@@ -130,6 +130,7 @@ def workbench_panel():
             html.Section(
                 [
                     html.Div(id="active-analysis-strip", className="bench-strip"),
+                    html.Div(id="analysis-guide", className="analysis-guide"),
                     dcc.Tabs(
                         id="main-tabs",
                         value="explore",

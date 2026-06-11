@@ -87,10 +87,12 @@ def test_workbench_analysis_cockpit_is_rendered_and_wired():
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
     assert "active-analysis-strip" in layout_json
+    assert "analysis-guide" in layout_json
     assert "plot-context-bar" in layout_json
     assert "channel-badge-rail" in layout_json
     assert "Population workflow" in layout_json
     assert "Display stack" in layout_json
     assert "Stats use full matrix" in layout_json
     assert any("active-analysis-strip.children" in key for key in dash_app.callback_map)
+    assert "analysis-guide.children" in dash_app.callback_map
     assert any("plot-context-bar.children" in key for key in dash_app.callback_map)

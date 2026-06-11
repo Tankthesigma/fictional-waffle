@@ -206,6 +206,94 @@ body {
   line-height: 1.25;
 }
 
+.analysis-guide {
+  padding: 0 12px 12px;
+  background: #edf5f8;
+  border-bottom: 1px solid var(--line);
+}
+
+.analysis-guide-panel {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 12px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.analysis-guide-head span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.analysis-guide-head strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+}
+
+.analysis-guide-steps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.analysis-step {
+  min-height: 72px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-left: 4px solid #94a3b8;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.analysis-step.done {
+  border-left-color: var(--accent);
+  background: #f0fdfa;
+}
+
+.analysis-step.review {
+  border-left-color: var(--warn);
+  background: #fffbeb;
+}
+
+.analysis-step.next {
+  border-left-color: var(--blue);
+  background: #f8fbff;
+}
+
+.analysis-step.waiting {
+  opacity: 0.78;
+}
+
+.analysis-step-state {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.analysis-step strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.analysis-step small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
 .workflow-card,
 .settings-primer {
   margin: 10px 0 16px;
@@ -735,7 +823,9 @@ button:hover {
   .workbench-grid,
   .two-col,
   .bench-strip,
-  .plot-context-bar {
+  .plot-context-bar,
+  .analysis-guide-panel,
+  .analysis-guide-steps {
     grid-template-columns: 1fr;
   }
 
