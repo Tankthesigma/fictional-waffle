@@ -2,10 +2,14 @@
   --ink: #0f172a;
   --muted: #64748b;
   --line: #dbe3ef;
+  --line-strong: #c6d3e2;
   --surface: #ffffff;
   --soft: #f8fafc;
+  --panel: #f3f7fb;
   --accent: #0f766e;
+  --accent-soft: #dff8f3;
   --blue: #2563eb;
+  --blue-soft: #e8f0ff;
   --warn: #b45309;
   --severe: #b91c1c;
 }
@@ -16,7 +20,9 @@
 
 body {
   margin: 0;
-  background: #eef3f8;
+  background:
+    linear-gradient(180deg, #eaf1f8 0, #f6f9fc 280px),
+    #f6f9fc;
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -26,9 +32,10 @@ body {
   align-items: end;
   justify-content: space-between;
   gap: 24px;
-  padding: 28px 32px 22px;
-  background: #ffffff;
-  border-bottom: 1px solid var(--line);
+  padding: 26px 32px 20px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+  border-bottom: 1px solid var(--line-strong);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
 }
 
 .topbar h1 {
@@ -43,6 +50,26 @@ body {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.workflow-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.workflow-strip span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  color: #115e59;
+  background: var(--accent-soft);
+  border: 1px solid #a7f3d0;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .eyebrow {
@@ -60,8 +87,8 @@ body {
 
 .app-shell {
   display: grid;
-  gap: 18px;
-  padding: 18px;
+  gap: 16px;
+  padding: 16px;
 }
 
 .upload-grid {
@@ -83,7 +110,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
 }
 
 .card {
@@ -94,12 +121,14 @@ body {
 .sidebar h2 {
   margin: 0 0 12px;
   font-size: 15px;
+  letter-spacing: 0;
 }
 
 .sidebar {
   padding: 14px;
   position: sticky;
   top: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #f9fbfe 100%);
 }
 
 .sidebar label {
@@ -131,6 +160,19 @@ body {
 
 .center-panel {
   overflow: hidden;
+  background: #ffffff;
+}
+
+.analysis-graph {
+  margin: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.primary-graph {
+  min-height: 520px;
 }
 
 .upload-box {
@@ -156,7 +198,7 @@ body {
 .metric {
   min-width: 118px;
   padding: 10px 12px;
-  background: var(--soft);
+  background: linear-gradient(180deg, #ffffff 0%, var(--soft) 100%);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
@@ -216,7 +258,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 0 12px;
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fafc 100%);
   color: var(--ink);
   font-weight: 700;
   cursor: pointer;
@@ -224,8 +266,12 @@ button {
 
 button.primary {
   border-color: var(--accent);
-  background: var(--accent);
+  background: linear-gradient(180deg, #12867d 0%, var(--accent) 100%);
   color: white;
+}
+
+button:hover {
+  border-color: var(--line-strong);
 }
 
 .button-row {
@@ -255,7 +301,7 @@ button.primary {
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--soft);
+  background: #ffffff;
 }
 
 .flag-card p {

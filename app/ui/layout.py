@@ -33,6 +33,16 @@ def header():
                         "Exploratory only; does not control cytometer hardware and does not replace expert review.",
                         className="safety-line",
                     ),
+                    html.Div(
+                        [
+                            html.Span("Import"),
+                            html.Span("Inspect"),
+                            html.Span("Gate"),
+                            html.Span("Compare"),
+                            html.Span("Report"),
+                        ],
+                        className="workflow-strip",
+                    ),
                 ]
             ),
             html.Div(
@@ -175,8 +185,8 @@ def workbench_panel():
 def explore_tab():
     return html.Div(
         [
-            dcc.Graph(id="scatter-graph", config={"displayModeBar": True}),
-            dcc.Graph(id="histogram-graph", config={"displayModeBar": True}),
+            dcc.Graph(id="scatter-graph", config={"displayModeBar": True}, className="analysis-graph primary-graph"),
+            dcc.Graph(id="histogram-graph", config={"displayModeBar": True}, className="analysis-graph"),
             html.Div(
                 [
                     card("Metadata Inspector", data_table("metadata-table", ["keyword", "value"], page_size=8)),
