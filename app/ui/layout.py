@@ -108,7 +108,7 @@ def workbench_panel():
                     html.H2("Samples"),
                     dcc.Dropdown(id="sample-dropdown", options=[], placeholder="Select sample", clearable=False),
                     html.H2("Gate Tree"),
-                    data_table("gate-table", ["gate_id", "name", "type", "parent", "channels", "status", "enabled"], page_size=6),
+                    data_table("gate-table", ["gate_id", "name", "type", "parent", "channels", "status", "enabled", "notes"], page_size=6),
                 ],
                 className="sidebar left-sidebar",
             ),
@@ -242,8 +242,15 @@ def gates_tab():
                                     dcc.Input(id="gate-y-min", type="number", placeholder="y min"),
                                     dcc.Input(id="gate-y-max", type="number", placeholder="y max"),
                                     html.Button("Add Rectangle Gate", id="add-rectangle-gate", n_clicks=0, className="primary"),
+                                    html.Button("Suggest Candidate Gates", id="suggest-candidate-gates", n_clicks=0),
+                                    html.Button("Accept Candidates", id="accept-candidate-gates", n_clicks=0),
+                                    html.Button("Reject Candidates", id="reject-candidate-gates", n_clicks=0),
                                 ],
                                 className="gate-form",
+                            ),
+                            html.Div(
+                                "Candidate gates are review-needed and disabled until accepted; they are not biological conclusions.",
+                                className="muted",
                             ),
                             html.Div(
                                 [

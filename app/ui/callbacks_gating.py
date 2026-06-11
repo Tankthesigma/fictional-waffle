@@ -17,6 +17,9 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         Output("gate-status", "children"),
         Input("add-rectangle-gate", "n_clicks"),
         Input("add-histogram-gate", "n_clicks"),
+        Input("suggest-candidate-gates", "n_clicks"),
+        Input("accept-candidate-gates", "n_clicks"),
+        Input("reject-candidate-gates", "n_clicks"),
         Input("save-gates", "n_clicks"),
         Input("load-gates", "n_clicks"),
         Input("save-project", "n_clicks"),
@@ -46,6 +49,9 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
     def gate_actions(
         add_clicks,
         add_hist_clicks,
+        suggest_clicks,
+        accept_clicks,
+        reject_clicks,
         save_clicks,
         load_clicks,
         save_project_clicks,
@@ -113,6 +119,44 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             gate.metadata["event_view"] = "metadata_compensated" if use_compensation else "raw"
             session.gates.append(gate)
             status = f"Added user-defined histogram range gate: {gate.name} ({gate.metadata['event_view']})."
+        elif action == "suggest-candidate-gates":
+            from app.core.compensation import event_view
+            from app.core.gating import suggest_candidate_gates
+
+            sample = session.selected_sample(sample_id)
+            if sample is None:
+                return no_update, no_update, no_update, "Upload and select a sample before suggesting candidate gates."
+            use_compensation = _is_compensation_on(compensation_enabled) and sample.compensated_events is not None
+            current_view = "metadata_compensated" if use_compensation else "raw"
+            existing_ids = {gate.gate_id for gate in session.gates}
+            suggestions = [
+                gate
+                for gate in suggest_candidate_gates(event_view(sample, use_compensation), sample.channels, id_prefix=sample.sample_id)
+                if gate.gate_id not in existing_ids
+            ]
+            for gate in suggestions:
+                gate.metadata["event_view"] = current_view
+            session.gates.extend(suggestions)
+            status = (
+                f"Added {len(suggestions)} disabled candidate gate(s) for review. Accept, edit, or reject before using them for final statistics."
+                if suggestions
+                else "No stable candidate gates were suggested for this sample."
+            )
+        elif action == "accept-candidate-gates":
+            accepted = 0
+            for gate in session.gates:
+                if gate.candidate:
+                    gate.candidate = False
+                    gate.user_defined = True
+                    gate.enabled = True
+                    gate.review_status = "accepted"
+                    gate.metadata["accepted_from_candidate"] = "true"
+                    accepted += 1
+            status = f"Accepted {accepted} candidate gate(s). Review/edit bounds before relying on final statistics."
+        elif action == "reject-candidate-gates":
+            before = len(session.gates)
+            session.gates = [gate for gate in session.gates if not gate.candidate]
+            status = f"Rejected {before - len(session.gates)} candidate gate(s)."
         elif action == "save-gates":
             from app.core.gating import save_gates
 

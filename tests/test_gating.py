@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 
-from app.core.gating import apply_gate, apply_gate_tree, histogram_range_gate, load_gates, rectangle_gate, save_gates
+from app.core.gating import apply_gate, apply_gate_tree, histogram_range_gate, load_gates, rectangle_gate, save_gates, suggest_candidate_gates
+from app.models.channel import ChannelSummary
 from app.models.gate import GateDefinition
 
 
@@ -75,3 +76,28 @@ def test_unknown_gate_type_is_empty_instead_of_crashing():
 
     np.testing.assert_array_equal(masks["q1"], np.array([False, False, False]))
     assert gate.metadata["mask_warning"] == "unsupported gate type: quadrant"
+
+
+def test_candidate_gate_suggestions_are_disabled_review_needed_gates():
+    events = pd.DataFrame(
+        {
+            "FSC-A": np.linspace(1, 1000, 500),
+            "SSC-A": np.linspace(10, 2000, 500),
+            "FSC-H": np.linspace(1, 900, 500),
+        }
+    )
+    channels = [
+        ChannelSummary(1, "FSC-A", role="fsc-a"),
+        ChannelSummary(2, "SSC-A", role="ssc-a"),
+        ChannelSummary(3, "FSC-H", role="fsc-h"),
+    ]
+
+    gates = suggest_candidate_gates(events, channels, id_prefix="s1")
+
+    assert [gate.name for gate in gates] == ["candidate main FSC/SSC population", "candidate pulse-geometry singlet review"]
+    assert all(gate.candidate for gate in gates)
+    assert all(not gate.enabled for gate in gates)
+    assert all(gate.review_status == "review_needed" for gate in gates)
+    assert all("review" in gate.metadata["candidate_reason"] for gate in gates)
+    masks = apply_gate_tree(events, gates)
+    assert all(not mask.any() for mask in masks.values())

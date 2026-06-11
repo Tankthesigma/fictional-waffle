@@ -31,6 +31,9 @@ def test_incomplete_gate_form_returns_status_without_callback_error():
             "inputs": [
                 {"id": "add-rectangle-gate", "property": "n_clicks", "value": 1},
                 {"id": "add-histogram-gate", "property": "n_clicks", "value": 0},
+                {"id": "suggest-candidate-gates", "property": "n_clicks", "value": 0},
+                {"id": "accept-candidate-gates", "property": "n_clicks", "value": 0},
+                {"id": "reject-candidate-gates", "property": "n_clicks", "value": 0},
                 {"id": "save-gates", "property": "n_clicks", "value": 0},
                 {"id": "load-gates", "property": "n_clicks", "value": 0},
                 {"id": "save-project", "property": "n_clicks", "value": 0},
@@ -84,6 +87,9 @@ def test_incomplete_histogram_gate_form_returns_status_without_callback_error():
             "inputs": [
                 {"id": "add-rectangle-gate", "property": "n_clicks", "value": 0},
                 {"id": "add-histogram-gate", "property": "n_clicks", "value": 1},
+                {"id": "suggest-candidate-gates", "property": "n_clicks", "value": 0},
+                {"id": "accept-candidate-gates", "property": "n_clicks", "value": 0},
+                {"id": "reject-candidate-gates", "property": "n_clicks", "value": 0},
                 {"id": "save-gates", "property": "n_clicks", "value": 0},
                 {"id": "load-gates", "property": "n_clicks", "value": 0},
                 {"id": "save-project", "property": "n_clicks", "value": 0},

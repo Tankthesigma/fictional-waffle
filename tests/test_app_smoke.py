@@ -42,3 +42,13 @@ def test_panel_setup_upload_is_rendered():
 
     assert "upload-panel" in layout_json
     assert "Optional panel setup CSV" in layout_json
+
+
+def test_candidate_gate_controls_are_rendered_with_review_language():
+    dash_app = create_app()
+    layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
+
+    assert "suggest-candidate-gates" in layout_json
+    assert "accept-candidate-gates" in layout_json
+    assert "reject-candidate-gates" in layout_json
+    assert "Candidate gates are review-needed and disabled until accepted" in layout_json

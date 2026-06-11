@@ -7,6 +7,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from app.core.channel_inference import best_scatter_pair
+from app.models.channel import ChannelSummary
 from app.models.gate import GateDefinition
 
 
@@ -51,6 +53,45 @@ def histogram_range_gate(
         parent_id=parent_id,
         bounds={"min": minimum, "max": maximum},
     )
+
+
+def suggest_candidate_gates(events: pd.DataFrame, channels: list[ChannelSummary], id_prefix: str = "candidate") -> list[GateDefinition]:
+    """Suggest conservative review-needed gates from channel metadata and distributions.
+
+    Candidate gates are disabled by default. They are workflow hints for human
+    review, not biological truth and not final statistics until accepted.
+    """
+    suggestions: list[GateDefinition] = []
+    fsc, ssc = best_scatter_pair(channels)
+    if fsc and ssc and fsc in events and ssc in events:
+        gate = _quantile_rectangle(
+            f"{id_prefix}_scatter_main",
+            "candidate main FSC/SSC population",
+            events,
+            fsc,
+            ssc,
+            0.05,
+            0.95,
+        )
+        if gate:
+            gate.metadata["candidate_reason"] = "robust central FSC/SSC event cloud; review before use"
+            suggestions.append(gate)
+
+    singlet_pair = _singlet_pair(channels)
+    if singlet_pair and singlet_pair[0] in events and singlet_pair[1] in events:
+        gate = _quantile_rectangle(
+            f"{id_prefix}_singlet_review",
+            "candidate pulse-geometry singlet review",
+            events,
+            singlet_pair[0],
+            singlet_pair[1],
+            0.08,
+            0.92,
+        )
+        if gate:
+            gate.metadata["candidate_reason"] = "central pulse-geometry region; review as a singlet-style aid only"
+            suggestions.append(gate)
+    return suggestions
 
 
 def apply_gate(events: pd.DataFrame, gate: GateDefinition, parent_mask: np.ndarray | None = None) -> np.ndarray:
@@ -184,6 +225,42 @@ def gate_to_table(gates: list[GateDefinition]) -> list[dict[str, Any]]:
             "channels": ", ".join(gate.channels),
             "status": "candidate - review needed" if gate.candidate else "user-defined",
             "enabled": "yes" if gate.enabled else "no",
+            "notes": gate.metadata.get("candidate_reason") or gate.metadata.get("mask_warning", ""),
         }
         for gate in gates
     ]
+
+
+def _quantile_rectangle(
+    gate_id: str,
+    name: str,
+    events: pd.DataFrame,
+    x_channel: str,
+    y_channel: str,
+    low: float,
+    high: float,
+) -> GateDefinition | None:
+    frame = events[[x_channel, y_channel]].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan).dropna()
+    if len(frame) < 100:
+        return None
+    x_min, x_max = frame[x_channel].quantile([low, high])
+    y_min, y_max = frame[y_channel].quantile([low, high])
+    if not all(np.isfinite(value) for value in [x_min, x_max, y_min, y_max]) or x_min >= x_max or y_min >= y_max:
+        return None
+    gate = rectangle_gate(gate_id, name, x_channel, y_channel, float(x_min), float(x_max), float(y_min), float(y_max))
+    gate.candidate = True
+    gate.user_defined = False
+    gate.enabled = False
+    gate.review_status = "review_needed"
+    gate.metadata["candidate"] = "review needed; disabled until accepted"
+    return gate
+
+
+def _singlet_pair(channels: list[ChannelSummary]) -> tuple[str, str] | None:
+    role_to_name = {channel.role: channel.raw_name for channel in channels}
+    for prefix in ("fsc", "ssc"):
+        area = role_to_name.get(f"{prefix}-a")
+        for geometry in (f"{prefix}-h", f"{prefix}-w"):
+            if area and role_to_name.get(geometry):
+                return area, role_to_name[geometry]
+    return None
