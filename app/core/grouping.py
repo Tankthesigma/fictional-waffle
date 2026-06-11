@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
+import re
 
 from app.core.csv_loader import MANIFEST_COLUMNS
 from app.models.sample import SampleRecord
@@ -90,13 +91,18 @@ def _text(value: object) -> bool:
 
 
 def _is_control(sample: SampleRecord) -> bool:
-    text = f"{sample.condition or ''} {sample.control_type or ''}".lower()
-    return any(token in text for token in ("control", "untreated", "vehicle", "unstained", "baseline"))
+    tokens = _classification_tokens(sample)
+    return any(token in tokens for token in ("control", "untreated", "vehicle", "unstained", "baseline"))
 
 
 def _is_treated(sample: SampleRecord) -> bool:
+    tokens = _classification_tokens(sample)
+    return any(token in tokens for token in ("treated", "stimulated", "drug", "test", "experimental"))
+
+
+def _classification_tokens(sample: SampleRecord) -> set[str]:
     text = f"{sample.condition or ''} {sample.control_type or ''}".lower()
-    return any(token in text for token in ("treated", "stimulated", "drug", "test", "experimental"))
+    return set(re.findall(r"[a-z0-9]+", text))
 
 
 def _next_step(status: str) -> str:

@@ -97,7 +97,11 @@ def _comparison_bullets(rows: list[dict[str, object]]) -> list[str]:
         raw_channel = row.get("channel")
         channel_text = f"{label} ({raw_channel})" if label != raw_channel else str(raw_channel)
         bullets.append(
-            f"{channel_text}: median difference {row.get('median_difference')}; "
-            f"fold-change {row.get('fold_change')}; {row.get('notes', '')}"
+            f"{channel_text}: median difference {_report_value(row.get('median_difference'))}; "
+            f"fold-change {_report_value(row.get('fold_change'))}; {_report_value(row.get('notes'))}"
         )
     return bullets
+
+
+def _report_value(value: object) -> object:
+    return "n/a" if value is None or value == "" else value

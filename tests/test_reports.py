@@ -71,6 +71,34 @@ def test_reports_include_comparison_rows(monkeypatch, tmp_path):
     assert "median difference 10.0" in pptx_text
 
 
+def test_reports_format_missing_comparison_values_as_na(monkeypatch, tmp_path):
+    frame = pd.DataFrame({"FSC-A": [1, 2], "SSC-A": [1, 2], "FL1-A": [10, 20]})
+    sample = SampleRecord("s1", "s1.csv", path=tmp_path / "s1.csv", file_type="csv", events=frame)
+    sample.channels = summarize_channels(frame)
+    rows = [{"channel": "FL1-A", "median_difference": None, "fold_change": None, "notes": None}]
+
+    real_import = builtins.__import__
+
+    def block_reportlab(name, *args, **kwargs):
+        if name.startswith("reportlab"):
+            raise ImportError("reportlab blocked for fallback test")
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", block_reportlab)
+    pdf = export_pdf_report([sample], [], [], [], tmp_path / "missing-values.txt", comparison_rows=rows)
+    monkeypatch.setattr(builtins, "__import__", real_import)
+    pptx = export_pptx_report([sample], [], [], [], tmp_path / "missing-values.pptx", comparison_rows=rows)
+
+    pdf_text = pdf.read_text(encoding="utf-8")
+    pptx_text = _pptx_text(pptx)
+    assert "None" not in pdf_text
+    assert "None" not in pptx_text
+    assert "difference=n/a" in pdf_text
+    assert "fold_change=n/a" in pdf_text
+    assert "median difference n/a" in pptx_text
+    assert "fold-change n/a" in pptx_text
+
+
 def test_report_outline_builds_review_notes_without_overclaiming(tmp_path):
     frame = pd.DataFrame({"FSC-A": [1, 2], "SSC-A": [1, 2], "FL1-A": [10, 20]})
     sample = SampleRecord("s1", "s1.csv", path=tmp_path / "s1.csv", file_type="csv", events=frame)

@@ -95,7 +95,7 @@ def export_pdf_report(
             "n_treated",
             "notes",
         ]
-        story.append(Table([comparison_keys] + [[row.get(key, "") for key in comparison_keys] for row in comparison_rows[:20]]))
+        story.append(Table([comparison_keys] + [[_report_value(row.get(key, "")) for key in comparison_keys] for row in comparison_rows[:20]]))
     doc.build(story)
     return target
 
@@ -127,8 +127,8 @@ def _plain_report(
     lines.append(f"\nGate stat rows: {len(gate_stats)}")
     lines.append("\nExploratory Comparison:")
     lines.extend(
-        f"- {row.get('channel_label') or row.get('channel')}: difference={row.get('median_difference')}, "
-        f"fold_change={row.get('fold_change')}, notes={row.get('notes')}"
+        f"- {row.get('channel_label') or row.get('channel')}: difference={_report_value(row.get('median_difference'))}, "
+        f"fold_change={_report_value(row.get('fold_change'))}, notes={_report_value(row.get('notes'))}"
         for row in comparison_rows
     )
     return "\n".join(lines)
@@ -153,3 +153,7 @@ def _channel_summary_rows(samples: list[SampleRecord]) -> list[list[object]]:
                 ]
             )
     return rows
+
+
+def _report_value(value: object) -> object:
+    return "n/a" if value is None or value == "" else value
