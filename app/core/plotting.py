@@ -37,7 +37,7 @@ def scatter_figure(
     if sample is None or not x_channel or not y_channel:
         return empty_figure()
     events = event_view(sample, use_compensation)
-    view_label = "metadata compensated" if use_compensation and getattr(sample, "compensated_events", None) is not None else "raw"
+    view_label = "metadata compensated events" if use_compensation and getattr(sample, "compensated_events", None) is not None else "raw events"
     if x_channel not in events or y_channel not in events:
         return empty_figure("Selected channels are not available for this sample.")
     display = downsample_events(events[[x_channel, y_channel]], max_events=max_events)
@@ -70,7 +70,7 @@ def scatter_figure(
         dragmode="drawrect",
         newshape=dict(line_color="#0f766e", fillcolor="rgba(15,118,110,0.08)", opacity=0.8),
         margin=dict(l=50, r=24, t=42, b=50),
-        title=f"{sample.sample_id}: {x_channel} vs {y_channel} ({view_label})",
+        title=f"{sample.sample_id}: {x_channel} vs {y_channel} ({view_label}, {transform} display)",
         xaxis_title=f"{x_channel} ({transform})",
         yaxis_title=f"{y_channel} ({transform})",
     )
@@ -114,7 +114,7 @@ def histogram_figure(
         barmode="overlay",
         height=420,
         margin=dict(l=50, r=24, t=42, b=50),
-        title=f"{channel} histogram overlay ({'metadata compensated' if use_compensation else 'raw'})",
+        title=f"{channel} histogram overlay ({'metadata compensated events' if use_compensation else 'raw events'}, {transform} display)",
         xaxis_title=f"{channel} ({transform})",
         yaxis_title="Density",
     )
