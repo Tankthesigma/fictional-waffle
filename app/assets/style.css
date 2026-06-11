@@ -621,6 +621,10 @@ body {
   padding: 8px;
 }
 
+.compare-form .dash-dropdown {
+  min-width: 220px;
+}
+
 button {
   min-height: 36px;
   border: 1px solid var(--line);

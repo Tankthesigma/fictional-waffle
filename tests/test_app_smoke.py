@@ -71,9 +71,12 @@ def test_compare_summary_container_is_rendered():
     dash_app = create_app()
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
+    assert "Select control group" in layout_json
+    assert "Select treated group" in layout_json
     assert "compare-summary-cards" in layout_json
     assert "comparison-delta-chart" in layout_json
     assert any("comparison-delta-chart.figure" in key for key in dash_app.callback_map)
+    assert any("control-group.options" in key for key in dash_app.callback_map)
 
 
 def test_qc_review_lanes_are_rendered_and_wired():

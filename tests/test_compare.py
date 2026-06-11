@@ -6,6 +6,7 @@ from app.core.channel_inference import summarize_channels
 from app.core.compare import compare_control_treated, comparison_summary, fluorescence_median_table
 from app.core.plotting import comparison_delta_chart
 from app.models.sample import SampleRecord
+from app.ui.callbacks_compare import _condition_groups, _default_groups
 
 
 def _sample(sample_id: str, condition: str, values: list[float]) -> SampleRecord:
@@ -111,3 +112,25 @@ def test_comparison_delta_chart_empty_state_is_friendly():
     fig = comparison_delta_chart([])
 
     assert fig.layout.annotations[0].text == "Choose control and treated groups to plot exploratory median differences."
+
+
+def test_compare_group_defaults_choose_control_and_treated_conditions():
+    samples = [
+        _sample("c1", "control", [1, 2, 3]),
+        _sample("t1", "treated", [4, 5, 6]),
+        _sample("v1", "vehicle", [1, 2, 3]),
+    ]
+
+    groups = _condition_groups(samples)
+    control, treated = _default_groups(groups)
+
+    assert groups == ["control", "treated", "vehicle"]
+    assert control == "control"
+    assert treated == "treated"
+
+
+def test_compare_group_defaults_fall_back_to_distinct_groups():
+    control, treated = _default_groups(["day0", "day7"])
+
+    assert control == "day0"
+    assert treated == "day7"

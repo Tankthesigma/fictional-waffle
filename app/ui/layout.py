@@ -347,9 +347,9 @@ def compare_tab():
                     html.Div(
                         [
                             html.Label("Control group"),
-                            dcc.Input(id="control-group", type="text", placeholder="e.g. untreated"),
+                            dcc.Dropdown(id="control-group", options=[], placeholder="Select control group", clearable=True),
                             html.Label("Treated group"),
-                            dcc.Input(id="treated-group", type="text", placeholder="e.g. treated"),
+                            dcc.Dropdown(id="treated-group", options=[], placeholder="Select treated group", clearable=True),
                             html.Button("Compare Groups", id="compare-button", n_clicks=0, className="primary"),
                             html.Button("Export Comparison CSV", id="export-comparison-csv", n_clicks=0),
                         ],

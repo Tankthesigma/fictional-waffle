@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dash import Input, Output, State, html
+from dash import Input, Output, html
 
 from app.core.paths import EXPORT_ROOT
 from app.core.session_store import WorkbenchSession
@@ -8,6 +8,19 @@ from app.ui.components import table_columns
 
 
 def register_compare_callbacks(app, session: WorkbenchSession) -> None:
+    @app.callback(
+        Output("control-group", "options"),
+        Output("treated-group", "options"),
+        Output("control-group", "value"),
+        Output("treated-group", "value"),
+        Input("sample-ids-store", "data"),
+    )
+    def update_group_options(_sample_ids):
+        groups = _condition_groups(session.sample_list())
+        options = [{"label": group, "value": group} for group in groups]
+        control, treated = _default_groups(groups)
+        return options, options, control, treated
+
     @app.callback(
         Output("batch-table", "data"),
         Output("median-table", "data"),
@@ -20,8 +33,8 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
         Input("compare-button", "n_clicks"),
         Input("export-comparison-csv", "n_clicks"),
         Input("compensation-enabled", "value"),
-        State("control-group", "value"),
-        State("treated-group", "value"),
+        Input("control-group", "value"),
+        Input("treated-group", "value"),
     )
     def update_compare(_sample_ids, _n_clicks, _export_clicks, compensation_enabled, control_group, treated_group):
         from dash import callback_context
@@ -82,3 +95,26 @@ def _summary_cards(rows: list[dict[str, object]]):
         )
         for row in rows
     ]
+
+
+def _condition_groups(samples) -> list[str]:
+    groups = sorted({str(sample.condition).strip() for sample in samples if sample.condition and str(sample.condition).strip()})
+    return groups
+
+
+def _default_groups(groups: list[str]) -> tuple[str | None, str | None]:
+    if not groups:
+        return None, None
+    control = _first_matching(groups, ("control", "untreated", "vehicle", "unstained", "baseline")) or groups[0]
+    treated = _first_matching(groups, ("treated", "stimulated", "drug", "test", "experimental"))
+    if treated is None:
+        treated = next((group for group in groups if group != control), None)
+    return control, treated
+
+
+def _first_matching(groups: list[str], tokens: tuple[str, ...]) -> str | None:
+    for group in groups:
+        normalized = group.lower()
+        if any(token in normalized for token in tokens):
+            return group
+    return None
