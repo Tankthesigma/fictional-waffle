@@ -15,6 +15,7 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
         Output("comparison-table", "data"),
         Output("compare-status", "children"),
         Output("compare-summary-cards", "children"),
+        Output("comparison-delta-chart", "figure"),
         Input("sample-ids-store", "data"),
         Input("compare-button", "n_clicks"),
         Input("export-comparison-csv", "n_clicks"),
@@ -26,6 +27,7 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
         from dash import callback_context
         from app.core.compare import batch_table, compare_control_treated, comparison_summary, fluorescence_median_table
         from app.core.export_tables import export_rows_csv
+        from app.core.plotting import comparison_delta_chart
 
         action = callback_context.triggered[0]["prop_id"].split(".")[0] if callback_context.triggered else ""
         samples = session.sample_list()
@@ -46,7 +48,15 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
             else:
                 status = "Choose control and treated groups before exporting comparison results."
         median_columns = _columns_from_rows(medians, ["sample_id", "condition"])
-        return batch_table(samples), medians, table_columns(median_columns), comparison_rows, status, _summary_cards(comparison_summary(comparison_rows))
+        return (
+            batch_table(samples),
+            medians,
+            table_columns(median_columns),
+            comparison_rows,
+            status,
+            _summary_cards(comparison_summary(comparison_rows)),
+            comparison_delta_chart(comparison_rows),
+        )
 
 
 def _columns_from_rows(rows: list[dict[str, object]], preferred: list[str]) -> list[str]:

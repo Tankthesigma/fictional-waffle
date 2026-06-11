@@ -70,6 +70,8 @@ def test_compare_summary_container_is_rendered():
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
     assert "compare-summary-cards" in layout_json
+    assert "comparison-delta-chart" in layout_json
+    assert any("comparison-delta-chart.figure" in key for key in dash_app.callback_map)
 
 
 def test_workbench_analysis_cockpit_is_rendered_and_wired():

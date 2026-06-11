@@ -177,6 +177,62 @@ def event_count_chart(samples: list[SampleRecord]):
     return px.bar(frame, x="sample_id", y="event_count", color="condition", template="plotly_white", title="Event counts")
 
 
+def comparison_delta_chart(rows: list[dict[str, object]]):
+    """Build an exploratory control-versus-treated median-difference chart."""
+    import plotly.graph_objects as go
+
+    numeric_rows = []
+    for row in rows:
+        diff = _number_or_none(row.get("median_difference"))
+        if diff is None:
+            continue
+        numeric_rows.append((str(row.get("channel", "channel")), diff, str(row.get("notes", ""))))
+    if not numeric_rows:
+        return empty_figure("Choose control and treated groups to plot exploratory median differences.")
+
+    numeric_rows.sort(key=lambda item: abs(item[1]), reverse=True)
+    channels = [item[0] for item in numeric_rows[:24]]
+    differences = [item[1] for item in numeric_rows[:24]]
+    notes = [item[2] for item in numeric_rows[:24]]
+    colors = ["#0f766e" if value >= 0 else "#b45309" for value in differences]
+    guarded = sum("fold-change not computed" in note for note in notes)
+    low_replicate = sum("replicate count is too low" in note for note in notes)
+
+    fig = go.Figure(
+        go.Bar(
+            x=differences,
+            y=channels,
+            orientation="h",
+            marker=dict(color=colors),
+            customdata=notes,
+            hovertemplate="Channel: %{y}<br>Median difference: %{x:.3g}<br>%{customdata}<extra></extra>",
+        )
+    )
+    fig.add_vline(x=0, line_color="#94a3b8", line_width=1)
+    fig.update_layout(
+        template="plotly_white",
+        height=max(360, min(680, 120 + len(channels) * 32)),
+        margin=dict(l=90, r=30, t=58, b=48),
+        title="Exploratory control-vs-treated median differences",
+        xaxis_title="Treated median - control median",
+        yaxis_title="Fluorescence channel",
+        yaxis=dict(autorange="reversed"),
+        annotations=[
+            dict(
+                text=f"Descriptive only | guarded fold-change rows: {guarded} | low-replicate rows: {low_replicate}",
+                x=0,
+                y=1.08,
+                xref="paper",
+                yref="paper",
+                showarrow=False,
+                xanchor="left",
+                font=dict(size=12, color="#64748b"),
+            )
+        ],
+    )
+    return fig
+
+
 def time_stability_figure(sample: SampleRecord | None):
     import plotly.express as px
 
@@ -278,3 +334,13 @@ def _finite_xy(x_values, y_values):
     y_arr = np.asarray(y_values, dtype=float)
     finite = np.isfinite(x_arr) & np.isfinite(y_arr)
     return x_arr[finite], y_arr[finite]
+
+
+def _number_or_none(value: object) -> float | None:
+    import numpy as np
+
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return number if np.isfinite(number) else None

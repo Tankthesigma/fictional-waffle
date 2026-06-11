@@ -355,6 +355,7 @@ def compare_tab():
                     ),
                     html.Div(id="compare-status", className="status-box small"),
                     html.Div(id="compare-summary-cards", className="metrics-row compare-summary"),
+                    dcc.Graph(id="comparison-delta-chart"),
                     dcc.Graph(id="event-count-chart"),
                     data_table("batch-table", ["sample_id", "condition", "replicate", "control_type", "event_count", "fluorescence_channels", "file_type"]),
                     data_table("median-table", ["sample_id", "condition"]),

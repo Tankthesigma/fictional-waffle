@@ -4,6 +4,7 @@ import pandas as pd
 
 from app.core.channel_inference import summarize_channels
 from app.core.compare import compare_control_treated, comparison_summary, fluorescence_median_table
+from app.core.plotting import comparison_delta_chart
 from app.models.sample import SampleRecord
 
 
@@ -80,3 +81,33 @@ def test_comparison_summary_highlights_direction_and_guardrails():
     assert summary[2]["value"] == "-4"
     assert summary[3]["value"] == 1
     assert summary[4]["value"] == 1
+
+
+def test_comparison_delta_chart_plots_directional_median_shifts():
+    rows = [
+        {
+            "channel": "FITC-A",
+            "median_difference": 15.0,
+            "notes": "exploratory only",
+        },
+        {
+            "channel": "PE-A",
+            "median_difference": -4.0,
+            "notes": "exploratory only; fold-change not computed for negative or near-zero medians",
+        },
+    ]
+
+    fig = comparison_delta_chart(rows)
+
+    assert len(fig.data) == 1
+    assert fig.data[0].type == "bar"
+    assert list(fig.data[0].y) == ["FITC-A", "PE-A"]
+    assert list(fig.data[0].x) == [15.0, -4.0]
+    assert fig.layout.xaxis.title.text == "Treated median - control median"
+    assert "guarded fold-change rows: 1" in fig.layout.annotations[0].text
+
+
+def test_comparison_delta_chart_empty_state_is_friendly():
+    fig = comparison_delta_chart([])
+
+    assert fig.layout.annotations[0].text == "Choose control and treated groups to plot exploratory median differences."
