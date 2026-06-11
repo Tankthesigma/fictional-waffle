@@ -5,9 +5,6 @@ from dash import dcc, html
 from app.ui.components import card, data_table, metric_card, upload_box
 
 
-DISCLAIMER = "Post-acquisition analysis only. This app does not control cytometer hardware and does not replace expert review."
-
-
 def build_layout():
     return html.Div(
         [
@@ -21,7 +18,6 @@ def build_layout():
                 ],
                 className="app-shell",
             ),
-            html.Footer(DISCLAIMER, className="footer"),
         ]
     )
 
@@ -33,7 +29,6 @@ def header():
                 [
                     html.P("Local-only cytometry analysis", className="eyebrow"),
                     html.H1("Ask Flow Workbench"),
-                    html.P(DISCLAIMER, className="subtle"),
                 ]
             ),
             html.Div(

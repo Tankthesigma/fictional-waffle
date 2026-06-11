@@ -18,6 +18,8 @@ __pycache__/
 app_data/
 exports/*
 !exports/.gitkeep
+sample_data/*.fcs
+sample_data/*.FCS
 
 # Editor directories and files
 .vscode/*

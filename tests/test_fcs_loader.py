@@ -29,6 +29,22 @@ def test_fcs_loader_retries_offset_error(tmp_path):
     assert any("ignore_offset_error=True" in warning for warning in warnings)
 
 
+def test_fcs_loader_retries_offset_discrepancy_flag(tmp_path):
+    class FakeFlowData:
+        calls = []
+
+        def __init__(self, path, ignore_offset_error=False, ignore_offset_discrepancy=False):
+            self.calls.append((ignore_offset_error, ignore_offset_discrepancy))
+            if not ignore_offset_discrepancy:
+                raise ValueError("has a discrepancy in the DATA start byte location")
+
+    loaded, warnings = _read_flow_data(FakeFlowData, tmp_path / "offset.fcs")
+
+    assert isinstance(loaded, FakeFlowData)
+    assert FakeFlowData.calls == [(False, False), (True, False), (False, True)]
+    assert any("ignore_offset_discrepancy=True" in warning for warning in warnings)
+
+
 def test_event_dataframe_preserves_available_names_on_channel_mismatch():
     class FakeFlowData:
         events = np.array([[1.0, 2.0, 3.0]])

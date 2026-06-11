@@ -84,17 +84,32 @@ def _read_flow_data(flow_data_class: Any, target: Path) -> tuple[Any, list[str]]
         return flow_data, [f"{target.name}: {item.message}" for item in captured]
     except Exception as exc:
         message = str(exc)
-        if "ignore_offset_error" not in message and "data offset" not in message.lower():
+        offset_problem = any(
+            token in message.lower()
+            for token in ("ignore_offset_error", "data offset", "data start byte", "data end byte", "discrepancy")
+        )
+        if not offset_problem:
             raise
-        try:
-            with warnings.catch_warnings(record=True) as captured:
-                warnings.simplefilter("always")
-                flow_data = flow_data_class(str(target), ignore_offset_error=True)
-        except TypeError:
-            raise exc
-        warning_messages = [f"{target.name}: {item.message}" for item in captured]
-        warning_messages.append(f"{target.name}: FlowIO reported a data offset mismatch; loaded with ignore_offset_error=True for review.")
-        return flow_data, warning_messages
+        retry_kwargs = ({"ignore_offset_error": True}, {"ignore_offset_discrepancy": True})
+        last_retry_error: Exception | None = None
+        for kwargs in retry_kwargs:
+            try:
+                with warnings.catch_warnings(record=True) as captured:
+                    warnings.simplefilter("always")
+                    flow_data = flow_data_class(str(target), **kwargs)
+                warning_messages = [f"{target.name}: {item.message}" for item in captured]
+                flag_name = next(iter(kwargs))
+                warning_messages.append(f"{target.name}: FlowIO reported a data offset mismatch; loaded with {flag_name}=True for review.")
+                return flow_data, warning_messages
+            except TypeError as retry_exc:
+                last_retry_error = retry_exc
+                continue
+            except Exception as retry_exc:
+                last_retry_error = retry_exc
+                continue
+        if last_retry_error:
+            raise last_retry_error
+        raise exc
 
 
 def _events_to_dataframe(flow_data: Any, event_count: int, channel_names: list[str]) -> tuple[pd.DataFrame, list[str]]:
