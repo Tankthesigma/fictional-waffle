@@ -279,6 +279,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         sample = session.selected_sample(sample_id)
         stats = []
         if sample:
+            from app.core.channel_labels import channel_label_map
             from app.core.compensation import event_view
             from app.core.gating import apply_gate_tree
             from app.core.stats import gate_statistics
@@ -291,7 +292,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
                 == ("metadata_compensated" if _is_compensation_on(compensation_enabled) and sample.compensated_events is not None else "raw")
             ]
             masks = apply_gate_tree(events, compatible_gates)
-            stats = gate_statistics(events, compatible_gates, masks, sample.fluorescence_channels)
+            stats = gate_statistics(events, compatible_gates, masks, sample.fluorescence_channels, channel_label_map([sample]))
         if action == "export-gate-stats":
             from app.core.export_tables import export_rows_csv
 
@@ -300,7 +301,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
                 status = f"Exported gate statistics CSV to {path}."
             else:
                 status = "No gate statistics available to export."
-        stats_columns = _columns_from_rows(stats, ["gate_name", "parent_gate", "channels", "event_count", "percent_total", "percent_parent"])
+        stats_columns = _columns_from_rows(stats, ["gate_name", "parent_gate", "channel_labels", "channels", "event_count", "percent_total", "percent_parent"])
         options = _gate_options(session.gates)
         selected_gate = manage_gate_id if manage_gate_id in {gate.gate_id for gate in session.gates} else (options[0]["value"] if options else None)
         return gate_to_table(session.gates), stats, table_columns(stats_columns), status, options, selected_gate, _gate_stack_cards(session.gates, stats)
@@ -343,7 +344,7 @@ def _gate_stack_cards(gates, stats: list[dict[str, object]]):
                 ],
                 className="gate-stack-head",
             ),
-            html.Small(f"{gate.gate_type} | parent: {gate.parent_id or 'total'} | {', '.join(gate.channels)}"),
+            html.Small(f"{gate.gate_type} | parent: {gate.parent_id or 'total'} | {row.get('channel_labels') or ', '.join(gate.channels)}"),
             html.Div(
                 [
                     html.Span(f"{_format_stat(count)} events"),

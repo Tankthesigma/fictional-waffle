@@ -37,6 +37,7 @@ def test_reports_include_comparison_rows(monkeypatch, tmp_path):
     rows = [
         {
             "channel": "FL1-A",
+            "channel_label": "CD3 FITC (FL1-A)",
             "control_median": 10.0,
             "treated_median": 20.0,
             "median_difference": 10.0,
@@ -64,8 +65,9 @@ def test_reports_include_comparison_rows(monkeypatch, tmp_path):
     assert "Analysis Review Notes" in pdf_text
     assert "Analysis Review Notes" in pptx_text
     assert "Exploratory Comparison" in pdf_text
-    assert "FL1-A" in pdf_text
+    assert "CD3 FITC (FL1-A)" in pdf_text
     assert "Exploratory Comparison" in pptx_text
+    assert "CD3 FITC (FL1-A)" in pptx_text
     assert "median difference 10.0" in pptx_text
 
 

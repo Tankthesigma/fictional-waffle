@@ -93,8 +93,11 @@ def _comparison_bullets(rows: list[dict[str, object]]) -> list[str]:
         return ["No control-versus-treated comparison rows were available for this report."]
     bullets = ["Rows are descriptive and exploratory; review replicate structure before interpreting effects."]
     for row in rows[:9]:
+        label = row.get("channel_label") or row.get("channel")
+        raw_channel = row.get("channel")
+        channel_text = f"{label} ({raw_channel})" if label != raw_channel else str(raw_channel)
         bullets.append(
-            f"{row.get('channel')}: median difference {row.get('median_difference')}; "
+            f"{channel_text}: median difference {row.get('median_difference')}; "
             f"fold-change {row.get('fold_change')}; {row.get('notes', '')}"
         )
     return bullets

@@ -14,9 +14,11 @@ def gate_statistics(
     gates: list[GateDefinition],
     masks: dict[str, np.ndarray],
     fluorescence_channels: list[str] | None = None,
+    channel_labels: dict[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Compute counts, percentages, and fluorescence summaries for gates."""
     total_count = len(events)
+    channel_labels = channel_labels or {}
     fluorescence_channels = fluorescence_channels or [
         column for column in events.select_dtypes("number").columns if infer_channel_role(str(column)) == "fluorescence"
     ]
@@ -41,6 +43,7 @@ def gate_statistics(
             "parent_missing": parent_missing,
             "gate_warning": gate.metadata.get("mask_warning", ""),
             "channels": ", ".join(gate.channels),
+            "channel_labels": ", ".join(channel_labels.get(channel, channel) for channel in gate.channels),
             "event_count": count,
             "percent_total": _pct(count, total_count),
             "percent_parent": _pct(count, parent_count) if parent_count is not None else None,

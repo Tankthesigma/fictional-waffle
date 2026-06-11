@@ -426,7 +426,20 @@ def compare_tab():
                     dcc.Graph(id="event-count-chart"),
                     data_table("batch-table", ["sample_id", "condition", "replicate", "control_type", "event_count", "fluorescence_channels", "file_type"]),
                     data_table("median-table", ["sample_id", "condition"]),
-                    data_table("comparison-table", ["channel", "control_median", "treated_median", "median_difference", "fold_change", "n_control", "n_treated", "notes"]),
+                    data_table(
+                        "comparison-table",
+                        [
+                            "channel",
+                            "channel_label",
+                            "control_median",
+                            "treated_median",
+                            "median_difference",
+                            "fold_change",
+                            "n_control",
+                            "n_treated",
+                            "notes",
+                        ],
+                    ),
                 ],
             )
         ]

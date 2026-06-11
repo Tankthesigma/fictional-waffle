@@ -92,6 +92,7 @@ def register_report_callbacks(app, session: WorkbenchSession) -> None:
         samples = session.sample_list()
         gate_stats = []
         if sample:
+            from app.core.channel_labels import channel_label_map
             from app.core.compensation import event_view
             from app.core.gating import apply_gate_tree
             from app.core.stats import gate_statistics
@@ -100,7 +101,13 @@ def register_report_callbacks(app, session: WorkbenchSession) -> None:
             events = event_view(sample, use_compensation)
             current_view = "metadata_compensated" if use_compensation and sample.compensated_events is not None else "raw"
             compatible_gates = [gate for gate in session.gates if gate.metadata.get("event_view", "raw") == current_view]
-            gate_stats = gate_statistics(events, compatible_gates, apply_gate_tree(events, compatible_gates), sample.fluorescence_channels)
+            gate_stats = gate_statistics(
+                events,
+                compatible_gates,
+                apply_gate_tree(events, compatible_gates),
+                sample.fluorescence_channels,
+                channel_label_map([sample]),
+            )
         stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         figure_export = _export_report_figures(
             stamp,

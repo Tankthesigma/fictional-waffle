@@ -35,3 +35,19 @@ def test_default_gate_statistics_only_include_fluorescence_channels():
     assert "FL1-A_median" in rows[0]
     assert "Time_median" not in rows[0]
     assert "FSC-A_median" not in rows[0]
+
+
+def test_gate_statistics_include_marker_aware_channel_labels():
+    events = pd.DataFrame({"FSC-A": [1, 2, 3], "SSC-A": [1, 2, 3], "FITC-A": [10, 20, 30]})
+    gate = rectangle_gate("g1", "main", "FSC-A", "SSC-A", 0, 4, 0, 4)
+    masks = {"g1": np.array([True, True, True])}
+
+    rows = gate_statistics(
+        events,
+        [gate],
+        masks,
+        ["FITC-A"],
+        {"FSC-A": "Forward Scatter Area (FSC-A)", "SSC-A": "Side Scatter Area (SSC-A)", "FITC-A": "CD3 FITC (FITC-A)"},
+    )
+
+    assert rows[0]["channel_labels"] == "Forward Scatter Area (FSC-A), Side Scatter Area (SSC-A)"

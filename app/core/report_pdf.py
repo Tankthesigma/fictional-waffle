@@ -84,7 +84,17 @@ def export_pdf_report(
         story.append(Paragraph("No gate statistics available.", styles["Normal"]))
     if comparison_rows:
         story.extend([Spacer(1, 12), Paragraph("Exploratory Comparison", styles["Heading2"])])
-        comparison_keys = ["channel", "control_median", "treated_median", "median_difference", "fold_change", "n_control", "n_treated", "notes"]
+        comparison_keys = [
+            "channel",
+            "channel_label",
+            "control_median",
+            "treated_median",
+            "median_difference",
+            "fold_change",
+            "n_control",
+            "n_treated",
+            "notes",
+        ]
         story.append(Table([comparison_keys] + [[row.get(key, "") for key in comparison_keys] for row in comparison_rows[:20]]))
     doc.build(story)
     return target
@@ -117,7 +127,8 @@ def _plain_report(
     lines.append(f"\nGate stat rows: {len(gate_stats)}")
     lines.append("\nExploratory Comparison:")
     lines.extend(
-        f"- {row.get('channel')}: difference={row.get('median_difference')}, fold_change={row.get('fold_change')}, notes={row.get('notes')}"
+        f"- {row.get('channel_label') or row.get('channel')}: difference={row.get('median_difference')}, "
+        f"fold_change={row.get('fold_change')}, notes={row.get('notes')}"
         for row in comparison_rows
     )
     return "\n".join(lines)

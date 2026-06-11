@@ -5,6 +5,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
+from app.core.channel_labels import channel_label_map
 from app.core.compensation import event_view
 from app.models.comparison import ComparisonResult
 from app.models.sample import SampleRecord
@@ -57,6 +58,7 @@ def compare_control_treated(
     control = grouped.get(control_group, [])
     treated = grouped.get(treated_group, [])
     channels = channels or sorted({channel for sample in samples for channel in sample.fluorescence_channels})
+    labels = channel_label_map(samples)
     results: list[ComparisonResult] = []
     for channel in channels:
         control_values = _sample_medians(control, channel, use_compensation)
@@ -79,6 +81,7 @@ def compare_control_treated(
                 fold,
                 len(control_values),
                 len(treated_values),
+                labels.get(channel, channel),
                 notes,
             )
         )
@@ -274,7 +277,7 @@ def _difference_label(row: dict[str, object] | None) -> str:
 def _channel_detail(row: dict[str, object] | None) -> str:
     if not row:
         return "no directional median shift detected"
-    return f"{row.get('channel', 'channel')} median difference; exploratory only"
+    return f"{row.get('channel_label') or row.get('channel', 'channel')} median difference; exploratory only"
 
 
 def _strongest_absolute_difference(rows: list[dict[str, object]]) -> dict[str, object] | None:
@@ -293,7 +296,8 @@ def _largest_shift_message(row: dict[str, object] | None) -> str:
         return "No finite median shifts were available for review."
     diff = _number_or_none(row.get("median_difference"))
     direction = "higher" if diff is not None and diff > 0 else "lower"
-    return f"{row.get('channel', 'channel')} is {direction} in treated medians by {_difference_label(row)}."
+    channel = row.get("channel_label") or row.get("channel", "channel")
+    return f"{channel} is {direction} in treated medians by {_difference_label(row)}."
 
 
 def _group_label(control_group: str | None, treated_group: str | None) -> str:

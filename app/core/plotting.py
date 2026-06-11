@@ -186,14 +186,17 @@ def comparison_delta_chart(rows: list[dict[str, object]]):
         diff = _number_or_none(row.get("median_difference"))
         if diff is None:
             continue
-        numeric_rows.append((str(row.get("channel", "channel")), diff, str(row.get("notes", ""))))
+        label = str(row.get("channel_label") or row.get("channel", "channel"))
+        raw_channel = str(row.get("channel", label))
+        numeric_rows.append((label, raw_channel, diff, str(row.get("notes", ""))))
     if not numeric_rows:
         return empty_figure("Choose control and treated groups to plot exploratory median differences.")
 
-    numeric_rows.sort(key=lambda item: abs(item[1]), reverse=True)
+    numeric_rows.sort(key=lambda item: abs(item[2]), reverse=True)
     channels = [item[0] for item in numeric_rows[:24]]
-    differences = [item[1] for item in numeric_rows[:24]]
-    notes = [item[2] for item in numeric_rows[:24]]
+    raw_channels = [item[1] for item in numeric_rows[:24]]
+    differences = [item[2] for item in numeric_rows[:24]]
+    notes = [item[3] for item in numeric_rows[:24]]
     colors = ["#0f766e" if value >= 0 else "#b45309" for value in differences]
     guarded = sum("fold-change not computed" in note for note in notes)
     low_replicate = sum("replicate count is too low" in note for note in notes)
@@ -204,8 +207,8 @@ def comparison_delta_chart(rows: list[dict[str, object]]):
             y=channels,
             orientation="h",
             marker=dict(color=colors),
-            customdata=notes,
-            hovertemplate="Channel: %{y}<br>Median difference: %{x:.3g}<br>%{customdata}<extra></extra>",
+            customdata=list(zip(raw_channels, notes, strict=False)),
+            hovertemplate="Channel: %{y}<br>Raw detector: %{customdata[0]}<br>Median difference: %{x:.3g}<br>%{customdata[1]}<extra></extra>",
         )
     )
     fig.add_vline(x=0, line_color="#94a3b8", line_width=1)

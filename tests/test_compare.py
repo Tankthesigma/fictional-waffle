@@ -17,6 +17,18 @@ def _sample(sample_id: str, condition: str, values: list[float]) -> SampleRecord
     return sample
 
 
+def test_compare_includes_marker_aware_channel_label():
+    control = _sample("c1", "control", [10, 10, 10])
+    treated = _sample("t1", "treated", [20, 20, 20])
+    control.channels[0].marker = "CD3"
+    control.channels[0].fluorochrome = "FITC"
+
+    row = compare_control_treated([control, treated], "control", "treated")[0].to_dict()
+
+    assert row["channel"] == "FITC-A"
+    assert row["channel_label"] == "CD3 FITC (FITC-A)"
+
+
 def test_compare_does_not_compute_fold_change_for_negative_medians():
     control = _sample("c1", "control", [-20, -20, -20])
     treated = _sample("t1", "treated", [-5, -5, -5])
@@ -133,6 +145,7 @@ def test_comparison_delta_chart_plots_directional_median_shifts():
     rows = [
         {
             "channel": "FITC-A",
+            "channel_label": "CD3 FITC (FITC-A)",
             "median_difference": 15.0,
             "notes": "exploratory only",
         },
@@ -147,8 +160,9 @@ def test_comparison_delta_chart_plots_directional_median_shifts():
 
     assert len(fig.data) == 1
     assert fig.data[0].type == "bar"
-    assert list(fig.data[0].y) == ["FITC-A", "PE-A"]
+    assert list(fig.data[0].y) == ["CD3 FITC (FITC-A)", "PE-A"]
     assert list(fig.data[0].x) == [15.0, -4.0]
+    assert fig.data[0].customdata[0][0] == "FITC-A"
     assert fig.layout.xaxis.title.text == "Treated median - control median"
     assert "guarded fold-change rows: 1" in fig.layout.annotations[0].text
 

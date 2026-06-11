@@ -15,11 +15,13 @@ class ComparisonResult:
     fold_change: float | None
     n_control: int
     n_treated: int
+    channel_label: str | None = None
     notes: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "channel": self.channel,
+            "channel_label": self.channel_label or self.channel,
             "control_median": self.control_median,
             "treated_median": self.treated_median,
             "median_difference": self.median_difference,
