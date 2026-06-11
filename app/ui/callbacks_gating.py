@@ -19,6 +19,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         Output("manage-gate-id", "value"),
         Output("gate-stack-cards", "children"),
         Input("add-rectangle-gate", "n_clicks"),
+        Input("add-review-scatter-gate", "n_clicks"),
         Input("add-histogram-gate", "n_clicks"),
         Input("suggest-candidate-gates", "n_clicks"),
         Input("accept-candidate-gates", "n_clicks"),
@@ -56,6 +57,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
     )
     def gate_actions(
         add_clicks,
+        add_review_scatter_clicks,
         add_hist_clicks,
         suggest_clicks,
         accept_clicks,
@@ -115,6 +117,20 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             gate.metadata["event_view"] = "metadata_compensated" if use_compensation else "raw"
             session.gates.append(gate)
             status = f"Added user-defined rectangle gate: {gate.name} ({gate.metadata['event_view']})."
+        elif action == "add-review-scatter-gate":
+            from app.core.compensation import event_view
+            from app.core.gating import review_scatter_gate
+
+            sample = session.selected_sample(sample_id)
+            if sample is None:
+                return no_update, no_update, no_update, "Upload and select a sample before adding a review FSC/SSC gate.", no_update, no_update, no_update
+            use_compensation = _is_compensation_on(compensation_enabled) and sample.compensated_events is not None
+            gate = review_scatter_gate(event_view(sample, use_compensation), sample.channels, uuid4().hex[:8])
+            if gate is None:
+                return no_update, no_update, no_update, "FSC/SSC review gate could not be created; review channel inference first.", no_update, no_update, no_update
+            gate.metadata["event_view"] = "metadata_compensated" if use_compensation else "raw"
+            session.gates.append(gate)
+            status = f"Added editable FSC/SSC review gate: {gate.name}. Review/edit before relying on final statistics."
         elif action == "add-histogram-gate":
             from app.core.gating import histogram_range_gate
 

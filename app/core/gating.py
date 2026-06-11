@@ -94,6 +94,28 @@ def suggest_candidate_gates(events: pd.DataFrame, channels: list[ChannelSummary]
     return suggestions
 
 
+def review_scatter_gate(events: pd.DataFrame, channels: list[ChannelSummary], gate_id: str, name: str = "Main FSC/SSC review gate") -> GateDefinition | None:
+    """Create an enabled central FSC/SSC review gate from robust quantiles.
+
+    This is a convenience gate for faster human review. It is deliberately
+    marked as user-defined/review-needed metadata, not as an automatic
+    biological conclusion.
+    """
+    fsc, ssc = best_scatter_pair(channels)
+    if not fsc or not ssc or fsc not in events or ssc not in events:
+        return None
+    gate = _quantile_rectangle(gate_id, name, events, fsc, ssc, 0.05, 0.95)
+    if gate is None:
+        return None
+    gate.candidate = False
+    gate.user_defined = True
+    gate.enabled = True
+    gate.review_status = "review_needed"
+    gate.metadata.pop("candidate", None)
+    gate.metadata["review_gate_reason"] = "central FSC/SSC quantile gate; review/edit before relying on final statistics"
+    return gate
+
+
 def apply_gate(events: pd.DataFrame, gate: GateDefinition, parent_mask: np.ndarray | None = None) -> np.ndarray:
     """Compute a boolean membership mask for one gate."""
     if not gate.enabled:

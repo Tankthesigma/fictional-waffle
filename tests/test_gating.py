@@ -9,6 +9,7 @@ from app.core.gating import (
     load_gates,
     rectangle_gate,
     rename_gate,
+    review_scatter_gate,
     save_gates,
     suggest_candidate_gates,
     toggle_gate_enabled,
@@ -112,6 +113,32 @@ def test_candidate_gate_suggestions_are_disabled_review_needed_gates():
     assert all("review" in gate.metadata["candidate_reason"] for gate in gates)
     masks = apply_gate_tree(events, gates)
     assert all(not mask.any() for mask in masks.values())
+
+
+def test_review_scatter_gate_creates_enabled_editable_review_gate():
+    events = pd.DataFrame(
+        {
+            "FSC-A": np.linspace(1, 1000, 500),
+            "SSC-A": np.linspace(10, 2000, 500),
+            "FITC-A": np.linspace(100, 500, 500),
+        }
+    )
+    channels = [
+        ChannelSummary(1, "FSC-A", role="fsc-a"),
+        ChannelSummary(2, "SSC-A", role="ssc-a"),
+        ChannelSummary(3, "FITC-A", role="fluorescence"),
+    ]
+
+    gate = review_scatter_gate(events, channels, "quick")
+
+    assert gate is not None
+    assert gate.enabled is True
+    assert gate.candidate is False
+    assert gate.user_defined is True
+    assert gate.review_status == "review_needed"
+    assert gate.channels == ["FSC-A", "SSC-A"]
+    assert gate.bounds["x_min"] > 1
+    assert "review/edit" in gate.metadata["review_gate_reason"]
 
 
 def test_gate_management_helpers_rename_toggle_and_delete():
