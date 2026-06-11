@@ -8,6 +8,7 @@ UPLOAD_ROOT = PROJECT_ROOT / "app_data" / "uploads"
 EXPORT_ROOT = PROJECT_ROOT / "exports"
 GATES_PATH = EXPORT_ROOT / "gates.json"
 PROJECT_PATH = EXPORT_ROOT / "ask-flow-project.json"
+TEMPLATE_PATH = EXPORT_ROOT / "ask-flow-analysis-template.json"
 
 
 def ensure_runtime_dirs() -> None:

@@ -75,6 +75,18 @@ def test_gate_manager_controls_are_rendered():
     assert "delete-gate" in layout_json
 
 
+def test_analysis_template_controls_are_rendered_and_wired():
+    dash_app = create_app()
+    layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
+
+    assert "save-analysis-template" in layout_json
+    assert "Save Analysis Template" in layout_json
+    assert "load-analysis-template" in layout_json
+    assert "Load Analysis Template" in layout_json
+    assert "template-status" in layout_json
+    assert any("template-status.children" in key for key in dash_app.callback_map)
+
+
 def test_compare_summary_container_is_rendered():
     dash_app = create_app()
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
