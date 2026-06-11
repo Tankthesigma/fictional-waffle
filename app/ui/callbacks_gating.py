@@ -199,16 +199,17 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             path = save_project(project, PROJECT_PATH)
             status = f"Saved project JSON to {path}. Raw event matrices are not embedded."
         elif action == "load-project":
-            from app.core.project_store import gates_from_project, load_project
+            from app.core.project_store import apply_project_sample_metadata, gates_from_project, load_project
 
             if PROJECT_PATH.exists():
                 try:
                     project = load_project(PROJECT_PATH)
                     session.gates = gates_from_project(project)
                     session.comparison_rows = list(project.comparison_settings.get("comparison_rows", []))
+                    restored_channels = apply_project_sample_metadata(session.sample_list(), project)
                     status = (
                         f"Loaded project metadata from {PROJECT_PATH}. Restored {len(session.gates)} gate(s); "
-                        "re-upload raw FCS/CSV files if samples are not already loaded."
+                        f"reapplied {restored_channels} channel annotation(s). Re-upload raw FCS/CSV files if samples are not already loaded."
                     )
                 except Exception as exc:
                     status = f"Project file could not be loaded: {exc}"

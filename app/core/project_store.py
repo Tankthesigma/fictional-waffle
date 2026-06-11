@@ -55,6 +55,41 @@ def gates_from_project(project: ProjectState) -> list[GateDefinition]:
     return [GateDefinition.from_dict(payload) for payload in project.gate_definitions]
 
 
+def apply_project_sample_metadata(samples: list[SampleRecord], project: ProjectState) -> int:
+    """Apply saved sample and channel annotations to currently loaded samples.
+
+    Raw event matrices are still loaded from the uploaded FCS/CSV files. This
+    function only restores local project annotations such as panel labels,
+    conditions, replicates, notes, and channel role overrides.
+    """
+    saved = _saved_sample_lookup(project)
+    applied = 0
+    for sample in samples:
+        payload = saved.get(sample.sample_id) or saved.get(sample.filename)
+        if not payload:
+            continue
+        sample.condition = _optional_str(payload.get("condition"))
+        sample.replicate = _optional_str(payload.get("replicate"))
+        sample.control_type = _optional_str(payload.get("control_type"))
+        sample.notes = _optional_str(payload.get("notes"))
+        saved_channels = {
+            str(channel.get("raw_name")): channel
+            for channel in payload.get("channels", [])
+            if isinstance(channel, dict) and channel.get("raw_name")
+        }
+        for channel in sample.channels:
+            channel_payload = saved_channels.get(channel.raw_name)
+            if not channel_payload:
+                continue
+            channel.display_label = _optional_str(channel_payload.get("display_label")) or channel.display_label
+            channel.marker = _optional_str(channel_payload.get("marker")) or channel.marker
+            channel.antibody = _optional_str(channel_payload.get("antibody")) or channel.antibody
+            channel.fluorochrome = _optional_str(channel_payload.get("fluorochrome")) or channel.fluorochrome
+            channel.role = _optional_str(channel_payload.get("role")) or channel.role
+            applied += 1
+    return applied
+
+
 def _sample_metadata(sample: SampleRecord) -> dict[str, object]:
     return {
         "sample_id": sample.sample_id,
@@ -80,3 +115,22 @@ def _file_reference(sample: SampleRecord) -> dict[str, object]:
         "file_type": sample.file_type,
         "exists": Path(sample.path).exists(),
     }
+
+
+def _saved_sample_lookup(project: ProjectState) -> dict[str, dict[str, object]]:
+    lookup: dict[str, dict[str, object]] = {}
+    for payload in project.sample_metadata:
+        sample_id = payload.get("sample_id")
+        filename = payload.get("filename")
+        if sample_id:
+            lookup[str(sample_id)] = payload
+        if filename:
+            lookup[str(filename)] = payload
+    return lookup
+
+
+def _optional_str(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value)
+    return text if text else None

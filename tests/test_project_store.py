@@ -2,7 +2,7 @@ import pandas as pd
 
 from app.core.channel_inference import summarize_channels
 from app.core.gating import rectangle_gate
-from app.core.project_store import build_project_state, gates_from_project, load_project, save_project
+from app.core.project_store import apply_project_sample_metadata, build_project_state, gates_from_project, load_project, save_project
 from app.models.gate import GateDefinition
 from app.models.project_schema import ProjectState
 from app.models.sample import SampleRecord
@@ -78,3 +78,52 @@ def test_unknown_gate_type_loads_with_warning_for_forward_compatibility():
 
     assert gate.gate_type == "quadrant"
     assert gate.metadata["mask_warning"] == "unsupported gate type: quadrant"
+
+
+def test_project_round_trip_preserves_panel_annotations_and_candidate_state(tmp_path):
+    frame = pd.DataFrame({"FSC-A": [1, 2], "FL1-A": [10, 20]})
+    sample = SampleRecord("s1", "s1.csv", path=tmp_path / "s1.csv", file_type="csv", events=frame)
+    sample.condition = "treated"
+    sample.channels = summarize_channels(frame)
+    sample.channels[1].display_label = "FITC detector"
+    sample.channels[1].marker = "CD3"
+    sample.channels[1].antibody = "UCHT1"
+    sample.channels[1].fluorochrome = "FITC"
+    gate = rectangle_gate("candidate", "candidate main", "FSC-A", "FL1-A", 0, 3, 0, 30)
+    gate.enabled = False
+    gate.candidate = True
+    gate.user_defined = False
+    gate.review_status = "review_needed"
+    gate.metadata["candidate_reason"] = "review before use"
+
+    project = build_project_state([sample], [gate], [])
+    path = save_project(project, tmp_path / "project.json")
+    loaded = load_project(path)
+    restored_gate = gates_from_project(loaded)[0]
+
+    assert loaded.sample_metadata[0]["channels"][1]["marker"] == "CD3"
+    assert restored_gate.candidate is True
+    assert restored_gate.enabled is False
+    assert restored_gate.review_status == "review_needed"
+    assert restored_gate.metadata["candidate_reason"] == "review before use"
+
+
+def test_apply_project_sample_metadata_restores_annotations_to_loaded_samples(tmp_path):
+    saved_frame = pd.DataFrame({"FSC-A": [1, 2], "FL1-A": [10, 20]})
+    saved = SampleRecord("s1", "s1.csv", path=tmp_path / "s1.csv", file_type="csv", events=saved_frame)
+    saved.condition = "control"
+    saved.channels = summarize_channels(saved_frame)
+    saved.channels[1].marker = "CD19"
+    saved.channels[1].fluorochrome = "PE"
+    project = build_project_state([saved], [], [])
+
+    current = SampleRecord("s1", "s1.csv", path=tmp_path / "s1.csv", file_type="csv", events=saved_frame)
+    current.channels = summarize_channels(saved_frame)
+
+    applied = apply_project_sample_metadata([current], project)
+
+    assert applied == 2
+    assert current.condition == "control"
+    assert current.channels[1].marker == "CD19"
+    assert current.channels[1].fluorochrome == "PE"
+    assert current.channels[1].label == "CD19 PE (FL1-A)"
