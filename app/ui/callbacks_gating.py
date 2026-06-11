@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from dash import Input, Output, State, no_update
+from dash import Input, Output, State, html, no_update
 
 from app.core.paths import EXPORT_ROOT, GATES_PATH, PROJECT_PATH
 from app.core.session_store import WorkbenchSession
@@ -17,6 +17,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         Output("gate-status", "children"),
         Output("manage-gate-id", "options"),
         Output("manage-gate-id", "value"),
+        Output("gate-stack-cards", "children"),
         Input("add-rectangle-gate", "n_clicks"),
         Input("add-histogram-gate", "n_clicks"),
         Input("suggest-candidate-gates", "n_clicks"),
@@ -98,7 +99,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             from app.core.gating import rectangle_gate
 
             if not all(value is not None for value in [x_channel, y_channel, x_min, x_max, y_min, y_max]):
-                return no_update, no_update, no_update, "Choose x/y channels and complete all rectangle bounds.", no_update, no_update
+                return no_update, no_update, no_update, "Choose x/y channels and complete all rectangle bounds.", no_update, no_update, no_update
             gate = rectangle_gate(
                 uuid4().hex[:8],
                 gate_name or "User rectangle gate",
@@ -118,7 +119,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             from app.core.gating import histogram_range_gate
 
             if not all(value is not None for value in [hist_channel, hist_min, hist_max]):
-                return no_update, no_update, no_update, "Choose a histogram channel and complete range bounds.", no_update, no_update
+                return no_update, no_update, no_update, "Choose a histogram channel and complete range bounds.", no_update, no_update, no_update
             gate = histogram_range_gate(
                 uuid4().hex[:8],
                 hist_gate_name or "User histogram gate",
@@ -137,7 +138,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
 
             sample = session.selected_sample(sample_id)
             if sample is None:
-                return no_update, no_update, no_update, "Upload and select a sample before suggesting candidate gates.", no_update, no_update
+                return no_update, no_update, no_update, "Upload and select a sample before suggesting candidate gates.", no_update, no_update, no_update
             use_compensation = _is_compensation_on(compensation_enabled) and sample.compensated_events is not None
             current_view = "metadata_compensated" if use_compensation else "raw"
             existing_ids = {gate.gate_id for gate in session.gates}
@@ -270,7 +271,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         stats_columns = _columns_from_rows(stats, ["gate_name", "parent_gate", "channels", "event_count", "percent_total", "percent_parent"])
         options = _gate_options(session.gates)
         selected_gate = manage_gate_id if manage_gate_id in {gate.gate_id for gate in session.gates} else (options[0]["value"] if options else None)
-        return gate_to_table(session.gates), stats, table_columns(stats_columns), status, options, selected_gate
+        return gate_to_table(session.gates), stats, table_columns(stats_columns), status, options, selected_gate, _gate_stack_cards(session.gates, stats)
 
 
 def _columns_from_rows(rows: list[dict[str, object]], preferred: list[str]) -> list[str]:
@@ -288,3 +289,62 @@ def _is_compensation_on(value) -> bool:
 
 def _gate_options(gates):
     return [{"label": f"{gate.name} ({gate.gate_id})", "value": gate.gate_id} for gate in gates]
+
+
+def _gate_stack_cards(gates, stats: list[dict[str, object]]):
+    if not gates:
+        return html.Div("No gates yet. Add or suggest review-needed gates.", className="gate-stack-card empty")
+    stats_by_gate = {row.get("gate_id"): row for row in stats}
+    cards = []
+    for gate in gates:
+        row = stats_by_gate.get(gate.gate_id, {})
+        count = row.get("event_count")
+        percent_total = row.get("percent_total")
+        percent_parent = row.get("percent_parent")
+        warning = gate.metadata.get("mask_warning") or row.get("gate_warning") or ""
+        status = _gate_status_label(gate)
+        children = [
+            html.Div(
+                [
+                    html.Span(status, className="gate-stack-status"),
+                    html.Strong(gate.name),
+                ],
+                className="gate-stack-head",
+            ),
+            html.Small(f"{gate.gate_type} | parent: {gate.parent_id or 'total'} | {', '.join(gate.channels)}"),
+            html.Div(
+                [
+                    html.Span(f"{_format_stat(count)} events"),
+                    html.Span(f"{_format_stat(percent_total)}% total"),
+                    html.Span(f"{_format_stat(percent_parent)}% parent"),
+                ],
+                className="gate-stack-metrics",
+            ),
+        ]
+        if warning:
+            children.append(html.P(warning, className="gate-stack-warning"))
+        cards.append(
+            html.Div(
+                children,
+                className=f"gate-stack-card {'disabled' if not gate.enabled else ''} {'candidate' if gate.candidate else ''}".strip(),
+            )
+        )
+    return cards
+
+
+def _gate_status_label(gate) -> str:
+    if gate.candidate:
+        return "candidate review needed"
+    if not gate.enabled:
+        return "disabled"
+    if gate.review_status and gate.review_status != "accepted":
+        return gate.review_status.replace("_", " ")
+    return "active"
+
+
+def _format_stat(value: object) -> str:
+    if value is None or value == "":
+        return "n/a"
+    if isinstance(value, float):
+        return f"{value:.3g}"
+    return str(value)

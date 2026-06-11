@@ -123,6 +123,7 @@ def workbench_panel():
                     ),
                     html.H2("Gate Tree"),
                     data_table("gate-table", ["gate_id", "name", "type", "parent", "channels", "status", "enabled", "notes"], page_size=6),
+                    html.Div("No gates yet. Add or suggest review-needed gates.", id="gate-stack-cards", className="gate-stack"),
                 ],
                 className="sidebar left-sidebar",
             ),

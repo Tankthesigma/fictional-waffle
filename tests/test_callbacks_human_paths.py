@@ -29,6 +29,7 @@ def test_incomplete_gate_form_returns_status_without_callback_error():
                 {"id": "gate-status", "property": "children"},
                 {"id": "manage-gate-id", "property": "options"},
                 {"id": "manage-gate-id", "property": "value"},
+                {"id": "gate-stack-cards", "property": "children"},
             ],
             "inputs": [
                 {"id": "add-rectangle-gate", "property": "n_clicks", "value": 1},
@@ -92,6 +93,7 @@ def test_incomplete_histogram_gate_form_returns_status_without_callback_error():
                 {"id": "gate-status", "property": "children"},
                 {"id": "manage-gate-id", "property": "options"},
                 {"id": "manage-gate-id", "property": "value"},
+                {"id": "gate-stack-cards", "property": "children"},
             ],
             "inputs": [
                 {"id": "add-rectangle-gate", "property": "n_clicks", "value": 0},

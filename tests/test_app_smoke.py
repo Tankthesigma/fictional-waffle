@@ -58,6 +58,7 @@ def test_gate_manager_controls_are_rendered():
     dash_app = create_app()
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
+    assert "gate-stack-cards" in layout_json
     assert "manage-gate-id" in layout_json
     assert "rename-gate" in layout_json
     assert "toggle-gate" in layout_json
