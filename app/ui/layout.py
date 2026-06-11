@@ -369,7 +369,14 @@ def compare_tab():
 def qc_tab():
     return html.Div(
         [
-            card("QC Dashboard", [html.Div(id="qc-summary-cards", className="metrics-row"), data_table("qc-table", ["sample_id", "severity", "code", "title", "metric_value", "threshold", "suggested_check", "affects", "channel"])]),
+            card(
+                "QC Dashboard",
+                [
+                    html.Div(id="qc-summary-cards", className="metrics-row"),
+                    html.Div(id="qc-review-lanes", className="qc-review-lanes"),
+                    data_table("qc-table", ["sample_id", "severity", "code", "title", "metric_value", "threshold", "suggested_check", "affects", "channel"]),
+                ],
+            ),
             dcc.Graph(id="time-stability-graph"),
         ]
     )
