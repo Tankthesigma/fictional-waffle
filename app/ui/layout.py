@@ -58,6 +58,7 @@ def home_upload_panel():
                     html.P("Use exported FCS files when available. CSV fallback is supported for event-level tables with clear limitations.", className="muted"),
                     upload_box("upload-data", ".fcs or .csv files", multiple=True),
                     upload_box("upload-manifest", "Optional manifest CSV", multiple=False),
+                    html.Button("Clear Project", id="clear-project", n_clicks=0),
                     html.Div(id="upload-status", className="status-box"),
                 ],
                 "upload-card",

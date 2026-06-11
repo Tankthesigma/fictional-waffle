@@ -41,7 +41,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         status = ""
         if action == "add-rectangle-gate":
             if not all(value is not None for value in [x_channel, y_channel, x_min, x_max, y_min, y_max]):
-                return no_update, no_update, "Choose x/y channels and complete all rectangle bounds."
+                return no_update, no_update, no_update, "Choose x/y channels and complete all rectangle bounds."
             gate = rectangle_gate(
                 uuid4().hex[:8],
                 gate_name or "User rectangle gate",
@@ -62,8 +62,11 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             status = f"Saved gates to {GATES_PATH}."
         elif action == "load-gates":
             if GATES_PATH.exists():
-                session.gates = load_gates(GATES_PATH)
-                status = f"Loaded gates from {GATES_PATH}."
+                try:
+                    session.gates = load_gates(GATES_PATH)
+                    status = f"Loaded gates from {GATES_PATH}."
+                except Exception as exc:
+                    status = f"Gate file could not be loaded: {exc}"
             else:
                 status = f"No saved gate file found at {GATES_PATH}."
         sample = session.selected_sample(sample_id)
