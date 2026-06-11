@@ -18,7 +18,7 @@ DEFAULT_VERTEX_MODEL = "gemini-3.5-flash"
 
 @dataclass(slots=True)
 class GeminiAnswer:
-    """Optional Vertex/Gemini response plus status details."""
+    """Optional enhanced assistant response plus status details."""
 
     text: str
     used_vertex: bool
@@ -26,21 +26,20 @@ class GeminiAnswer:
 
 
 def vertex_enabled() -> bool:
-    """Return whether Ask Flow should attempt Vertex/Gemini calls."""
-    value = os.getenv("ASK_FLOW_VERTEX_ENABLED", "").strip().lower()
+    """Return whether Ask Flow should attempt cloud-enhanced assistant calls."""
+    value = (os.getenv("ASK_FLOW_CLOUD_ASSISTANT_ENABLED") or os.getenv("ASK_FLOW_VERTEX_ENABLED", "")).strip().lower()
     return value in {"1", "true", "yes", "on", "auto"}
 
 
 def vertex_status() -> str:
-    """Human-readable Vertex/Gemini runtime status."""
+    """Human-readable assistant runtime status."""
     if not vertex_enabled():
-        return "Vertex Gemini: off. Set ASK_FLOW_VERTEX_ENABLED=1 to enable cloud answers."
+        return "Assistant: local mode. Set ASK_FLOW_CLOUD_ASSISTANT_ENABLED=1 to enable enhanced answers."
     project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT_ID")
     location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
-    model = os.getenv("ASK_FLOW_GEMINI_MODEL", DEFAULT_VERTEX_MODEL)
     if not project:
-        return "Vertex Gemini: enabled, but GOOGLE_CLOUD_PROJECT is not set."
-    return f"Vertex Gemini: enabled ({model}, project {project}, location {location})."
+        return "Assistant: enhanced mode requested, but GOOGLE_CLOUD_PROJECT is not set."
+    return f"Assistant: enhanced mode enabled for project {project}, location {location}."
 
 
 def answer_with_gemini(
@@ -55,20 +54,20 @@ def answer_with_gemini(
     comparison_rows: list[dict[str, object]] | None = None,
     action_messages: list[str] | None = None,
 ) -> GeminiAnswer:
-    """Answer with Vertex/Gemini when explicitly enabled, otherwise return fallback."""
+    """Answer with the optional cloud assistant when enabled, otherwise return fallback."""
     if not vertex_enabled():
         return GeminiAnswer(fallback, used_vertex=False, status=vertex_status())
     try:
         from google import genai
         from google.genai.types import HttpOptions
     except Exception as exc:
-        return GeminiAnswer(fallback, used_vertex=False, status=f"Vertex Gemini unavailable: google-genai is not installed ({exc}).")
+        return GeminiAnswer(fallback, used_vertex=False, status=f"Enhanced assistant unavailable: google-genai is not installed ({exc}).")
 
     project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT_ID")
     location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
-    model = os.getenv("ASK_FLOW_GEMINI_MODEL", DEFAULT_VERTEX_MODEL)
+    model = os.getenv("ASK_FLOW_CLOUD_MODEL") or os.getenv("ASK_FLOW_GEMINI_MODEL", DEFAULT_VERTEX_MODEL)
     if not project:
-        return GeminiAnswer(fallback, used_vertex=False, status="Vertex Gemini unavailable: GOOGLE_CLOUD_PROJECT is not set.")
+        return GeminiAnswer(fallback, used_vertex=False, status="Enhanced assistant unavailable: GOOGLE_CLOUD_PROJECT is not set.")
 
     try:
         client = genai.Client(vertexai=True, project=project, location=location, http_options=HttpOptions(api_version="v1"))
@@ -87,10 +86,10 @@ def answer_with_gemini(
         )
         text = (getattr(response, "text", "") or "").strip()
         if not text:
-            return GeminiAnswer(fallback, used_vertex=False, status=f"Vertex Gemini returned an empty answer from {model}; local answer shown.")
-        return GeminiAnswer(text, used_vertex=True, status=f"Vertex Gemini answered with {model}.")
+            return GeminiAnswer(fallback, used_vertex=False, status="Enhanced assistant returned an empty answer; local answer shown.")
+        return GeminiAnswer(text, used_vertex=True, status="Enhanced assistant answered.")
     except Exception as exc:
-        return GeminiAnswer(fallback, used_vertex=False, status=f"Vertex Gemini unavailable: {exc}. Local answer shown.")
+        return GeminiAnswer(fallback, used_vertex=False, status=f"Enhanced assistant unavailable: {exc}. Local answer shown.")
 
 
 def _prompt(

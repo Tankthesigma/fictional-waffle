@@ -1305,6 +1305,60 @@ button:hover {
   line-height: 1.3;
 }
 
+.analysis-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 10px;
+  margin: 10px 0 14px;
+}
+
+.analysis-plan-card {
+  min-height: 132px;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--accent);
+  border-radius: 8px;
+}
+
+.analysis-plan-card.review {
+  border-top-color: var(--warn);
+  background: #fffbeb;
+}
+
+.analysis-plan-card.waiting {
+  border-top-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.analysis-plan-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.analysis-plan-card strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 14px;
+}
+
+.analysis-plan-card p {
+  margin: 7px 0 5px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.analysis-plan-card small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
 .assistant-answer {
   margin-top: 14px;
   padding: 14px;

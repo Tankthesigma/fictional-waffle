@@ -31,6 +31,8 @@ def answer_question(
     comparison_rows = comparison_rows or []
     if not sample:
         return "Upload or select a sample first. " + FORBIDDEN_NOTICE
+    if any(token in q for token in ("plan", "what next", "next step", "workup", "analyze this", "analysis")):
+        return _analysis_plan_answer(sample, gates, qc_flags, comparison_rows)
     if "fsc" in q or "ssc" in q or "plot" in q:
         x_label = _channel_label(sample, x_channel)
         y_label = _channel_label(sample, y_channel)
@@ -152,6 +154,113 @@ def analysis_briefing(
     ]
 
 
+def analysis_plan(
+    sample: SampleRecord | None,
+    *,
+    gates: list[GateDefinition] | None = None,
+    qc_flags: list[QCFlag] | None = None,
+    comparison_rows: list[dict[str, object]] | None = None,
+) -> list[dict[str, str]]:
+    """Build a state-aware suggested analysis plan."""
+    gates = gates or []
+    qc_flags = qc_flags or []
+    comparison_rows = comparison_rows or []
+    if sample is None:
+        return [
+            {
+                "status": "waiting",
+                "title": "Load Data",
+                "body": "Upload FCS files or load the demo dataset.",
+                "detail": "The assistant needs event-level data before it can suggest analysis steps.",
+            }
+        ]
+
+    plan = [
+        {
+            "status": "ready",
+            "title": "1. Review Acquisition Shape",
+            "body": "Start with FSC/SSC and Time context before fluorescence interpretation.",
+            "detail": f"{sample.event_count:,} events across {sample.channel_count} channels are loaded.",
+        }
+    ]
+    severe_or_warning = [flag for flag in qc_flags if flag.severity in {"severe", "warning"}]
+    if severe_or_warning:
+        top = sorted(severe_or_warning, key=lambda flag: 0 if flag.severity == "severe" else 1)[0]
+        plan.append(
+            {
+                "status": "review",
+                "title": "2. Resolve QC Review Items",
+                "body": f"Inspect {top.title.lower()} before leaning on gates or medians.",
+                "detail": top.suggested_check,
+            }
+        )
+    else:
+        plan.append(
+            {
+                "status": "ready",
+                "title": "2. QC Looks Clear",
+                "body": "No severe or warning QC flags are currently active.",
+                "detail": "Still review histograms and scatter shape manually.",
+            }
+        )
+    accepted = [gate for gate in gates if gate.enabled and not gate.candidate]
+    candidates = [gate for gate in gates if gate.candidate]
+    if not accepted:
+        plan.append(
+            {
+                "status": "waiting",
+                "title": "3. Create A Review Gate",
+                "body": "Add a current-view or rectangle gate, then inspect gate statistics.",
+                "detail": "Candidate gates remain review-needed until accepted or edited.",
+            }
+        )
+    else:
+        plan.append(
+            {
+                "status": "ready",
+                "title": "3. Check Gate Statistics",
+                "body": f"{len(accepted)} enabled gate(s) are ready for counts and fluorescence summaries.",
+                "detail": f"{len(candidates)} candidate gate(s) still need review." if candidates else "No candidate gates are pending.",
+            }
+        )
+    if sample.condition and comparison_rows:
+        plan.append(
+            {
+                "status": "ready",
+                "title": "4. Interpret Batch Differences",
+                "body": "Control-versus-treated rows are available for exploratory review.",
+                "detail": "Use median differences first; fold-change is guarded when values are negative or near zero.",
+            }
+        )
+    elif sample.condition:
+        plan.append(
+            {
+                "status": "waiting",
+                "title": "4. Run Comparison",
+                "body": "Group labels exist; choose control and treated groups in Compare.",
+                "detail": "Stats are descriptive until replicate structure is reviewed.",
+            }
+        )
+    else:
+        plan.append(
+            {
+                "status": "waiting",
+                "title": "4. Add Group Labels",
+                "body": "Upload a manifest or label conditions before comparison.",
+                "detail": "Condition and replicate labels make batch review cleaner.",
+            }
+        )
+    plan.append(
+        {
+            "status": "ready",
+            "title": "5. Export A Clean Report",
+            "body": "Export PDF or PowerPoint after plots, gates, QC, and comparison are reviewed.",
+            "detail": "Reports retain the post-acquisition and expert-review disclaimer.",
+        }
+    )
+    return plan
+
+
 def _qc_answer(flags: list[QCFlag]) -> str:
     if not flags:
         return "No QC flags are currently present."
@@ -164,6 +273,16 @@ def _qc_answer(flags: list[QCFlag]) -> str:
         if items:
             parts.append(f"{severity}: " + "; ".join(f"{flag.code} - {flag.title}" for flag in items[:5]))
     return "QC review summary: " + " | ".join(parts)
+
+
+def _analysis_plan_answer(
+    sample: SampleRecord,
+    gates: list[GateDefinition],
+    qc_flags: list[QCFlag],
+    comparison_rows: list[dict[str, object]],
+) -> str:
+    rows = analysis_plan(sample, gates=gates, qc_flags=qc_flags, comparison_rows=comparison_rows)
+    return "Suggested analysis plan:\n" + "\n".join(f"{row['title']}: {row['body']} {row['detail']}" for row in rows)
 
 
 def _channel_label(sample: SampleRecord, raw_name: str | None) -> str:

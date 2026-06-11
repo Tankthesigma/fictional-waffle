@@ -8,6 +8,7 @@ from app.core.session_store import WorkbenchSession
 def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
     @app.callback(
         Output("ask-flow-briefing", "children"),
+        Output("ask-flow-plan", "children"),
         Output("ask-flow-agent-status", "children"),
         Input("selected-sample-store", "data"),
         Input("x-channel", "value"),
@@ -16,7 +17,7 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
         Input("comparison-table", "data"),
     )
     def update_briefing(sample_id, x_channel, y_channel, _gate_rows, _comparison_rows):
-        from app.core.ask_flow import analysis_briefing
+        from app.core.ask_flow import analysis_briefing, analysis_plan
         from app.core.vertex_gemini import vertex_status
 
         sample = session.selected_sample(sample_id)
@@ -27,6 +28,14 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
                     sample,
                     x_channel=x_channel,
                     y_channel=y_channel,
+                    gates=session.gates,
+                    qc_flags=flags,
+                    comparison_rows=session.comparison_rows,
+                )
+            ),
+            _plan_cards(
+                analysis_plan(
+                    sample,
                     gates=session.gates,
                     qc_flags=flags,
                     comparison_rows=session.comparison_rows,
@@ -103,6 +112,21 @@ def _briefing_cards(rows: list[dict[str, str]]):
                 html.Small(row["detail"]),
             ],
             className=f"ask-briefing-card {row['status']}",
+        )
+        for row in rows
+    ]
+
+
+def _plan_cards(rows: list[dict[str, str]]):
+    return [
+        html.Div(
+            [
+                html.Span(row["status"]),
+                html.Strong(row["title"]),
+                html.P(row["body"]),
+                html.Small(row["detail"]),
+            ],
+            className=f"analysis-plan-card {row['status']}",
         )
         for row in rows
     ]

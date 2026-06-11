@@ -15,7 +15,7 @@ Ask Flow Workbench is not instrument-control software. It does not connect to, c
 - No `.ncf` parsing.
 - No cloud dashboard or required API integration.
 - No diagnosis or unsupported biological claims.
-- Ask Flow is deterministic and local by default; optional Vertex Gemini answers require explicit environment configuration.
+- Ask Flow is deterministic and local by default; enhanced cloud answers require explicit environment configuration.
 
 ## Why FCS-First
 
@@ -55,17 +55,17 @@ python app/main.py
 
 Open http://127.0.0.1:8050.
 
-Optional Vertex Gemini mode:
+Optional enhanced assistant mode:
 
 ```bash
-export ASK_FLOW_VERTEX_ENABLED=1
-export ASK_FLOW_GEMINI_MODEL=gemini-3.5-flash
+export ASK_FLOW_CLOUD_ASSISTANT_ENABLED=1
+export ASK_FLOW_CLOUD_MODEL=gemini-3.5-flash
 export GOOGLE_CLOUD_PROJECT=your-project-id
 export GOOGLE_CLOUD_LOCATION=global
 python app/main.py
 ```
 
-This uses Google Application Default Credentials on the local machine. No API keys or credentials are stored in the repo. If Vertex is not configured or the call fails, Ask Flow falls back to deterministic local answers.
+This uses Google Application Default Credentials on the local machine. No API keys or credentials are stored in the repo. If enhanced mode is not configured or the call fails, Ask Flow falls back to deterministic local answers.
 
 ## Public Test Data
 
@@ -110,7 +110,7 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 - Rule-based QC dashboard with review-needed language.
 - Batch tables, event count chart, median fluorescence table, and exploratory control-vs-treated comparison.
 - Local CSV, PDF, and PowerPoint report export with representative plot images when static export is available.
-- Ask Flow assistant panel with deterministic local answers, safe UI actions, and optional Vertex Gemini responses.
+- Ask Flow assistant panel with deterministic local answers, state-aware analysis plans, safe UI actions, and optional enhanced responses.
 
 ## Limitations
 

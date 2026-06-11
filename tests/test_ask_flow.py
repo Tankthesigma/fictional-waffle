@@ -1,6 +1,6 @@
 import pandas as pd
 
-from app.core.ask_flow import analysis_briefing, answer_question
+from app.core.ask_flow import analysis_briefing, analysis_plan, answer_question
 from app.core.compensation import parse_spillover
 from app.models.channel import ChannelSummary
 from app.models.gate import GateDefinition
@@ -146,3 +146,36 @@ def test_analysis_briefing_empty_state_is_waiting():
             "detail": "Ask Flow stays local and deterministic.",
         }
     ]
+
+
+def test_analysis_plan_guides_next_steps_without_overclaiming():
+    sample = SampleRecord(
+        "s1",
+        "s1.csv",
+        path="unused.csv",
+        file_type="csv",
+        events=pd.DataFrame({"FSC-A": [1, 2], "SSC-A": [1, 2], "FL1-A": [10, 20]}),
+        channels=[ChannelSummary(1, "FSC-A", role="fsc-a"), ChannelSummary(2, "SSC-A", role="ssc-a"), ChannelSummary(3, "FL1-A", role="fluorescence")],
+    )
+    flag = QCFlag(
+        sample_id="s1",
+        severity="warning",
+        code="POSSIBLE_HIGH_CLIPPING",
+        title="Possible high-end clipping",
+        explanation="review distribution",
+        metric_value=2.0,
+        threshold=1.0,
+        suggested_check="Inspect histogram",
+        affects=["plotting"],
+        channel="FL1-A",
+    )
+
+    plan = analysis_plan(sample, qc_flags=[flag])
+    answer = answer_question("plan the analysis", sample, qc_flags=[flag])
+    text = " ".join(f"{row['title']} {row['body']} {row['detail']}" for row in plan)
+
+    assert "Review Acquisition Shape" in text
+    assert "Resolve QC Review Items" in text
+    assert "Create A Review Gate" in text
+    assert "Add Group Labels" in text
+    assert "Suggested analysis plan" in answer

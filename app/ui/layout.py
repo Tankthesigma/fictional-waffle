@@ -489,12 +489,14 @@ def ask_flow_tab():
             card(
                 "Ask Flow",
                 [
-                    html.P("Local by default. Optional Vertex Gemini answers use your machine's Google Cloud credentials when enabled; no keys are stored in the app.", className="muted"),
+                    html.P("Analysis assistant for the current workspace. It can explain results, suggest next steps, and apply safe plot actions.", className="muted"),
                     html.Div(id="ask-flow-agent-status", className="status-box small"),
                     html.Div(id="ask-flow-briefing", className="ask-briefing"),
+                    html.H3("Suggested Analysis Plan"),
+                    html.Div(id="ask-flow-plan", className="analysis-plan-grid"),
                     dcc.Textarea(
                         id="ask-flow-question",
-                        value="Summarize the QC flags.",
+                        value="Plan the analysis for this sample.",
                         placeholder="Ask anything about the current analysis, or try: plot FL1-A vs SSC-A as density with arcsinh; histogram FITC; show 100000 events.",
                         className="ask-input",
                     ),
