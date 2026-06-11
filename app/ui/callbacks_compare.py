@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from dash import Input, Output, State
 
-from app.core.compare import batch_table, compare_control_treated, fluorescence_median_table
-from app.core.export_tables import export_rows_csv
 from app.core.paths import EXPORT_ROOT
 from app.core.session_store import WorkbenchSession
 from app.ui.components import table_columns
@@ -25,6 +23,8 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
     )
     def update_compare(_sample_ids, _n_clicks, _export_clicks, compensation_enabled, control_group, treated_group):
         from dash import callback_context
+        from app.core.compare import batch_table, compare_control_treated, fluorescence_median_table
+        from app.core.export_tables import export_rows_csv
 
         action = callback_context.triggered[0]["prop_id"].split(".")[0] if callback_context.triggered else ""
         samples = session.sample_list()

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dash import Input, Output, State
 
-from app.core.channel_inference import best_scatter_pair
 from app.core.session_store import WorkbenchSession
 
 
@@ -22,6 +21,8 @@ def register_sample_callbacks(app, session: WorkbenchSession) -> None:
         State("sample-table", "data"),
     )
     def select_sample(dropdown_value, selected_rows, sample_table_data):
+        from app.core.channel_inference import best_scatter_pair
+
         selected = dropdown_value
         if selected_rows and sample_table_data:
             selected = sample_table_data[selected_rows[0]].get("sample_id")

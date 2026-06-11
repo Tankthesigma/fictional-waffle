@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from dash import Input, Output
 
-from app.core.compensation import compensation_status
-from app.core.plotting import event_count_chart, histogram_figure, scatter_figure, time_stability_figure
 from app.core.session_store import WorkbenchSession
 
 
@@ -21,6 +19,8 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
         Input("gate-table", "data"),
     )
     def update_scatter(sample_id, x_channel, y_channel, plot_mode, transform, cofactor, max_events, compensation_enabled, _gate_rows):
+        from app.core.plotting import scatter_figure
+
         sample = session.selected_sample(sample_id)
         return scatter_figure(
             sample,
@@ -43,6 +43,8 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
         Input("compensation-enabled", "value"),
     )
     def update_histogram(channel, transform, cofactor, max_events, compensation_enabled):
+        from app.core.plotting import histogram_figure
+
         return histogram_figure(
             session.sample_list(),
             channel,
@@ -54,14 +56,20 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
 
     @app.callback(Output("event-count-chart", "figure"), Input("sample-ids-store", "data"))
     def update_event_counts(_sample_ids):
+        from app.core.plotting import event_count_chart
+
         return event_count_chart(session.sample_list())
 
     @app.callback(Output("time-stability-graph", "figure"), Input("selected-sample-store", "data"))
     def update_time_stability(sample_id):
+        from app.core.plotting import time_stability_figure
+
         return time_stability_figure(session.selected_sample(sample_id))
 
     @app.callback(Output("compensation-status", "children"), Input("selected-sample-store", "data"), Input("compensation-enabled", "value"))
     def update_compensation_status(sample_id, compensation_enabled):
+        from app.core.compensation import compensation_status
+
         sample = session.selected_sample(sample_id)
         if not sample:
             return "Upload a sample to inspect compensation metadata."

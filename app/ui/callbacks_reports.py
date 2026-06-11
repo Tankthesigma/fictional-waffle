@@ -5,14 +5,8 @@ from pathlib import Path
 
 from dash import Input, Output, State
 
-from app.core.compensation import event_view
-from app.core.gating import apply_gate_tree
 from app.core.paths import EXPORT_ROOT
-from app.core.plotting import histogram_figure, scatter_figure
-from app.core.report_pdf import export_pdf_report
-from app.core.report_pptx import export_pptx_report
 from app.core.session_store import WorkbenchSession
-from app.core.stats import gate_statistics
 
 
 def register_report_callbacks(app, session: WorkbenchSession) -> None:
@@ -45,12 +39,18 @@ def register_report_callbacks(app, session: WorkbenchSession) -> None:
         max_events,
     ):
         from dash import callback_context
+        from app.core.report_pdf import export_pdf_report
+        from app.core.report_pptx import export_pptx_report
 
         action = callback_context.triggered[0]["prop_id"].split(".")[0] if callback_context.triggered else ""
         sample = session.selected_sample(selected_sample)
         samples = session.sample_list()
         gate_stats = []
         if sample:
+            from app.core.compensation import event_view
+            from app.core.gating import apply_gate_tree
+            from app.core.stats import gate_statistics
+
             use_compensation = isinstance(compensation_enabled, list) and "on" in compensation_enabled
             events = event_view(sample, use_compensation)
             current_view = "metadata_compensated" if use_compensation and sample.compensated_events is not None else "raw"
@@ -94,6 +94,8 @@ def _export_report_figures(
     gates,
     use_compensation: bool,
 ) -> list[Path]:
+    from app.core.plotting import histogram_figure, scatter_figure
+
     if sample is None:
         return []
     asset_dir = EXPORT_ROOT / f"report-assets-{stamp}"

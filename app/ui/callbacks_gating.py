@@ -4,13 +4,8 @@ from uuid import uuid4
 
 from dash import Input, Output, State, no_update
 
-from app.core.compensation import event_view
-from app.core.export_tables import export_rows_csv
-from app.core.gating import gate_to_table, histogram_range_gate, load_gates, rectangle_gate, save_gates
 from app.core.paths import EXPORT_ROOT, GATES_PATH, PROJECT_PATH
-from app.core.project_store import build_project_state, gates_from_project, load_project, save_project
 from app.core.session_store import WorkbenchSession
-from app.core.stats import gate_statistics
 from app.ui.components import table_columns
 
 
@@ -77,10 +72,13 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         compensation_enabled,
     ):
         from dash import callback_context
+        from app.core.gating import gate_to_table
 
         action = callback_context.triggered[0]["prop_id"].split(".")[0] if callback_context.triggered else ""
         status = ""
         if action == "add-rectangle-gate":
+            from app.core.gating import rectangle_gate
+
             if not all(value is not None for value in [x_channel, y_channel, x_min, x_max, y_min, y_max]):
                 return no_update, no_update, no_update, "Choose x/y channels and complete all rectangle bounds."
             gate = rectangle_gate(
@@ -99,6 +97,8 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             session.gates.append(gate)
             status = f"Added user-defined rectangle gate: {gate.name} ({gate.metadata['event_view']})."
         elif action == "add-histogram-gate":
+            from app.core.gating import histogram_range_gate
+
             if not all(value is not None for value in [hist_channel, hist_min, hist_max]):
                 return no_update, no_update, no_update, "Choose a histogram channel and complete range bounds."
             gate = histogram_range_gate(
@@ -114,9 +114,13 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             session.gates.append(gate)
             status = f"Added user-defined histogram range gate: {gate.name} ({gate.metadata['event_view']})."
         elif action == "save-gates":
+            from app.core.gating import save_gates
+
             save_gates(session.gates, GATES_PATH)
             status = f"Saved gates to {GATES_PATH}."
         elif action == "load-gates":
+            from app.core.gating import load_gates
+
             if GATES_PATH.exists():
                 try:
                     session.gates = load_gates(GATES_PATH)
@@ -126,6 +130,8 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             else:
                 status = f"No saved gate file found at {GATES_PATH}."
         elif action == "save-project":
+            from app.core.project_store import build_project_state, save_project
+
             project = build_project_state(
                 session.sample_list(),
                 session.gates,
@@ -149,6 +155,8 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             path = save_project(project, PROJECT_PATH)
             status = f"Saved project JSON to {path}. Raw event matrices are not embedded."
         elif action == "load-project":
+            from app.core.project_store import gates_from_project, load_project
+
             if PROJECT_PATH.exists():
                 try:
                     project = load_project(PROJECT_PATH)
@@ -165,7 +173,9 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         sample = session.selected_sample(sample_id)
         stats = []
         if sample:
+            from app.core.compensation import event_view
             from app.core.gating import apply_gate_tree
+            from app.core.stats import gate_statistics
 
             events = event_view(sample, _is_compensation_on(compensation_enabled))
             compatible_gates = [
@@ -177,6 +187,8 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             masks = apply_gate_tree(events, compatible_gates)
             stats = gate_statistics(events, compatible_gates, masks, sample.fluorescence_channels)
         if action == "export-gate-stats":
+            from app.core.export_tables import export_rows_csv
+
             if stats:
                 path = export_rows_csv(stats, EXPORT_ROOT / "gate-statistics.csv")
                 status = f"Exported gate statistics CSV to {path}."

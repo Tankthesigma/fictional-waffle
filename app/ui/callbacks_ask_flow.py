@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dash import Input, Output, State
 
-from app.core.ask_flow import answer_question
 from app.core.session_store import WorkbenchSession
 
 
@@ -17,6 +16,8 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
         prevent_initial_call=True,
     )
     def ask_flow(_clicks, question, sample_id, x_channel, y_channel):
+        from app.core.ask_flow import answer_question
+
         sample = session.selected_sample(sample_id)
         flags = session.qc_flags.get(sample.sample_id, []) if sample else []
         return answer_question(

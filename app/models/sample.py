@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
-
-import pandas as pd
+from typing import TYPE_CHECKING, Any
 
 from app.models.channel import ChannelSummary
-from app.core.compensation import SpilloverInfo
+
+if TYPE_CHECKING:
+    import pandas as pd
+
+    from app.core.compensation import SpilloverInfo
 
 
 @dataclass(slots=True)

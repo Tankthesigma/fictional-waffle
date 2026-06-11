@@ -6,10 +6,7 @@ from uuid import uuid4
 
 from dash import Input, Output, State, callback_context, html, no_update
 
-from app.core.csv_loader import apply_manifest, load_csv_file, parse_manifest
-from app.core.fcs_loader import load_fcs_file
 from app.core.paths import UPLOAD_ROOT
-from app.core.qc import qc_summary, run_batch_qc
 from app.core.session_store import WorkbenchSession
 
 
@@ -31,6 +28,10 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
         prevent_initial_call=True,
     )
     def handle_upload(clear_clicks, contents, filenames, manifest_contents, manifest_filename):
+        from app.core.csv_loader import apply_manifest, load_csv_file, parse_manifest
+        from app.core.fcs_loader import load_fcs_file
+        from app.core.qc import qc_summary, run_batch_qc
+
         action = callback_context.triggered[0]["prop_id"].split(".")[0] if callback_context.triggered else ""
         if action == "clear-project":
             session.samples.clear()
