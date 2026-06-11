@@ -81,8 +81,10 @@ def test_compare_summary_container_is_rendered():
     assert "Select control group" in layout_json
     assert "Select treated group" in layout_json
     assert "compare-summary-cards" in layout_json
+    assert "compare-insights" in layout_json
     assert "comparison-delta-chart" in layout_json
     assert any("comparison-delta-chart.figure" in key for key in dash_app.callback_map)
+    assert any("compare-insights.children" in key for key in dash_app.callback_map)
     assert any("control-group.options" in key for key in dash_app.callback_map)
 
 

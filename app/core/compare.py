@@ -131,6 +131,72 @@ def comparison_summary(rows: list[ComparisonResult | dict[str, object]]) -> list
     ]
 
 
+def comparison_insights(
+    rows: list[ComparisonResult | dict[str, object]],
+    control_group: str | None = None,
+    treated_group: str | None = None,
+) -> list[dict[str, str]]:
+    """Create plain-English review notes for exploratory comparison results."""
+    normalized = [_row_dict(row) for row in rows]
+    if not normalized:
+        return [
+            {
+                "severity": "waiting",
+                "title": "Choose Groups",
+                "message": "Select control and treated groups to generate exploratory comparison notes.",
+                "detail": "No statistical or biological interpretation is made automatically.",
+            }
+        ]
+
+    comparable = [row for row in normalized if _number_or_none(row.get("median_difference")) is not None]
+    increases = [row for row in comparable if (_number_or_none(row.get("median_difference")) or 0) > 0]
+    decreases = [row for row in comparable if (_number_or_none(row.get("median_difference")) or 0) < 0]
+    guarded = [row for row in normalized if "fold-change not computed" in str(row.get("notes", ""))]
+    low_replicate = [row for row in normalized if "replicate count is too low" in str(row.get("notes", ""))]
+    strongest = _strongest_absolute_difference(comparable)
+    group_label = _group_label(control_group, treated_group)
+
+    insights = [
+        {
+            "severity": "info",
+            "title": "Comparison Scope",
+            "message": f"{len(normalized)} fluorescence channel row(s) compared{group_label}.",
+            "detail": "Values are descriptive medians; review replicate structure before making claims.",
+        },
+        {
+            "severity": "review" if strongest else "info",
+            "title": "Largest Median Shift",
+            "message": _largest_shift_message(strongest),
+            "detail": "Use marker labels and gates to decide whether this shift is meaningful for the experiment.",
+        },
+        {
+            "severity": "info",
+            "title": "Direction Count",
+            "message": f"{len(increases)} channel(s) higher and {len(decreases)} channel(s) lower in treated medians.",
+            "detail": "Direction is based only on treated median minus control median.",
+        },
+    ]
+    if guarded:
+        insights.append(
+            {
+                "severity": "warning",
+                "title": "Guarded Fold-Changes",
+                "message": f"{len(guarded)} row(s) hide fold-change because medians were negative, non-finite, or near zero.",
+                "detail": "Use median difference for compensated data and review the underlying distributions.",
+            }
+        )
+    if low_replicate:
+        insights.append(
+            {
+                "severity": "warning",
+                "title": "Low Replicate Review",
+                "message": f"{len(low_replicate)} row(s) have too few replicates for inferential statistics.",
+                "detail": "Treat these as screening notes until replicate structure is reviewed.",
+            }
+        )
+    return insights
+
+
 def _sample_medians(samples: list[SampleRecord], channel: str, use_compensation: bool) -> list[float]:
     values: list[float] = []
     for sample in samples:
@@ -209,3 +275,28 @@ def _channel_detail(row: dict[str, object] | None) -> str:
     if not row:
         return "no directional median shift detected"
     return f"{row.get('channel', 'channel')} median difference; exploratory only"
+
+
+def _strongest_absolute_difference(rows: list[dict[str, object]]) -> dict[str, object] | None:
+    candidates = []
+    for row in rows:
+        diff = _number_or_none(row.get("median_difference"))
+        if diff is not None:
+            candidates.append((abs(diff), row))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: item[0])[1]
+
+
+def _largest_shift_message(row: dict[str, object] | None) -> str:
+    if not row:
+        return "No finite median shifts were available for review."
+    diff = _number_or_none(row.get("median_difference"))
+    direction = "higher" if diff is not None and diff > 0 else "lower"
+    return f"{row.get('channel', 'channel')} is {direction} in treated medians by {_difference_label(row)}."
+
+
+def _group_label(control_group: str | None, treated_group: str | None) -> str:
+    if control_group and treated_group:
+        return f" between {control_group} and {treated_group}"
+    return ""

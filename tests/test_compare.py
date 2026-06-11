@@ -3,7 +3,7 @@ import math
 import pandas as pd
 
 from app.core.channel_inference import summarize_channels
-from app.core.compare import compare_control_treated, comparison_summary, fluorescence_median_table
+from app.core.compare import compare_control_treated, comparison_insights, comparison_summary, fluorescence_median_table
 from app.core.plotting import comparison_delta_chart
 from app.models.sample import SampleRecord
 from app.ui.callbacks_compare import _condition_groups, _default_groups
@@ -82,6 +82,51 @@ def test_comparison_summary_highlights_direction_and_guardrails():
     assert summary[2]["value"] == "-4"
     assert summary[3]["value"] == 1
     assert summary[4]["value"] == 1
+
+
+def test_comparison_insights_describe_shifts_and_guardrails_without_overclaiming():
+    rows = [
+        {
+            "channel": "FITC-A",
+            "median_difference": 15.0,
+            "notes": "exploratory only",
+        },
+        {
+            "channel": "PE-A",
+            "median_difference": -4.0,
+            "notes": "exploratory only; fold-change not computed for negative or near-zero medians; use median difference",
+        },
+        {
+            "channel": "APC-A",
+            "median_difference": 1.0,
+            "notes": "exploratory only; replicate count is too low for inferential statistics",
+        },
+    ]
+
+    insights = comparison_insights(rows, "control", "treated")
+    text = " ".join(f"{item['title']} {item['message']} {item['detail']}" for item in insights)
+
+    assert insights[0]["title"] == "Comparison Scope"
+    assert "between control and treated" in insights[0]["message"]
+    assert "FITC-A is higher in treated medians by +15" in text
+    assert "2 channel(s) higher and 1 channel(s) lower" in text
+    assert any(item["severity"] == "warning" and item["title"] == "Guarded Fold-Changes" for item in insights)
+    assert any(item["severity"] == "warning" and item["title"] == "Low Replicate Review" for item in insights)
+    assert "significant" not in text.lower()
+    assert "diagnos" not in text.lower()
+
+
+def test_comparison_insights_empty_state_is_waiting():
+    insights = comparison_insights([])
+
+    assert insights == [
+        {
+            "severity": "waiting",
+            "title": "Choose Groups",
+            "message": "Select control and treated groups to generate exploratory comparison notes.",
+            "detail": "No statistical or biological interpretation is made automatically.",
+        }
+    ]
 
 
 def test_comparison_delta_chart_plots_directional_median_shifts():

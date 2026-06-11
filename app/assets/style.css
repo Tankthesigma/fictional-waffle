@@ -634,6 +634,65 @@ body {
   margin: 12px 0;
 }
 
+.compare-insights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.compare-insight {
+  min-height: 118px;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-left: 4px solid #0ea5e9;
+  border-radius: 8px;
+}
+
+.compare-insight.review {
+  border-left-color: var(--accent);
+  background: #f0fdfa;
+}
+
+.compare-insight.warning {
+  border-left-color: var(--warn);
+  background: #fffbeb;
+}
+
+.compare-insight.waiting {
+  border-left-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.compare-insight span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.compare-insight strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.compare-insight p {
+  margin: 7px 0 5px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.compare-insight small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
 .compare-metric {
   min-width: 168px;
   max-width: 230px;

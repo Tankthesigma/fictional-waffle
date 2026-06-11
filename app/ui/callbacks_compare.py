@@ -28,6 +28,7 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
         Output("comparison-table", "data"),
         Output("compare-status", "children"),
         Output("compare-summary-cards", "children"),
+        Output("compare-insights", "children"),
         Output("comparison-delta-chart", "figure"),
         Input("sample-ids-store", "data"),
         Input("compare-button", "n_clicks"),
@@ -38,7 +39,7 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
     )
     def update_compare(_sample_ids, _n_clicks, _export_clicks, compensation_enabled, control_group, treated_group):
         from dash import callback_context
-        from app.core.compare import batch_table, compare_control_treated, comparison_summary, fluorescence_median_table
+        from app.core.compare import batch_table, compare_control_treated, comparison_insights, comparison_summary, fluorescence_median_table
         from app.core.export_tables import export_rows_csv
         from app.core.plotting import comparison_delta_chart
 
@@ -68,6 +69,7 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
             comparison_rows,
             status,
             _summary_cards(comparison_summary(comparison_rows)),
+            _insight_cards(comparison_insights(comparison_rows, control_group, treated_group)),
             comparison_delta_chart(comparison_rows),
         )
 
@@ -92,6 +94,21 @@ def _summary_cards(rows: list[dict[str, object]]):
                 html.Small(str(row["detail"])),
             ],
             className=f"metric compare-metric {row.get('tone', '')}".strip(),
+        )
+        for row in rows
+    ]
+
+
+def _insight_cards(rows: list[dict[str, str]]):
+    return [
+        html.Div(
+            [
+                html.Span(row["severity"]),
+                html.Strong(row["title"]),
+                html.P(row["message"]),
+                html.Small(row["detail"]),
+            ],
+            className=f"compare-insight {row['severity']}",
         )
         for row in rows
     ]
