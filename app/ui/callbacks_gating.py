@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-from pathlib import Path
 from uuid import uuid4
 
 from dash import Input, Output, State, no_update
 
 from app.core.compensation import event_view
 from app.core.gating import gate_to_table, load_gates, rectangle_gate, save_gates
+from app.core.paths import GATES_PATH
 from app.core.session_store import WorkbenchSession
 from app.core.stats import gate_statistics
 from app.ui.components import table_columns
-
-GATES_PATH = Path("exports/gates.json")
 
 
 def register_gating_callbacks(app, session: WorkbenchSession) -> None:

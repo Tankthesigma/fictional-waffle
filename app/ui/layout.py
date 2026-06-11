@@ -126,6 +126,17 @@ def workbench_panel():
                     dcc.Dropdown(id="x-channel"),
                     html.Label("Y channel"),
                     dcc.Dropdown(id="y-channel"),
+                    html.Label("Plot mode"),
+                    dcc.Dropdown(
+                        id="plot-mode",
+                        value="scatter",
+                        clearable=False,
+                        options=[
+                            {"label": "Dot plot", "value": "scatter"},
+                            {"label": "Density plot", "value": "density"},
+                            {"label": "Contour plot", "value": "contour"},
+                        ],
+                    ),
                     html.Label("Histogram channel"),
                     dcc.Dropdown(id="hist-channel"),
                     html.Label("Transform"),

@@ -13,18 +13,20 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
         Input("selected-sample-store", "data"),
         Input("x-channel", "value"),
         Input("y-channel", "value"),
+        Input("plot-mode", "value"),
         Input("transform", "value"),
         Input("cofactor", "value"),
         Input("max-events", "value"),
         Input("compensation-enabled", "value"),
         Input("gate-table", "data"),
     )
-    def update_scatter(sample_id, x_channel, y_channel, transform, cofactor, max_events, compensation_enabled, _gate_rows):
+    def update_scatter(sample_id, x_channel, y_channel, plot_mode, transform, cofactor, max_events, compensation_enabled, _gate_rows):
         sample = session.selected_sample(sample_id)
         return scatter_figure(
             sample,
             x_channel,
             y_channel,
+            plot_mode=plot_mode or "scatter",
             transform=transform or "raw",
             cofactor=cofactor or 150,
             max_events=max_events or 50_000,

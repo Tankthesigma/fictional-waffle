@@ -25,13 +25,14 @@ def scatter_figure(
     x_channel: str | None,
     y_channel: str | None,
     *,
+    plot_mode: str = "scatter",
     transform: str = "raw",
     cofactor: float = 150.0,
     max_events: int = 50_000,
     gates: Iterable[GateDefinition] | None = None,
     use_compensation: bool = False,
 ):
-    """Build a Plotly WebGL scatter figure from a display downsample."""
+    """Build a Plotly cytometry scatter/density figure from a display downsample."""
     import plotly.graph_objects as go
 
     if sample is None or not x_channel or not y_channel:
@@ -46,16 +47,48 @@ def scatter_figure(
         y_values = apply_transform(display[y_channel], transform, cofactor=cofactor)
     except Exception as exc:
         return empty_figure(f"{transform} transform could not be displayed: {exc}")
+    x_values, y_values = _finite_xy(x_values, y_values)
+    if len(x_values) == 0:
+        return empty_figure("Selected channels have no finite display values.")
     fig = go.Figure()
-    fig.add_trace(
-        go.Scattergl(
-            x=x_values,
-            y=y_values,
-            mode="markers",
-            marker=dict(size=3, color="#2563eb", opacity=0.38),
-            name=sample.sample_id,
+    normalized_mode = _normalize_plot_mode(plot_mode)
+    if normalized_mode == "density":
+        fig.add_trace(
+            go.Histogram2d(
+                x=x_values,
+                y=y_values,
+                nbinsx=160,
+                nbinsy=160,
+                colorscale="Viridis",
+                colorbar=dict(title="Events/bin"),
+                name=sample.sample_id,
+                hovertemplate=f"{x_channel}: %{{x:.3g}}<br>{y_channel}: %{{y:.3g}}<br>Events: %{{z}}<extra></extra>",
+            )
         )
-    )
+    elif normalized_mode == "contour":
+        fig.add_trace(
+            go.Histogram2dContour(
+                x=x_values,
+                y=y_values,
+                ncontours=18,
+                colorscale="Viridis",
+                contours=dict(coloring="heatmap"),
+                line=dict(width=0.6, color="rgba(15,23,42,0.35)"),
+                colorbar=dict(title="Density"),
+                name=sample.sample_id,
+                hovertemplate=f"{x_channel}: %{{x:.3g}}<br>{y_channel}: %{{y:.3g}}<br>Density: %{{z}}<extra></extra>",
+            )
+        )
+    else:
+        fig.add_trace(
+            go.Scattergl(
+                x=x_values,
+                y=y_values,
+                mode="markers",
+                marker=dict(size=3, color="#2563eb", opacity=0.38),
+                name=sample.sample_id,
+            )
+        )
     for gate in gates or []:
         if not gate.enabled or gate.gate_type != "rectangle" or gate.channels[:2] != [x_channel, y_channel]:
             continue
@@ -70,9 +103,11 @@ def scatter_figure(
         dragmode="drawrect",
         newshape=dict(line_color="#0f766e", fillcolor="rgba(15,118,110,0.08)", opacity=0.8),
         margin=dict(l=50, r=24, t=42, b=50),
-        title=f"{sample.sample_id}: {x_channel} vs {y_channel} ({view_label}, {transform} display)",
+        title=f"{sample.sample_id}: {x_channel} vs {y_channel} ({view_label}, {transform} display, {_plot_mode_label(normalized_mode)})",
         xaxis_title=f"{x_channel} ({transform})",
         yaxis_title=f"{y_channel} ({transform})",
+        hovermode="closest",
+        uirevision=f"{sample.sample_id}:{x_channel}:{y_channel}:{transform}:{normalized_mode}",
     )
     return fig
 
@@ -150,3 +185,29 @@ def _add_rectangle_shape(fig, gate: GateDefinition, transform: str, cofactor: fl
     y0, y1 = apply_transform([bounds["y_min"], bounds["y_max"]], transform, cofactor=cofactor)
     fig.add_shape(type="rect", x0=x0, x1=x1, y0=y0, y1=y1, line=dict(color="#0f766e", width=2), fillcolor="rgba(15,118,110,0.08)")
     fig.add_annotation(x=x1, y=y1, text=gate.name, showarrow=False, bgcolor="rgba(255,255,255,0.8)", font=dict(size=11, color="#0f172a"))
+
+
+def _normalize_plot_mode(plot_mode: str | None) -> str:
+    mode = (plot_mode or "scatter").strip().lower().replace("_", "-")
+    if mode in {"density", "heatmap", "histogram2d", "histogram-2d"}:
+        return "density"
+    if mode in {"contour", "density-contour", "contours"}:
+        return "contour"
+    return "scatter"
+
+
+def _plot_mode_label(plot_mode: str) -> str:
+    if plot_mode == "density":
+        return "density plot"
+    if plot_mode == "contour":
+        return "contour plot"
+    return "dot plot"
+
+
+def _finite_xy(x_values, y_values):
+    import numpy as np
+
+    x_arr = np.asarray(x_values, dtype=float)
+    y_arr = np.asarray(y_values, dtype=float)
+    finite = np.isfinite(x_arr) & np.isfinite(y_arr)
+    return x_arr[finite], y_arr[finite]

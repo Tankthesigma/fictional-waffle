@@ -8,10 +8,9 @@ from dash import Input, Output, State, callback_context, html, no_update
 
 from app.core.csv_loader import apply_manifest, load_csv_file, parse_manifest
 from app.core.fcs_loader import load_fcs_file
+from app.core.paths import UPLOAD_ROOT
 from app.core.qc import qc_summary, run_batch_qc
 from app.core.session_store import WorkbenchSession
-
-UPLOAD_ROOT = Path("app_data/uploads")
 
 
 def register_upload_callbacks(app, session: WorkbenchSession) -> None:

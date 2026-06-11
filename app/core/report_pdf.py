@@ -18,6 +18,7 @@ def export_pdf_report(
     gate_stats: list[dict[str, object]],
     output_path: str | Path,
     title: str = "Ask Flow Workbench Report",
+    figure_paths: list[str | Path] | None = None,
 ) -> Path:
     """Export a concise PDF report using ReportLab when available."""
     target = Path(output_path)
@@ -25,7 +26,7 @@ def export_pdf_report(
     try:
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import getSampleStyleSheet
-        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table
+        from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table
     except Exception:
         target.write_text(_plain_report(samples, qc_flags, gates, gate_stats, title), encoding="utf-8")
         return target
@@ -43,6 +44,12 @@ def export_pdf_report(
     sample_rows = [["Sample ID", "Filename", "Events", "Channels", "Condition"]]
     sample_rows.extend([[s.sample_id, s.filename, s.event_count, s.channel_count, s.condition or ""] for s in samples])
     story.append(Table(sample_rows))
+    figures = _existing_figures(figure_paths)
+    if figures:
+        story.extend([Spacer(1, 12), Paragraph("Representative Plots", styles["Heading2"])])
+        for figure_path in figures:
+            story.append(Image(str(figure_path), width=480, height=300))
+            story.append(Spacer(1, 8))
     story.extend([Spacer(1, 12), Paragraph("QC Summary", styles["Heading2"])])
     qc_rows = [["Sample", "Severity", "Code", "Title"]]
     qc_rows.extend([[f.sample_id, f.severity, f.code, f.title] for f in qc_flags] or [["", "", "", "No QC flags"]])
@@ -71,3 +78,7 @@ def _plain_report(samples: list[SampleRecord], qc_flags: list[QCFlag], gates: li
     lines.extend(f"- {g.name}: {g.gate_type} on {', '.join(g.channels)}" for g in gates)
     lines.append(f"\nGate stat rows: {len(gate_stats)}")
     return "\n".join(lines)
+
+
+def _existing_figures(figure_paths: list[str | Path] | None) -> list[Path]:
+    return [Path(path) for path in figure_paths or [] if Path(path).exists()]

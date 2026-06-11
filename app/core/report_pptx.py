@@ -17,6 +17,7 @@ def export_pptx_report(
     gate_stats: list[dict[str, object]],
     output_path: str | Path,
     title: str = "Ask Flow Workbench Report",
+    figure_paths: list[str | Path] | None = None,
 ) -> Path:
     """Export a PowerPoint report."""
     target = Path(output_path)
@@ -31,8 +32,12 @@ def export_pptx_report(
     _title_slide(prs, title)
     _bullets_slide(prs, "Sample Summary", [f"{s.sample_id}: {s.event_count:,} events, {s.channel_count} channels" for s in samples])
     _bullets_slide(prs, "QC Summary", [f"{f.sample_id} {f.severity}: {f.title}" for f in qc_flags] or ["No QC flags currently present."])
-    _bullets_slide(prs, "Representative FSC/SSC", ["Static figure export can be added with Kaleido; interactive views remain in the app."])
-    _bullets_slide(prs, "Fluorescence Histograms", ["Histogram overlays are generated in the Explore and Compare tabs."])
+    figures = _existing_figures(figure_paths)
+    if figures:
+        for figure_path in figures[:3]:
+            _image_slide(prs, figure_path.stem.replace("-", " ").replace("_", " ").title(), figure_path)
+    else:
+        _bullets_slide(prs, "Representative Plots", ["No static plot images were available for this export."])
     _bullets_slide(prs, "Gate Statistics", [f"{row.get('gate_name')}: {row.get('event_count')} events" for row in gate_stats[:8]] or ["No gate statistics available."])
     _bullets_slide(prs, "Comparison", ["Control-versus-treated tables are exploratory and exported from the Compare tab when groups are selected."])
     _bullets_slide(prs, "Methods and Disclaimer", [f"App version {__version__}", DISCLAIMER])
@@ -55,3 +60,15 @@ def _bullets_slide(prs, title: str, bullets: list[str]) -> None:
         para = body.paragraphs[0] if index == 0 else body.add_paragraph()
         para.text = bullet
         para.level = 0
+
+
+def _image_slide(prs, title: str, image_path: Path) -> None:
+    from pptx.util import Inches
+
+    slide = prs.slides.add_slide(prs.slide_layouts[5])
+    slide.shapes.title.text = title
+    slide.shapes.add_picture(str(image_path), Inches(0.7), Inches(1.25), width=Inches(8.9))
+
+
+def _existing_figures(figure_paths: list[str | Path] | None) -> list[Path]:
+    return [Path(path) for path in figure_paths or [] if Path(path).exists()]

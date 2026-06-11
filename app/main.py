@@ -11,6 +11,7 @@ if __package__ is None or __package__ == "":
 
 from dash import Dash  # noqa: E402
 
+from app.core.paths import ensure_runtime_dirs  # noqa: E402
 from app.core.session_store import WorkbenchSession  # noqa: E402
 from app.ui.callbacks import register_callbacks  # noqa: E402
 from app.ui.layout import build_layout  # noqa: E402
@@ -22,8 +23,7 @@ def create_app() -> Dash:
         import PIL.Image  # noqa: F401
     except Exception:
         pass
-    (PROJECT_ROOT / "exports").mkdir(exist_ok=True)
-    (PROJECT_ROOT / "app_data/uploads").mkdir(parents=True, exist_ok=True)
+    ensure_runtime_dirs()
     dash_app = Dash(__name__, title="Ask Flow Workbench", suppress_callback_exceptions=True)
     dash_app.layout = build_layout()
     register_callbacks(dash_app, WorkbenchSession())
