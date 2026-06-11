@@ -236,6 +236,8 @@ def gates_tab():
                                 [
                                     html.Button("Save Gates JSON", id="save-gates", n_clicks=0),
                                     html.Button("Load Gates JSON", id="load-gates", n_clicks=0),
+                                    html.Button("Save Project JSON", id="save-project", n_clicks=0),
+                                    html.Button("Load Project JSON", id="load-project", n_clicks=0),
                                     html.Div(id="gate-status", className="status-box small"),
                                 ],
                                 className="button-row",

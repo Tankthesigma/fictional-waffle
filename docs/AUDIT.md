@@ -24,6 +24,7 @@ Sources checked:
 - Rule-based QC flags with review-needed language.
 - Batch tables, fluorescence medians, and exploratory control-vs-treated comparison.
 - Gate statistics CSV export, comparison CSV export, and PDF/PowerPoint export with representative plot images when static export is available.
+- Project JSON save/load for metadata, file references, gates, QC, transform settings, comparison settings, and report selections. Raw event matrices are not embedded.
 - Deterministic local Ask Flow summaries.
 
 ## Explicitly Out Of Scope
@@ -41,7 +42,7 @@ ruff check app tests
 python -m compileall -q app tests
 ```
 
-Current audit coverage includes upload error paths, channel inference, transforms, downsampling, compensation parsing/application, QC heuristics, rectangle and histogram range gate membership, gate serialization, table CSV export, project save/load, report export, Dash callback smoke paths, project-rooted runtime paths, and graph stress tests for WebGL dot plots, density plots, contour plots, gate overlays, and histogram overlays.
+Current audit coverage includes upload error paths, channel inference, transforms, downsampling, compensation parsing/application, QC heuristics, rectangle and histogram range gate membership, gate serialization, table CSV export, project save/load without raw event matrices, report export, Dash callback smoke paths, project-rooted runtime paths, and graph stress tests for WebGL dot plots, density plots, contour plots, gate overlays, and histogram overlays.
 
 ## Remaining Gaps To Treat Honestly
 

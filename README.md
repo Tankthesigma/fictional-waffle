@@ -74,7 +74,7 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 5. Apply raw, safe log10, or arcsinh display transforms.
 6. Add user-defined rectangle or histogram range gates and review gate statistics.
 7. Compare batches or control-vs-treated groups using exploratory medians and fold-changes.
-8. Export gate statistics, comparison CSVs, PDF reports, or PowerPoint reports from `exports/`.
+8. Save gates or project JSON locally, then export gate statistics, comparison CSVs, PDF reports, or PowerPoint reports from `exports/`.
 9. Use Ask Flow for local deterministic summaries of plots, QC flags, gates, and comparisons.
 
 ## What It Does
@@ -90,6 +90,7 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 - Raw, safe log10, arcsinh, and optional logicle display transforms.
 - Metadata-driven compensation view toggle for FCS files with usable `$SPILL`/`$SPILLOVER` matrices.
 - Rectangle gates, histogram range gates, gate JSON save/load, parent-ready gate model, and statistics.
+- Project JSON save/load for metadata, file references, gates, QC, transform settings, comparison settings, and report selections.
 - Rule-based QC dashboard with review-needed language.
 - Batch tables, event count chart, median fluorescence table, and exploratory control-vs-treated comparison.
 - Local CSV, PDF, and PowerPoint report export with representative plot images when static export is available.
@@ -116,7 +117,7 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 
 - Very large FCS files depend on local memory and FlowIO parse speed.
 - Logicle support depends on installed FlowUtils/FlowKit behavior.
-- The app currently uses a local in-memory Dash session; restart clears loaded event matrices unless files are re-uploaded.
+- Project JSON intentionally does not store raw event matrices; reload exported FCS/CSV files after restart for event-level analysis.
 
 ## Citation And Inspiration Links
 

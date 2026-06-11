@@ -7,7 +7,8 @@ from dash import Input, Output, State, no_update
 from app.core.compensation import event_view
 from app.core.export_tables import export_rows_csv
 from app.core.gating import gate_to_table, histogram_range_gate, load_gates, rectangle_gate, save_gates
-from app.core.paths import EXPORT_ROOT, GATES_PATH
+from app.core.paths import EXPORT_ROOT, GATES_PATH, PROJECT_PATH
+from app.core.project_store import build_project_state, gates_from_project, load_project, save_project
 from app.core.session_store import WorkbenchSession
 from app.core.stats import gate_statistics
 from app.ui.components import table_columns
@@ -23,11 +24,19 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         Input("add-histogram-gate", "n_clicks"),
         Input("save-gates", "n_clicks"),
         Input("load-gates", "n_clicks"),
+        Input("save-project", "n_clicks"),
+        Input("load-project", "n_clicks"),
         Input("export-gate-stats", "n_clicks"),
         State("selected-sample-store", "data"),
         State("x-channel", "value"),
         State("y-channel", "value"),
         State("hist-channel", "value"),
+        State("plot-mode", "value"),
+        State("transform", "value"),
+        State("cofactor", "value"),
+        State("max-events", "value"),
+        State("control-group", "value"),
+        State("treated-group", "value"),
         State("gate-name", "value"),
         State("gate-x-min", "value"),
         State("gate-x-max", "value"),
@@ -44,11 +53,19 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         add_hist_clicks,
         save_clicks,
         load_clicks,
+        save_project_clicks,
+        load_project_clicks,
         export_clicks,
         sample_id,
         x_channel,
         y_channel,
         hist_channel,
+        plot_mode,
+        transform,
+        cofactor,
+        max_events,
+        control_group,
+        treated_group,
         gate_name,
         x_min,
         x_max,
@@ -108,6 +125,43 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
                     status = f"Gate file could not be loaded: {exc}"
             else:
                 status = f"No saved gate file found at {GATES_PATH}."
+        elif action == "save-project":
+            project = build_project_state(
+                session.sample_list(),
+                session.gates,
+                session.all_qc_flags(),
+                transform_settings={
+                    "x_channel": x_channel,
+                    "y_channel": y_channel,
+                    "hist_channel": hist_channel,
+                    "plot_mode": plot_mode,
+                    "transform": transform,
+                    "cofactor": cofactor,
+                    "max_events": max_events,
+                },
+                comparison_settings={
+                    "control_group": control_group,
+                    "treated_group": treated_group,
+                    "comparison_rows": session.comparison_rows,
+                },
+                report_selections={"selected_sample": sample_id},
+            )
+            path = save_project(project, PROJECT_PATH)
+            status = f"Saved project JSON to {path}. Raw event matrices are not embedded."
+        elif action == "load-project":
+            if PROJECT_PATH.exists():
+                try:
+                    project = load_project(PROJECT_PATH)
+                    session.gates = gates_from_project(project)
+                    session.comparison_rows = list(project.comparison_settings.get("comparison_rows", []))
+                    status = (
+                        f"Loaded project metadata from {PROJECT_PATH}. Restored {len(session.gates)} gate(s); "
+                        "re-upload raw FCS/CSV files if samples are not already loaded."
+                    )
+                except Exception as exc:
+                    status = f"Project file could not be loaded: {exc}"
+            else:
+                status = f"No saved project file found at {PROJECT_PATH}."
         sample = session.selected_sample(sample_id)
         stats = []
         if sample:
