@@ -54,6 +54,8 @@ def test_candidate_gate_controls_are_rendered_with_review_language():
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
     assert "suggest-candidate-gates" in layout_json
+    assert "add-review-current-view-gate" in layout_json
+    assert "Quick Gate Current View" in layout_json
     assert "add-review-scatter-gate" in layout_json
     assert "Add Review FSC/SSC Gate" in layout_json
     assert "accept-candidate-gates" in layout_json

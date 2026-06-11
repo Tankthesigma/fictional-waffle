@@ -116,6 +116,33 @@ def review_scatter_gate(events: pd.DataFrame, channels: list[ChannelSummary], ga
     return gate
 
 
+def review_current_view_gate(
+    events: pd.DataFrame,
+    x_channel: str | None,
+    y_channel: str | None,
+    gate_id: str,
+    name: str = "Current view review gate",
+) -> GateDefinition | None:
+    """Create an enabled editable rectangle gate from the current X/Y view.
+
+    The bounds are robust display-aid quantiles on raw event values. This gate
+    is a workflow accelerator for human review, not an automated biological
+    classification.
+    """
+    if not x_channel or not y_channel or x_channel not in events or y_channel not in events:
+        return None
+    gate = _quantile_rectangle(gate_id, name, events, x_channel, y_channel, 0.05, 0.95)
+    if gate is None:
+        return None
+    gate.candidate = False
+    gate.user_defined = True
+    gate.enabled = True
+    gate.review_status = "review_needed"
+    gate.metadata.pop("candidate", None)
+    gate.metadata["review_gate_reason"] = f"central {x_channel}/{y_channel} quantile gate; review/edit before relying on final statistics"
+    return gate
+
+
 def apply_gate(events: pd.DataFrame, gate: GateDefinition, parent_mask: np.ndarray | None = None) -> np.ndarray:
     """Compute a boolean membership mask for one gate."""
     if not gate.enabled:

@@ -33,6 +33,7 @@ def test_incomplete_gate_form_returns_status_without_callback_error():
             ],
             "inputs": [
                 {"id": "add-rectangle-gate", "property": "n_clicks", "value": 1},
+                {"id": "add-review-current-view-gate", "property": "n_clicks", "value": 0},
                 {"id": "add-review-scatter-gate", "property": "n_clicks", "value": 0},
                 {"id": "add-histogram-gate", "property": "n_clicks", "value": 0},
                 {"id": "suggest-candidate-gates", "property": "n_clicks", "value": 0},
@@ -98,6 +99,7 @@ def test_incomplete_histogram_gate_form_returns_status_without_callback_error():
             ],
             "inputs": [
                 {"id": "add-rectangle-gate", "property": "n_clicks", "value": 0},
+                {"id": "add-review-current-view-gate", "property": "n_clicks", "value": 0},
                 {"id": "add-review-scatter-gate", "property": "n_clicks", "value": 0},
                 {"id": "add-histogram-gate", "property": "n_clicks", "value": 1},
                 {"id": "suggest-candidate-gates", "property": "n_clicks", "value": 0},

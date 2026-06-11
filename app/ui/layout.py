@@ -295,6 +295,7 @@ def gates_tab():
                                     dcc.Input(id="gate-y-min", type="number", placeholder="y min"),
                                     dcc.Input(id="gate-y-max", type="number", placeholder="y max"),
                                     html.Button("Add Rectangle Gate", id="add-rectangle-gate", n_clicks=0, className="primary"),
+                                    html.Button("Quick Gate Current View", id="add-review-current-view-gate", n_clicks=0),
                                     html.Button("Add Review FSC/SSC Gate", id="add-review-scatter-gate", n_clicks=0),
                                     html.Button("Suggest Candidate Gates", id="suggest-candidate-gates", n_clicks=0),
                                     html.Button("Accept Candidates", id="accept-candidate-gates", n_clicks=0),

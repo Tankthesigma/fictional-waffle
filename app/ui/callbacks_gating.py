@@ -19,6 +19,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         Output("manage-gate-id", "value"),
         Output("gate-stack-cards", "children"),
         Input("add-rectangle-gate", "n_clicks"),
+        Input("add-review-current-view-gate", "n_clicks"),
         Input("add-review-scatter-gate", "n_clicks"),
         Input("add-histogram-gate", "n_clicks"),
         Input("suggest-candidate-gates", "n_clicks"),
@@ -57,6 +58,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
     )
     def gate_actions(
         add_clicks,
+        add_review_current_view_clicks,
         add_review_scatter_clicks,
         add_hist_clicks,
         suggest_clicks,
@@ -117,6 +119,20 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             gate.metadata["event_view"] = "metadata_compensated" if use_compensation else "raw"
             session.gates.append(gate)
             status = f"Added user-defined rectangle gate: {gate.name} ({gate.metadata['event_view']})."
+        elif action == "add-review-current-view-gate":
+            from app.core.compensation import event_view
+            from app.core.gating import review_current_view_gate
+
+            sample = session.selected_sample(sample_id)
+            if sample is None:
+                return no_update, no_update, no_update, "Upload and select a sample before adding a current-view review gate.", no_update, no_update, no_update
+            use_compensation = _is_compensation_on(compensation_enabled) and sample.compensated_events is not None
+            gate = review_current_view_gate(event_view(sample, use_compensation), x_channel, y_channel, uuid4().hex[:8])
+            if gate is None:
+                return no_update, no_update, no_update, "Current-view review gate could not be created; choose two numeric channels with enough events.", no_update, no_update, no_update
+            gate.metadata["event_view"] = "metadata_compensated" if use_compensation else "raw"
+            session.gates.append(gate)
+            status = f"Added editable current-view review gate: {gate.name}. Review/edit before relying on final statistics."
         elif action == "add-review-scatter-gate":
             from app.core.compensation import event_view
             from app.core.gating import review_scatter_gate
