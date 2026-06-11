@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 from app.main import create_app
 
@@ -119,6 +120,15 @@ def test_ask_flow_briefing_is_rendered_and_wired():
     assert "ask-flow-briefing" in layout_json
     assert "Local deterministic summaries only" in layout_json
     assert "ask-flow-briefing.children" in dash_app.callback_map
+
+
+def test_workbench_tabs_have_compact_horizontal_css():
+    css = Path("app/assets/style.css").read_text(encoding="utf-8")
+
+    assert ".center-panel .tab-container" in css
+    assert "flex-direction: row !important" in css
+    assert ".center-panel .tab--selected" in css
+    assert "width: auto !important" in css
 
 
 def test_workbench_analysis_cockpit_is_rendered_and_wired():
