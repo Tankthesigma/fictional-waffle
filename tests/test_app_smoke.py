@@ -114,8 +114,14 @@ def test_workbench_analysis_cockpit_is_rendered_and_wired():
     assert "Panel Setup Readiness" in layout_json
     assert "panel-readiness-summary" in layout_json
     assert "panel-readiness-table" in layout_json
+    assert "Analysis preset" in layout_json
+    assert "plot-preset" in layout_json
+    assert "Apply Preset" in layout_json
+    assert "plot-preset-table" in layout_json
     assert any("active-analysis-strip.children" in key for key in dash_app.callback_map)
     assert "analysis-guide.children" in dash_app.callback_map
     assert any("plot-context-bar.children" in key for key in dash_app.callback_map)
     assert any("panel-readiness-summary.children" in key for key in dash_app.callback_map)
     assert "panel-template-download.data" in dash_app.callback_map
+    assert any("plot-preset.options" in key for key in dash_app.callback_map)
+    assert any("plot-preset-status.children" in key for key in dash_app.callback_map)

@@ -1,11 +1,52 @@
 from __future__ import annotations
 
-from dash import Input, Output, html
+from dash import Input, Output, State, html, no_update
 
 from app.core.session_store import WorkbenchSession
 
 
 def register_plot_callbacks(app, session: WorkbenchSession) -> None:
+    @app.callback(
+        Output("plot-preset", "options"),
+        Output("plot-preset", "value"),
+        Output("plot-preset-table", "data"),
+        Input("selected-sample-store", "data"),
+    )
+    def update_plot_presets(sample_id):
+        from app.core.plot_presets import plot_preset_rows, recommended_plot_presets
+
+        sample = session.selected_sample(sample_id)
+        presets = recommended_plot_presets(sample)
+        return [preset.option() for preset in presets], presets[0].preset_id if presets else None, plot_preset_rows(sample)
+
+    @app.callback(
+        Output("x-channel", "value", allow_duplicate=True),
+        Output("y-channel", "value", allow_duplicate=True),
+        Output("hist-channel", "value", allow_duplicate=True),
+        Output("plot-mode", "value"),
+        Output("transform", "value"),
+        Output("plot-preset-status", "children"),
+        Input("apply-plot-preset", "n_clicks"),
+        State("selected-sample-store", "data"),
+        State("plot-preset", "value"),
+        prevent_initial_call=True,
+    )
+    def apply_plot_preset(_clicks, sample_id, preset_id):
+        from app.core.plot_presets import resolve_plot_preset
+
+        sample = session.selected_sample(sample_id)
+        preset = resolve_plot_preset(sample, preset_id)
+        if preset is None:
+            return no_update, no_update, no_update, no_update, no_update, "No compatible plot preset is available for the selected sample."
+        return (
+            preset.x_channel or no_update,
+            preset.y_channel or no_update,
+            preset.hist_channel or no_update,
+            preset.plot_mode,
+            preset.transform,
+            f"Applied {preset.label}: {preset.description}",
+        )
+
     @app.callback(
         Output("plot-context-bar", "children"),
         Input("selected-sample-store", "data"),
