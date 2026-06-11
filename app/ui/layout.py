@@ -105,8 +105,22 @@ def workbench_panel():
         [
             html.Aside(
                 [
-                    html.H2("Samples"),
+                    html.H2("Analysis Queue"),
                     dcc.Dropdown(id="sample-dropdown", options=[], placeholder="Select sample", clearable=False),
+                    html.Div(
+                        [
+                            html.Span("Population workflow"),
+                            html.Ol(
+                                [
+                                    html.Li("Total events"),
+                                    html.Li("Scatter cleanup"),
+                                    html.Li("Fluorescence gate"),
+                                    html.Li("Compare/export"),
+                                ]
+                            ),
+                        ],
+                        className="workflow-card",
+                    ),
                     html.H2("Gate Tree"),
                     data_table("gate-table", ["gate_id", "name", "type", "parent", "channels", "status", "enabled", "notes"], page_size=6),
                 ],
@@ -114,6 +128,7 @@ def workbench_panel():
             ),
             html.Section(
                 [
+                    html.Div(id="active-analysis-strip", className="bench-strip"),
                     dcc.Tabs(
                         id="main-tabs",
                         value="explore",
@@ -132,6 +147,20 @@ def workbench_panel():
             html.Aside(
                 [
                     html.H2("Plot Settings"),
+                    html.Div(
+                        [
+                            html.Span("Display stack", className="panel-kicker"),
+                            html.Div(
+                                [
+                                    html.Span("Raw data preserved"),
+                                    html.Span("Transforms display-only"),
+                                    html.Span("Stats use full matrix"),
+                                ],
+                                className="mode-chips",
+                            ),
+                        ],
+                        className="settings-primer",
+                    ),
                     html.Label("X channel"),
                     dcc.Dropdown(id="x-channel"),
                     html.Label("Y channel"),
