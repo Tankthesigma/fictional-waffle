@@ -6,7 +6,7 @@ import pandas as pd
 
 from app.core.downsample import downsample_events
 from app.core.compensation import event_view
-from app.core.transforms import apply_transform
+from app.core.transforms import apply_transform, log10_clamp_warning
 from app.models.gate import GateDefinition
 from app.models.sample import SampleRecord
 
@@ -42,11 +42,13 @@ def scatter_figure(
     if x_channel not in events or y_channel not in events:
         return empty_figure("Selected channels are not available for this sample.")
     display = downsample_events(events[[x_channel, y_channel]], max_events=max_events)
+    display_transform, transform_warnings = _resolve_display_transform(sample, transform, use_compensation)
+    transform_warnings.extend(_log10_warnings(events, [x_channel, y_channel], display_transform))
     try:
-        x_values = apply_transform(display[x_channel], transform, cofactor=cofactor)
-        y_values = apply_transform(display[y_channel], transform, cofactor=cofactor)
+        x_values = apply_transform(display[x_channel], display_transform, cofactor=cofactor)
+        y_values = apply_transform(display[y_channel], display_transform, cofactor=cofactor)
     except Exception as exc:
-        return empty_figure(f"{transform} transform could not be displayed: {exc}")
+        return empty_figure(f"{display_transform} transform could not be displayed: {exc}")
     x_values, y_values = _finite_xy(x_values, y_values)
     if len(x_values) == 0:
         return empty_figure("Selected channels have no finite display values.")
@@ -96,18 +98,18 @@ def scatter_figure(
         current_view = "metadata_compensated" if use_compensation and getattr(sample, "compensated_events", None) is not None else "raw"
         if gate_view != current_view:
             continue
-        _add_rectangle_shape(fig, gate, transform, cofactor)
+        _add_rectangle_shape(fig, gate, display_transform, cofactor)
+    _add_transform_warnings(fig, transform_warnings)
     fig.update_layout(
         template="plotly_white",
         height=560,
-        dragmode="drawrect",
-        newshape=dict(line_color="#0f766e", fillcolor="rgba(15,118,110,0.08)", opacity=0.8),
+        dragmode="zoom",
         margin=dict(l=50, r=24, t=42, b=50),
-        title=f"{sample.sample_id}: {x_channel} vs {y_channel} ({view_label}, {transform} display, {_plot_mode_label(normalized_mode)})",
-        xaxis_title=f"{x_channel} ({transform})",
-        yaxis_title=f"{y_channel} ({transform})",
+        title=f"{sample.sample_id}: {x_channel} vs {y_channel} ({view_label}, {display_transform} display, {_plot_mode_label(normalized_mode)})",
+        xaxis_title=f"{x_channel} ({display_transform})",
+        yaxis_title=f"{y_channel} ({display_transform})",
         hovermode="closest",
-        uirevision=f"{sample.sample_id}:{x_channel}:{y_channel}:{transform}:{normalized_mode}",
+        uirevision=f"{sample.sample_id}:{x_channel}:{y_channel}:{display_transform}:{normalized_mode}",
     )
     return fig
 
@@ -127,15 +129,21 @@ def histogram_figure(
     if not samples or not channel:
         return empty_figure("Select a fluorescence channel for histogram overlays.")
     fig = go.Figure()
+    warnings: list[str] = []
+    transforms_used: set[str] = set()
     for sample in samples:
         events = event_view(sample, use_compensation)
         if channel not in events:
             continue
+        display_transform, transform_warnings = _resolve_display_transform(sample, transform, use_compensation)
+        transforms_used.add(display_transform)
+        warnings.extend(f"{sample.sample_id}: {warning}" for warning in transform_warnings)
+        warnings.extend(f"{sample.sample_id}: {warning}" for warning in _log10_warnings(events, [channel], display_transform))
         display = downsample_events(pd.DataFrame({channel: events[channel]}), max_events=max_events)
         try:
-            transformed = apply_transform(display[channel], transform, cofactor=cofactor)
+            transformed = apply_transform(display[channel], display_transform, cofactor=cofactor)
         except Exception as exc:
-            return empty_figure(f"{transform} transform could not be displayed: {exc}")
+            return empty_figure(f"{display_transform} transform could not be displayed: {exc}")
         fig.add_trace(
             go.Histogram(
                 x=transformed,
@@ -144,13 +152,15 @@ def histogram_figure(
                 name=sample.sample_id,
             )
         )
+    _add_transform_warnings(fig, warnings)
+    transform_label = next(iter(transforms_used)) if len(transforms_used) == 1 else (transform or "raw")
     fig.update_layout(
         template="plotly_white",
         barmode="overlay",
         height=420,
         margin=dict(l=50, r=24, t=42, b=50),
-        title=f"{channel} histogram overlay ({'metadata compensated events' if use_compensation else 'raw events'}, {transform} display)",
-        xaxis_title=f"{channel} ({transform})",
+        title=f"{channel} histogram overlay ({'metadata compensated events' if use_compensation else 'raw events'}, {transform_label} display)",
+        xaxis_title=f"{channel} ({transform_label})",
         yaxis_title="Density",
     )
     return fig
@@ -202,6 +212,56 @@ def _plot_mode_label(plot_mode: str) -> str:
     if plot_mode == "contour":
         return "contour plot"
     return "dot plot"
+
+
+def _resolve_display_transform(sample: SampleRecord, transform: str, use_compensation: bool) -> tuple[str, list[str]]:
+    requested = transform or "raw"
+    has_compensated_view = use_compensation and getattr(sample, "compensated_events", None) is not None
+    if has_compensated_view and requested in {"log", "log10", "safe_log10"}:
+        return (
+            "arcsinh",
+            [
+                "Log10 display was switched to arcsinh for metadata-compensated values; "
+                "compensated cytometry data can include real negative values."
+            ],
+        )
+    return requested, []
+
+
+def _log10_warnings(events: pd.DataFrame, channels: list[str], transform: str) -> list[str]:
+    if transform not in {"log", "log10", "safe_log10"}:
+        return []
+    warnings: list[str] = []
+    for channel in channels:
+        if channel not in events:
+            continue
+        warning = log10_clamp_warning(channel, events[channel])
+        if warning:
+            warnings.append(warning)
+    return warnings
+
+
+def _add_transform_warnings(fig, warnings: list[str]) -> None:
+    if not warnings:
+        return
+    text = "<br>".join(warnings[:3])
+    if len(warnings) > 3:
+        text += f"<br>+{len(warnings) - 3} more transform warning(s)"
+    fig.add_annotation(
+        text=text,
+        showarrow=False,
+        x=0,
+        y=1.02,
+        xref="paper",
+        yref="paper",
+        xanchor="left",
+        yanchor="bottom",
+        align="left",
+        bgcolor="rgba(255,247,237,0.96)",
+        bordercolor="#fed7aa",
+        borderwidth=1,
+        font=dict(size=11, color="#9a3412"),
+    )
 
 
 def _finite_xy(x_values, y_values):

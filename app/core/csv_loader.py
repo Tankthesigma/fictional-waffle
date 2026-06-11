@@ -21,14 +21,18 @@ def load_csv_file(path: str | Path, sample_id: str | None = None) -> LoadResult:
         data = pd.read_csv(target)
     except Exception as exc:
         return LoadResult(None, [f"Could not parse {target.name}: {exc}"], [])
+    if data.empty:
+        return LoadResult(None, [f"{target.name} contains no event rows."], [])
 
     numeric = data.select_dtypes(include="number")
+    if numeric.empty:
+        return LoadResult(None, [f"{target.name} contains no numeric event columns."], [])
     limitations: list[str] = []
-    if numeric.shape[1] < 2 or len(numeric) < 10:
-        limitations.append("CSV appears to contain summary data, not event-level cytometry data.")
-        events = numeric if not numeric.empty else data.copy()
-    else:
-        events = numeric.copy()
+    if numeric.shape[1] == 1:
+        limitations.append("CSV has one numeric channel; scatter plots and FSC/SSC QC are limited.")
+    if len(numeric) < 10:
+        limitations.append("CSV has fewer than 10 event rows; statistics and QC are limited.")
+    events = numeric.copy()
     record = SampleRecord(
         sample_id=sample_id or _safe_sample_id(target),
         filename=target.name,
@@ -48,6 +52,9 @@ def parse_manifest(path: str | Path) -> dict[str, dict[str, str]]:
     missing = [column for column in ("sample_id", "file_name") if column not in data.columns]
     if missing:
         raise ValueError(f"manifest missing required columns: {', '.join(missing)}")
+    duplicates = sorted(str(name) for name in data.loc[data["file_name"].duplicated(), "file_name"].unique())
+    if duplicates:
+        raise ValueError(f"manifest contains duplicate file_name values: {', '.join(duplicates)}")
     manifest: dict[str, dict[str, str]] = {}
     for _, row in data.iterrows():
         item = {column: str(row[column]) for column in data.columns if column in MANIFEST_COLUMNS}

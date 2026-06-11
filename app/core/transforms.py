@@ -17,6 +17,23 @@ def safe_log10(values: np.ndarray | pd.Series, floor: float = 1.0) -> np.ndarray
     return np.log10(safe)
 
 
+def log10_clamped_fraction(values: np.ndarray | pd.Series, floor: float = 1.0) -> float:
+    """Return the percent of finite values that would be clamped by safe_log10."""
+    arr = np.asarray(values, dtype=float)
+    finite = arr[np.isfinite(arr)]
+    if finite.size == 0:
+        return 0.0
+    return float(np.mean(finite <= floor) * 100.0)
+
+
+def log10_clamp_warning(channel: str, values: np.ndarray | pd.Series, floor: float = 1.0) -> str | None:
+    """Build a plain-English warning when safe_log10 floors real values."""
+    fraction = log10_clamped_fraction(values, floor=floor)
+    if fraction <= 0:
+        return None
+    return f"{channel}: {fraction:.1f}% of finite events were clamped at the log10 floor ({floor:g})."
+
+
 def arcsinh_transform(values: np.ndarray | pd.Series, cofactor: float = 150.0) -> np.ndarray:
     """Apply an arcsinh display transform with a configurable cofactor."""
     if cofactor <= 0:

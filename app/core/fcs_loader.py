@@ -49,7 +49,7 @@ def load_fcs_file(path: str | Path, sample_id: str | None = None) -> LoadResult:
         keywords = _extract_keywords(flow_data)
         channel_names = _extract_channel_names(flow_data, keywords)
         event_count = _extract_event_count(flow_data, keywords)
-        events = _events_to_dataframe(flow_data, event_count, channel_names)
+        events, event_warnings = _events_to_dataframe(flow_data, event_count, channel_names)
         record = SampleRecord(
             sample_id=sample_id or _safe_sample_id(target),
             filename=target.name,
@@ -62,7 +62,7 @@ def load_fcs_file(path: str | Path, sample_id: str | None = None) -> LoadResult:
         record.channels = summarize_channels(record.events, record.keywords)
         record.spillover = parse_spillover(record.keywords)
         record.compensated_events, record.compensation_warnings = apply_spillover_compensation(record.events, record.spillover)
-        return LoadResult(record, [], load_warnings)
+        return LoadResult(record, [], load_warnings + event_warnings)
     except Exception as exc:
         return LoadResult(None, [f"Could not parse {target.name}: {exc}"], [])
 
@@ -97,18 +97,51 @@ def _read_flow_data(flow_data_class: Any, target: Path) -> tuple[Any, list[str]]
         return flow_data, warning_messages
 
 
-def _events_to_dataframe(flow_data: Any, event_count: int, channel_names: list[str]) -> pd.DataFrame:
+def _events_to_dataframe(flow_data: Any, event_count: int, channel_names: list[str]) -> tuple[pd.DataFrame, list[str]]:
     events = getattr(flow_data, "events", None)
     if events is None:
         events = getattr(flow_data, "event_data", None)
     arr = np.asarray(events, dtype=float)
+    warnings: list[str] = []
     if arr.ndim == 1:
-        if event_count <= 0:
-            event_count = int(len(arr) / max(len(channel_names), 1))
-        arr = arr.reshape((event_count, len(channel_names)))
-    if arr.shape[1] != len(channel_names):
-        channel_names = [f"Channel {idx + 1}" for idx in range(arr.shape[1])]
-    return pd.DataFrame(arr, columns=channel_names)
+        channel_count = _infer_channel_count(len(arr), event_count, len(channel_names))
+        if channel_count <= 0 or len(arr) % channel_count != 0:
+            raise ValueError("event data length is not compatible with the parsed channel count")
+        inferred_event_count = len(arr) // channel_count
+        if event_count and inferred_event_count != event_count:
+            warnings.append(
+                f"Parsed event count {event_count} did not match event data; using {inferred_event_count} events from data shape."
+            )
+        arr = arr.reshape((inferred_event_count, channel_count))
+    if arr.ndim != 2:
+        raise ValueError(f"event data must be 1-D or 2-D, got {arr.ndim}-D")
+    names, name_warnings = _align_channel_names(channel_names, arr.shape[1])
+    warnings.extend(name_warnings)
+    return pd.DataFrame(arr, columns=names), warnings
+
+
+def _infer_channel_count(event_values: int, event_count: int, parsed_channels: int) -> int:
+    if event_count > 0 and event_values % event_count == 0:
+        return event_values // event_count
+    if parsed_channels > 0:
+        return parsed_channels
+    return 0
+
+
+def _align_channel_names(channel_names: list[str], observed_count: int) -> tuple[list[str], list[str]]:
+    warnings: list[str] = []
+    names = [str(name) for name in channel_names[:observed_count]]
+    if len(channel_names) > observed_count:
+        warnings.append(
+            f"FCS metadata listed {len(channel_names)} channel name(s), but event data has {observed_count}; extra metadata names were ignored."
+        )
+    if len(names) < observed_count:
+        start = len(names) + 1
+        names.extend(f"Channel {idx}" for idx in range(start, observed_count + 1))
+        warnings.append(
+            f"FCS metadata listed {len(channel_names)} channel name(s), but event data has {observed_count}; missing names were filled generically."
+        )
+    return names, warnings
 
 
 def _extract_keywords(flow_data: Any) -> dict[str, Any]:

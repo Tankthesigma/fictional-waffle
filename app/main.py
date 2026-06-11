@@ -25,6 +25,8 @@ def create_app() -> Dash:
         pass
     ensure_runtime_dirs()
     dash_app = Dash(__name__, title="Ask Flow Workbench", suppress_callback_exceptions=True)
+    max_upload_mb = int(os.environ.get("ASK_FLOW_MAX_UPLOAD_MB", "512"))
+    dash_app.server.config["MAX_CONTENT_LENGTH"] = max_upload_mb * 1024 * 1024
     dash_app.layout = build_layout()
     register_callbacks(dash_app, WorkbenchSession())
     return dash_app

@@ -58,13 +58,31 @@ def infer_channel_role(raw_name: str, display_label: str | None = None) -> str:
     if any(token in norm for token in geometry_tokens) and any(token in norm for token in non_fluor_tokens):
         return "unknown"
 
-    if any(token in norm for token in ("fl", "fitc", "pe", "apc", "percp", "pacific", "alexafluor", "bv", "cy", "af")):
+    if _looks_like_fluorescence(norm):
         return "fluorescence"
     if re.search(r"\d{3,4}[/\-]\d{2,4}", norm) or re.search(r"[a-z]+-\d{3,4}", norm):
         return "fluorescence"
-    if display_label and display_label.strip() and compact not in {"width", "height", "area"}:
+    if display_label and display_label.strip() and _looks_like_detector_name(norm) and compact not in {"width", "height", "area"}:
         return "fluorescence"
     return "unknown"
+
+
+def _looks_like_fluorescence(norm: str) -> bool:
+    tokens = [token for token in re.split(r"[^a-z0-9+]+", norm) if token]
+    exact_tokens = {"fitc", "pe", "apc", "percp", "pacific", "alexafluor", "fl", "cy"}
+    if any(token in exact_tokens for token in tokens):
+        return True
+    prefixes = ("fl", "bv", "af", "cy")
+    return any(re.fullmatch(rf"{prefix}\d+[a-z0-9]*", token) for prefix in prefixes for token in tokens)
+
+
+def _looks_like_detector_name(norm: str) -> bool:
+    compact = norm.replace("-", "")
+    return bool(
+        re.search(r"(^|-)fl\d+", norm)
+        or re.search(r"\d{3,4}[/\-]\d{2,4}", norm)
+        or re.fullmatch(r"[a-z]{1,3}\d{1,2}[-/]?[ahw]?", compact)
+    )
 
 
 def _geometry_role(prefix: str, norm: str) -> str:
@@ -134,26 +152,42 @@ def _best_role(channels: list[ChannelSummary], roles: list[str]) -> ChannelSumma
 
 
 def _lookup_display_label(metadata: dict[str, Any], index: int) -> str | None:
-    for key in (f"p{index}s", f"$p{index}s", f"P{index}S", f"$P{index}S"):
-        if key in metadata and metadata[key]:
-            return str(metadata[key])
+    value = _lookup_pn_value(metadata, index, "s")
+    if value:
+        return str(value)
     return None
 
 
 def _lookup_range(metadata: dict[str, Any], index: int) -> float | None:
-    for key in (f"p{index}r", f"$p{index}r", f"P{index}R", f"$P{index}R"):
-        if key in metadata:
-            try:
-                return float(metadata[key])
-            except (TypeError, ValueError):
-                return None
+    value = _lookup_pn_value(metadata, index, "r")
+    if value is not None:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
     return None
 
 
 def _lookup_channel_metadata(metadata: dict[str, Any], index: int) -> dict[str, Any]:
     channel_meta: dict[str, Any] = {}
-    patterns = (f"p{index}", f"$p{index}", f"P{index}", f"$P{index}")
     for key, value in metadata.items():
-        if any(str(key).startswith(pattern) for pattern in patterns):
+        parsed = _parse_pn_keyword(str(key))
+        if parsed and parsed[0] == index:
             channel_meta[str(key)] = value
     return channel_meta
+
+
+def _lookup_pn_value(metadata: dict[str, Any], index: int, suffix: str) -> Any:
+    suffix = suffix.lower()
+    for key, value in metadata.items():
+        parsed = _parse_pn_keyword(str(key))
+        if parsed and parsed == (index, suffix):
+            return value
+    return None
+
+
+def _parse_pn_keyword(key: str) -> tuple[int, str] | None:
+    match = re.fullmatch(r"\$?p(\d+)([a-z].*)", key.strip(), flags=re.IGNORECASE)
+    if not match:
+        return None
+    return int(match.group(1)), match.group(2).lower()

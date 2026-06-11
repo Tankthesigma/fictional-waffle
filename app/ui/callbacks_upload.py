@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 from pathlib import Path
+import shutil
 from uuid import uuid4
 
 from dash import Input, Output, State, callback_context, html, no_update
@@ -38,6 +39,7 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
             session.gates.clear()
             session.qc_flags.clear()
             session.comparison_rows.clear()
+            _clear_upload_cache()
             return html.Div("Project cleared."), [], [], None, [], "0", "0", "0"
         if not contents:
             return no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
@@ -119,3 +121,13 @@ def _save_upload(content: str, filename: str, directory: Path) -> Path:
     target = directory / safe
     target.write_bytes(data)
     return target
+
+
+def _clear_upload_cache() -> None:
+    if not UPLOAD_ROOT.exists():
+        return
+    for child in UPLOAD_ROOT.iterdir():
+        if child.is_dir():
+            shutil.rmtree(child, ignore_errors=True)
+        elif child.is_file():
+            child.unlink(missing_ok=True)

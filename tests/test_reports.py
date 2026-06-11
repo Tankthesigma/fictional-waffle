@@ -6,6 +6,7 @@ from app.core.gating import rectangle_gate
 from app.core.report_pdf import export_pdf_report
 from app.core.report_pptx import export_pptx_report
 from app.models.sample import SampleRecord
+from app.ui.callbacks_reports import _export_report_figures, _report_status
 
 
 def test_report_exports_create_files(tmp_path):
@@ -24,3 +25,47 @@ def test_report_exports_create_files(tmp_path):
     assert pdf.stat().st_size > 0
     assert pptx.exists()
     assert pptx.stat().st_size > 0
+
+
+def test_plotly_static_image_renderer_available(tmp_path):
+    import plotly.graph_objects as go
+
+    path = tmp_path / "plot.png"
+    fig = go.Figure(data=[go.Scatter(x=[1, 2, 3], y=[1, 4, 9])])
+
+    fig.write_image(path, width=400, height=300, scale=1)
+
+    assert path.exists()
+    assert path.stat().st_size > 0
+
+
+def test_report_figure_export_surfaces_static_image_errors(monkeypatch, tmp_path):
+    frame = pd.DataFrame({"FSC-A": [1, 2, 3], "SSC-A": [1, 4, 9], "FL1-A": [10, 20, 30]})
+    sample = SampleRecord("s1", "s1.csv", path=tmp_path / "s1.csv", file_type="csv", events=frame)
+    sample.channels = summarize_channels(frame)
+
+    def fail_write_image(self, *args, **kwargs):
+        raise RuntimeError("renderer missing")
+
+    monkeypatch.setattr("plotly.basedatatypes.BaseFigure.write_image", fail_write_image)
+
+    result = _export_report_figures(
+        "test-static-error",
+        sample,
+        [sample],
+        "FSC-A",
+        "SSC-A",
+        "FL1-A",
+        "scatter",
+        "raw",
+        150,
+        1_000,
+        [],
+        False,
+    )
+
+    assert result.paths == []
+    assert result.warnings
+    status = _report_status("PDF", tmp_path / "report.pdf", result)
+    assert "Static plot export needs review" in status
+    assert "renderer missing" in status

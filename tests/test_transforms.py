@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from app.core.transforms import arcsinh_transform, safe_log10
+from app.core.transforms import arcsinh_transform, log10_clamp_warning, log10_clamped_fraction, safe_log10
 
 
 def test_safe_log_transform_clamps_non_positive_values():
@@ -11,6 +11,8 @@ def test_safe_log_transform_clamps_non_positive_values():
 
     assert np.all(np.isfinite(transformed))
     assert transformed.tolist() == [0.0, 0.0, 0.0, 2.0]
+    assert log10_clamped_fraction(values) == pytest.approx(75.0)
+    assert "75.0%" in log10_clamp_warning("FL1-A", values)
 
 
 def test_arcsinh_transform_uses_cofactor():

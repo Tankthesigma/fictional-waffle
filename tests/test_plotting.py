@@ -72,7 +72,7 @@ def test_scatter_graph_is_webgl_downsampled_gated_and_does_not_mutate_events():
     assert len(fig.data[0].y) == 8_000
     assert np.all(np.isfinite(fig.data[0].x))
     assert np.all(np.isfinite(fig.data[0].y))
-    assert fig.layout.dragmode == "drawrect"
+    assert fig.layout.dragmode == "zoom"
     assert fig.layout.xaxis.title.text == "FSC-A (arcsinh)"
     assert fig.layout.yaxis.title.text == "SSC-A (arcsinh)"
     assert "demo: FSC-A vs SSC-A" in fig.layout.title.text
@@ -122,7 +122,7 @@ def test_density_plot_mode_uses_2d_bins_and_gate_overlay():
     assert len(fig.data[0].x) == 7_500
     assert len(fig.layout.shapes) == 1
     assert "density plot" in fig.layout.title.text
-    assert fig.layout.dragmode == "drawrect"
+    assert fig.layout.dragmode == "zoom"
 
 
 def test_contour_plot_mode_uses_density_contours():
@@ -136,6 +136,26 @@ def test_contour_plot_mode_uses_density_contours():
     assert len(fig.data[0].x) == 6_000
     assert "contour plot" in fig.layout.title.text
     assert fig.layout.xaxis.title.text == "FSC-A (safe_log10)"
+
+
+def test_log_transform_warns_when_values_are_clamped():
+    sample = _synthetic_flow_sample(n_events=2_000)
+    sample.events.loc[:500, "FL1-A"] = 0
+
+    fig = histogram_figure([sample], "FL1-A", transform="safe_log10", max_events=1_000)
+
+    assert any("clamped at the log10 floor" in annotation.text for annotation in fig.layout.annotations)
+
+
+def test_compensated_log_display_switches_to_arcsinh_with_warning():
+    sample = _synthetic_flow_sample(n_events=2_000)
+    sample.compensated_events = sample.events.assign(**{"FL1-A": sample.events["FL1-A"] - sample.events["FL1-A"].median()})
+
+    fig = histogram_figure([sample], "FL1-A", transform="safe_log10", use_compensation=True, max_events=1_000)
+
+    assert "arcsinh display" in fig.layout.title.text
+    assert fig.layout.xaxis.title.text == "FL1-A (arcsinh)"
+    assert any("switched to arcsinh" in annotation.text for annotation in fig.layout.annotations)
 
 
 def test_unknown_plot_mode_falls_back_to_dot_plot():

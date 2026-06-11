@@ -176,7 +176,7 @@ def workbench_panel():
 def explore_tab():
     return html.Div(
         [
-            dcc.Graph(id="scatter-graph", config={"displayModeBar": True, "modeBarButtonsToAdd": ["drawrect", "eraseshape"]}),
+            dcc.Graph(id="scatter-graph", config={"displayModeBar": True}),
             dcc.Graph(id="histogram-graph", config={"displayModeBar": True}),
             html.Div(
                 [
@@ -311,7 +311,7 @@ def reports_tab():
             card(
                 "Report Builder",
                 [
-                    html.P("Exports are local files written to exports/. Static figures can be expanded with Kaleido in future iterations.", className="muted"),
+                    html.P("Exports are local files written to exports/. Static figures are included when the local Plotly image renderer is available.", className="muted"),
                     html.Button("Export PDF", id="export-pdf", n_clicks=0, className="primary"),
                     html.Button("Export PowerPoint", id="export-pptx", n_clicks=0),
                     html.Div(id="report-status", className="status-box"),
