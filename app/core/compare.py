@@ -85,6 +85,52 @@ def compare_control_treated(
     return results
 
 
+def comparison_summary(rows: list[ComparisonResult | dict[str, object]]) -> list[dict[str, object]]:
+    """Summarize exploratory comparison rows for the UI.
+
+    The summary intentionally describes median differences and guardrails; it
+    does not assign statistical or biological significance.
+    """
+    normalized = [_row_dict(row) for row in rows]
+    comparable = [row for row in normalized if _number_or_none(row.get("median_difference")) is not None]
+    guarded = [row for row in normalized if "fold-change not computed" in str(row.get("notes", ""))]
+    low_replicate = [row for row in normalized if "replicate count is too low" in str(row.get("notes", ""))]
+    strongest_up = _extreme_difference(comparable, direction="up")
+    strongest_down = _extreme_difference(comparable, direction="down")
+    return [
+        {
+            "label": "Compared Channels",
+            "value": len(normalized),
+            "detail": "exploratory fluorescence median rows",
+            "tone": "",
+        },
+        {
+            "label": "Strongest Increase",
+            "value": _difference_label(strongest_up),
+            "detail": _channel_detail(strongest_up),
+            "tone": "positive" if strongest_up else "",
+        },
+        {
+            "label": "Strongest Decrease",
+            "value": _difference_label(strongest_down),
+            "detail": _channel_detail(strongest_down),
+            "tone": "warning" if strongest_down else "",
+        },
+        {
+            "label": "Guarded Fold-Changes",
+            "value": len(guarded),
+            "detail": "hidden for negative, non-finite, or near-zero medians",
+            "tone": "warning" if guarded else "",
+        },
+        {
+            "label": "Low-Replicate Rows",
+            "value": len(low_replicate),
+            "detail": "descriptive only; no inferential claim",
+            "tone": "warning" if low_replicate else "",
+        },
+    ]
+
+
 def _sample_medians(samples: list[SampleRecord], channel: str, use_compensation: bool) -> list[float]:
     values: list[float] = []
     for sample in samples:
@@ -121,3 +167,45 @@ def _guarded_fold_change(control_median: float | None, treated_median: float | N
     if control_median <= epsilon or treated_median < 0:
         return None, "fold-change not computed for negative or near-zero medians; use median difference"
     return treated_median / control_median, None
+
+
+def _row_dict(row: ComparisonResult | dict[str, object]) -> dict[str, object]:
+    return row.to_dict() if isinstance(row, ComparisonResult) else row
+
+
+def _number_or_none(value: object) -> float | None:
+    try:
+        number = float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+    return number if np.isfinite(number) else None
+
+
+def _extreme_difference(rows: list[dict[str, object]], direction: str) -> dict[str, object] | None:
+    candidates = []
+    for row in rows:
+        diff = _number_or_none(row.get("median_difference"))
+        if diff is None:
+            continue
+        if direction == "up" and diff > 0:
+            candidates.append((diff, row))
+        elif direction == "down" and diff < 0:
+            candidates.append((abs(diff), row))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda item: item[0])[1]
+
+
+def _difference_label(row: dict[str, object] | None) -> str:
+    if not row:
+        return "none"
+    diff = _number_or_none(row.get("median_difference"))
+    if diff is None:
+        return "none"
+    return f"{diff:+.3g}"
+
+
+def _channel_detail(row: dict[str, object] | None) -> str:
+    if not row:
+        return "no directional median shift detected"
+    return f"{row.get('channel', 'channel')} median difference; exploratory only"

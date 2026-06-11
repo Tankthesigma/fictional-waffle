@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dash import Input, Output, State
+from dash import Input, Output, State, html
 
 from app.core.paths import EXPORT_ROOT
 from app.core.session_store import WorkbenchSession
@@ -14,6 +14,7 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
         Output("median-table", "columns"),
         Output("comparison-table", "data"),
         Output("compare-status", "children"),
+        Output("compare-summary-cards", "children"),
         Input("sample-ids-store", "data"),
         Input("compare-button", "n_clicks"),
         Input("export-comparison-csv", "n_clicks"),
@@ -23,7 +24,7 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
     )
     def update_compare(_sample_ids, _n_clicks, _export_clicks, compensation_enabled, control_group, treated_group):
         from dash import callback_context
-        from app.core.compare import batch_table, compare_control_treated, fluorescence_median_table
+        from app.core.compare import batch_table, compare_control_treated, comparison_summary, fluorescence_median_table
         from app.core.export_tables import export_rows_csv
 
         action = callback_context.triggered[0]["prop_id"].split(".")[0] if callback_context.triggered else ""
@@ -45,7 +46,7 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
             else:
                 status = "Choose control and treated groups before exporting comparison results."
         median_columns = _columns_from_rows(medians, ["sample_id", "condition"])
-        return batch_table(samples), medians, table_columns(median_columns), comparison_rows, status
+        return batch_table(samples), medians, table_columns(median_columns), comparison_rows, status, _summary_cards(comparison_summary(comparison_rows))
 
 
 def _columns_from_rows(rows: list[dict[str, object]], preferred: list[str]) -> list[str]:
@@ -55,3 +56,19 @@ def _columns_from_rows(rows: list[dict[str, object]], preferred: list[str]) -> l
             if key not in seen:
                 seen.append(key)
     return seen
+
+
+def _summary_cards(rows: list[dict[str, object]]):
+    if not rows:
+        return []
+    return [
+        html.Div(
+            [
+                html.Span(str(row["label"])),
+                html.Strong(str(row["value"])),
+                html.Small(str(row["detail"])),
+            ],
+            className=f"metric compare-metric {row.get('tone', '')}".strip(),
+        )
+        for row in rows
+    ]

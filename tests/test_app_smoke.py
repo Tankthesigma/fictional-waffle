@@ -52,3 +52,10 @@ def test_candidate_gate_controls_are_rendered_with_review_language():
     assert "accept-candidate-gates" in layout_json
     assert "reject-candidate-gates" in layout_json
     assert "Candidate gates are review-needed and disabled until accepted" in layout_json
+
+
+def test_compare_summary_container_is_rendered():
+    dash_app = create_app()
+    layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
+
+    assert "compare-summary-cards" in layout_json

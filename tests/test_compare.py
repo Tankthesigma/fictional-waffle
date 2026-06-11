@@ -3,7 +3,7 @@ import math
 import pandas as pd
 
 from app.core.channel_inference import summarize_channels
-from app.core.compare import compare_control_treated, fluorescence_median_table
+from app.core.compare import compare_control_treated, comparison_summary, fluorescence_median_table
 from app.models.sample import SampleRecord
 
 
@@ -51,3 +51,32 @@ def test_fluorescence_median_table_uses_none_not_nan_for_empty_values():
     row = fluorescence_median_table([sample])[0]
 
     assert row["FITC-A"] is None
+
+
+def test_comparison_summary_highlights_direction_and_guardrails():
+    rows = [
+        {
+            "channel": "FITC-A",
+            "median_difference": 15.0,
+            "notes": "exploratory only",
+        },
+        {
+            "channel": "PE-A",
+            "median_difference": -4.0,
+            "notes": "exploratory only; fold-change not computed for negative or near-zero medians; use median difference",
+        },
+        {
+            "channel": "APC-A",
+            "median_difference": 1.0,
+            "notes": "exploratory only; replicate count is too low for inferential statistics",
+        },
+    ]
+
+    summary = comparison_summary(rows)
+
+    assert summary[0]["value"] == 3
+    assert summary[1]["value"] == "+15"
+    assert summary[1]["detail"] == "FITC-A median difference; exploratory only"
+    assert summary[2]["value"] == "-4"
+    assert summary[3]["value"] == 1
+    assert summary[4]["value"] == 1

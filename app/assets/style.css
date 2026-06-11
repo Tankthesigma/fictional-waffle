@@ -216,12 +216,33 @@ body {
   font-size: 22px;
 }
 
+.metric small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
 .metric.warning strong {
   color: var(--warn);
 }
 
 .metric.severe strong {
   color: var(--severe);
+}
+
+.metric.positive strong {
+  color: var(--accent);
+}
+
+.compare-summary {
+  margin: 12px 0;
+}
+
+.compare-metric {
+  min-width: 168px;
+  max-width: 230px;
 }
 
 .two-col {
