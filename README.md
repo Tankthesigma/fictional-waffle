@@ -72,9 +72,9 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 3. Review the sample table, metadata inspector, channel inspector, and QC cards.
 4. Explore FSC/SSC scatter plots and fluorescence histograms.
 5. Apply raw, safe log10, or arcsinh display transforms.
-6. Add user-defined rectangle gates and review gate statistics.
+6. Add user-defined rectangle or histogram range gates and review gate statistics.
 7. Compare batches or control-vs-treated groups using exploratory medians and fold-changes.
-8. Export PDF or PowerPoint reports from `exports/`.
+8. Export gate statistics, comparison CSVs, PDF reports, or PowerPoint reports from `exports/`.
 9. Use Ask Flow for local deterministic summaries of plots, QC flags, gates, and comparisons.
 
 ## What It Does
@@ -89,10 +89,10 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 - Fluorescence histogram overlays.
 - Raw, safe log10, arcsinh, and optional logicle display transforms.
 - Metadata-driven compensation view toggle for FCS files with usable `$SPILL`/`$SPILLOVER` matrices.
-- Rectangle gates, gate JSON save/load, parent-ready gate model, and statistics.
+- Rectangle gates, histogram range gates, gate JSON save/load, parent-ready gate model, and statistics.
 - Rule-based QC dashboard with review-needed language.
 - Batch tables, event count chart, median fluorescence table, and exploratory control-vs-treated comparison.
-- Local PDF and PowerPoint report export.
+- Local CSV, PDF, and PowerPoint report export with representative plot images when static export is available.
 - Local deterministic Ask Flow assistant panel.
 
 ## Limitations

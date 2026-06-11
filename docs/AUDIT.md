@@ -20,10 +20,10 @@ Sources checked:
 - Dot, density, contour, and histogram plotting.
 - Raw, safe log10, arcsinh, and optional logicle display transforms.
 - Metadata-driven spillover awareness and compensated event view when FCS metadata is usable.
-- Rectangle gates, gate JSON save/load, gate overlays, and descriptive gate statistics.
+- Rectangle gates, histogram range gates, gate JSON save/load, gate overlays, and descriptive gate statistics.
 - Rule-based QC flags with review-needed language.
 - Batch tables, fluorescence medians, and exploratory control-vs-treated comparison.
-- PDF and PowerPoint export with representative plot images when static export is available.
+- Gate statistics CSV export, comparison CSV export, and PDF/PowerPoint export with representative plot images when static export is available.
 - Deterministic local Ask Flow summaries.
 
 ## Explicitly Out Of Scope
@@ -41,7 +41,7 @@ ruff check app tests
 python -m compileall -q app tests
 ```
 
-Current audit coverage includes upload error paths, channel inference, transforms, downsampling, compensation parsing/application, QC heuristics, gate serialization and membership, project save/load, report export, Dash callback smoke paths, project-rooted runtime paths, and graph stress tests for WebGL dot plots, density plots, contour plots, gate overlays, and histogram overlays.
+Current audit coverage includes upload error paths, channel inference, transforms, downsampling, compensation parsing/application, QC heuristics, rectangle and histogram range gate membership, gate serialization, table CSV export, project save/load, report export, Dash callback smoke paths, project-rooted runtime paths, and graph stress tests for WebGL dot plots, density plots, contour plots, gate overlays, and histogram overlays.
 
 ## Remaining Gaps To Treat Honestly
 

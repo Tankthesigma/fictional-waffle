@@ -1,6 +1,6 @@
 import pandas as pd
 
-from app.core.gating import apply_gate, load_gates, rectangle_gate, save_gates
+from app.core.gating import apply_gate, histogram_range_gate, load_gates, rectangle_gate, save_gates
 
 
 def test_rectangle_gate_membership():
@@ -20,3 +20,12 @@ def test_gate_serialization(tmp_path):
     loaded = load_gates(path)
 
     assert loaded[0].to_dict() == gate.to_dict()
+
+
+def test_histogram_range_gate_membership():
+    events = pd.DataFrame({"FL1-A": [10, 20, 30, 40]})
+    gate = histogram_range_gate("h1", "positive", "FL1-A", 15, 35)
+
+    mask = apply_gate(events, gate)
+
+    assert mask.tolist() == [False, True, True, False]

@@ -30,18 +30,24 @@ def test_incomplete_gate_form_returns_status_without_callback_error():
             ],
             "inputs": [
                 {"id": "add-rectangle-gate", "property": "n_clicks", "value": 1},
+                {"id": "add-histogram-gate", "property": "n_clicks", "value": 0},
                 {"id": "save-gates", "property": "n_clicks", "value": 0},
                 {"id": "load-gates", "property": "n_clicks", "value": 0},
+                {"id": "export-gate-stats", "property": "n_clicks", "value": 0},
             ],
             "state": [
                 {"id": "selected-sample-store", "property": "data", "value": None},
                 {"id": "x-channel", "property": "value", "value": "FSC-A"},
                 {"id": "y-channel", "property": "value", "value": "SSC-A"},
+                {"id": "hist-channel", "property": "value", "value": "FL1-A"},
                 {"id": "gate-name", "property": "value", "value": "main"},
                 {"id": "gate-x-min", "property": "value", "value": None},
                 {"id": "gate-x-max", "property": "value", "value": None},
                 {"id": "gate-y-min", "property": "value", "value": None},
                 {"id": "gate-y-max", "property": "value", "value": None},
+                {"id": "hist-gate-name", "property": "value", "value": "positive"},
+                {"id": "hist-gate-min", "property": "value", "value": None},
+                {"id": "hist-gate-max", "property": "value", "value": None},
                 {"id": "compensation-enabled", "property": "value", "value": []},
             ],
             "changedPropIds": ["add-rectangle-gate.n_clicks"],
@@ -50,6 +56,51 @@ def test_incomplete_gate_form_returns_status_without_callback_error():
 
     assert response.status_code == 200
     assert "complete all rectangle bounds" in response.get_data(as_text=True)
+
+
+def test_incomplete_histogram_gate_form_returns_status_without_callback_error():
+    dash_app = create_app()
+    client = dash_app.server.test_client()
+    output = _callback_key(dash_app, "gate-status.children")
+
+    response = client.post(
+        "/_dash-update-component",
+        json={
+            "output": output,
+            "outputs": [
+                {"id": "gate-table", "property": "data"},
+                {"id": "gate-stats-table", "property": "data"},
+                {"id": "gate-stats-table", "property": "columns"},
+                {"id": "gate-status", "property": "children"},
+            ],
+            "inputs": [
+                {"id": "add-rectangle-gate", "property": "n_clicks", "value": 0},
+                {"id": "add-histogram-gate", "property": "n_clicks", "value": 1},
+                {"id": "save-gates", "property": "n_clicks", "value": 0},
+                {"id": "load-gates", "property": "n_clicks", "value": 0},
+                {"id": "export-gate-stats", "property": "n_clicks", "value": 0},
+            ],
+            "state": [
+                {"id": "selected-sample-store", "property": "data", "value": None},
+                {"id": "x-channel", "property": "value", "value": "FSC-A"},
+                {"id": "y-channel", "property": "value", "value": "SSC-A"},
+                {"id": "hist-channel", "property": "value", "value": "FL1-A"},
+                {"id": "gate-name", "property": "value", "value": "main"},
+                {"id": "gate-x-min", "property": "value", "value": 0},
+                {"id": "gate-x-max", "property": "value", "value": 1},
+                {"id": "gate-y-min", "property": "value", "value": 0},
+                {"id": "gate-y-max", "property": "value", "value": 1},
+                {"id": "hist-gate-name", "property": "value", "value": "positive"},
+                {"id": "hist-gate-min", "property": "value", "value": None},
+                {"id": "hist-gate-max", "property": "value", "value": None},
+                {"id": "compensation-enabled", "property": "value", "value": []},
+            ],
+            "changedPropIds": ["add-histogram-gate.n_clicks"],
+        },
+    )
+
+    assert response.status_code == 200
+    assert "complete range bounds" in response.get_data(as_text=True)
 
 
 def test_bad_upload_payload_returns_friendly_status_without_callback_error():

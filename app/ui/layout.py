@@ -242,7 +242,23 @@ def gates_tab():
                             ),
                         ],
                     ),
+                    card(
+                        "Histogram Range Gate",
+                        [
+                            html.Div("Use the current histogram channel. Enter raw-scale bounds; display transforms do not change stored events.", className="muted"),
+                            html.Div(
+                                [
+                                    dcc.Input(id="hist-gate-name", type="text", placeholder="Gate name", value="User histogram gate"),
+                                    dcc.Input(id="hist-gate-min", type="number", placeholder="min"),
+                                    dcc.Input(id="hist-gate-max", type="number", placeholder="max"),
+                                    html.Button("Add Histogram Gate", id="add-histogram-gate", n_clicks=0, className="primary"),
+                                ],
+                                className="gate-form",
+                            ),
+                        ],
+                    ),
                     card("Gate Statistics", data_table("gate-stats-table", ["gate_name", "parent_gate", "channels", "event_count", "percent_total", "percent_parent"], page_size=12)),
+                    html.Button("Export Gate Stats CSV", id="export-gate-stats", n_clicks=0),
                 ],
                 className="stack",
             )
@@ -263,9 +279,11 @@ def compare_tab():
                             html.Label("Treated group"),
                             dcc.Input(id="treated-group", type="text", placeholder="e.g. treated"),
                             html.Button("Compare Groups", id="compare-button", n_clicks=0, className="primary"),
+                            html.Button("Export Comparison CSV", id="export-comparison-csv", n_clicks=0),
                         ],
                         className="compare-form",
                     ),
+                    html.Div(id="compare-status", className="status-box small"),
                     dcc.Graph(id="event-count-chart"),
                     data_table("batch-table", ["sample_id", "condition", "replicate", "control_type", "event_count", "fluorescence_channels", "file_type"]),
                     data_table("median-table", ["sample_id", "condition"]),
