@@ -19,6 +19,7 @@ class FigureExportResult:
 def register_report_callbacks(app, session: WorkbenchSession) -> None:
     @app.callback(
         Output("report-readiness", "children"),
+        Output("report-outline-preview", "children"),
         Input("sample-ids-store", "data"),
         Input("selected-sample-store", "data"),
         Input("gate-table", "data"),
@@ -29,16 +30,29 @@ def register_report_callbacks(app, session: WorkbenchSession) -> None:
         Input("hist-channel", "value"),
     )
     def update_report_readiness(_sample_ids, selected_sample, _gate_rows, comparison_rows, _qc_rows, x_channel, y_channel, hist_channel):
+        from app.core.report_outline import report_outline
+
         sample = session.selected_sample(selected_sample)
-        return _report_readiness_cards(
-            sample_count=len(session.samples),
-            selected_sample_id=sample.sample_id if sample else None,
-            channel_count=sum(sample.channel_count for sample in session.sample_list()),
-            qc_count=len(session.all_qc_flags()),
-            gate_count=len(session.gates),
-            comparison_count=len(comparison_rows or session.comparison_rows or []),
-            has_scatter=bool(sample and x_channel and y_channel),
-            has_histogram=bool(sample and hist_channel),
+        samples = session.sample_list()
+        return (
+            _report_readiness_cards(
+                sample_count=len(session.samples),
+                selected_sample_id=sample.sample_id if sample else None,
+                channel_count=sum(item.channel_count for item in samples),
+                qc_count=len(session.all_qc_flags()),
+                gate_count=len(session.gates),
+                comparison_count=len(comparison_rows or session.comparison_rows or []),
+                has_scatter=bool(sample and x_channel and y_channel),
+                has_histogram=bool(sample and hist_channel),
+            ),
+            _report_outline_cards(
+                report_outline(
+                    samples,
+                    session.all_qc_flags(),
+                    session.gates,
+                    comparison_rows=comparison_rows or session.comparison_rows or [],
+                )
+            ),
         )
 
     @app.callback(
@@ -250,3 +264,33 @@ def _plot_detail(selected_sample_id: str | None, has_scatter: bool, has_histogra
     if has_histogram:
         return f"{selected_sample_id}: histogram selected"
     return "select a sample and plot channels for static figures"
+
+
+def _report_outline_cards(rows: list[dict[str, str]]):
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Span("Report narrative"),
+                    html.Strong("Review outline"),
+                ],
+                className="report-outline-head",
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Span(row["status"], className="report-outline-state"),
+                            html.Strong(row["section"]),
+                            html.P(row["note"]),
+                            html.Small(row["detail"]),
+                        ],
+                        className=f"report-outline-item {row['status']}",
+                    )
+                    for row in rows
+                ],
+                className="report-outline-grid",
+            ),
+        ],
+        className="report-outline-panel",
+    )

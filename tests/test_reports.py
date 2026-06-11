@@ -5,6 +5,7 @@ import pandas as pd
 
 from app.core.channel_inference import summarize_channels
 from app.core.gating import rectangle_gate
+from app.core.report_outline import report_outline, report_outline_bullets
 from app.core.report_pdf import export_pdf_report
 from app.core.report_pptx import export_pptx_report
 from app.models.sample import SampleRecord
@@ -60,10 +61,30 @@ def test_reports_include_comparison_rows(monkeypatch, tmp_path):
 
     pdf_text = pdf.read_text(encoding="utf-8")
     pptx_text = _pptx_text(pptx)
+    assert "Analysis Review Notes" in pdf_text
+    assert "Analysis Review Notes" in pptx_text
     assert "Exploratory Comparison" in pdf_text
     assert "FL1-A" in pdf_text
     assert "Exploratory Comparison" in pptx_text
     assert "median difference 10.0" in pptx_text
+
+
+def test_report_outline_builds_review_notes_without_overclaiming(tmp_path):
+    frame = pd.DataFrame({"FSC-A": [1, 2], "SSC-A": [1, 2], "FL1-A": [10, 20]})
+    sample = SampleRecord("s1", "s1.csv", path=tmp_path / "s1.csv", file_type="csv", events=frame)
+    sample.channels = summarize_channels(frame)
+    gate = rectangle_gate("g1", "main", "FSC-A", "SSC-A", 0, 3, 0, 3)
+    rows = [{"channel": "FL1-A", "median_difference": 10.0, "notes": "exploratory only"}]
+
+    outline = report_outline([sample], [], [gate], [{"gate_name": "main"}], rows)
+    bullets = " ".join(report_outline_bullets(outline))
+
+    assert outline[0]["section"] == "Scope"
+    assert "1 sample(s)" in outline[0]["note"]
+    assert "1 enabled gate(s)" in bullets
+    assert "FL1-A is higher in treated medians by +10" in bullets
+    assert "does not control any cytometer" in bullets
+    assert "significant" not in bullets.lower()
 
 
 def test_plotly_static_image_renderer_available(tmp_path):

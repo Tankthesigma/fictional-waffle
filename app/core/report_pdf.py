@@ -4,11 +4,13 @@ from datetime import datetime
 from pathlib import Path
 
 from app import __version__
+from app.core.disclaimers import REPORT_DISCLAIMER
+from app.core.report_outline import report_outline
 from app.models.gate import GateDefinition
 from app.models.qc_flag import QCFlag
 from app.models.sample import SampleRecord
 
-DISCLAIMER = "This report is a post-acquisition analysis aid. It does not control any cytometer and does not replace expert review."
+DISCLAIMER = REPORT_DISCLAIMER
 
 
 def export_pdf_report(
@@ -40,8 +42,19 @@ def export_pdf_report(
         Paragraph(f"App version: {__version__}", styles["Normal"]),
         Paragraph(DISCLAIMER, styles["Normal"]),
         Spacer(1, 12),
-        Paragraph("Uploaded Files", styles["Heading2"]),
+        Paragraph("Analysis Review Notes", styles["Heading2"]),
     ]
+    outline_rows = [["Section", "Status", "Note", "Detail"]]
+    outline_rows.extend([[row["section"], row["status"], row["note"], row["detail"]] for row in report_outline(samples, qc_flags, gates, gate_stats, comparison_rows or [])])
+    story.extend(
+        [
+            Table(outline_rows),
+            Spacer(1, 12),
+        ]
+    )
+    story.extend([
+        Paragraph("Uploaded Files", styles["Heading2"]),
+    ])
     sample_rows = [["Sample ID", "Filename", "Events", "Channels", "Condition"]]
     sample_rows.extend([[s.sample_id, s.filename, s.event_count, s.channel_count, s.condition or ""] for s in samples])
     story.append(Table(sample_rows))
@@ -86,6 +99,12 @@ def _plain_report(
     comparison_rows: list[dict[str, object]],
 ) -> str:
     lines = [title, f"Generated: {datetime.now().isoformat(timespec='seconds')}", f"App version: {__version__}", DISCLAIMER, ""]
+    lines.append("Analysis Review Notes:")
+    lines.extend(
+        f"- {row['section']} [{row['status']}]: {row['note']} {row['detail']}"
+        for row in report_outline(samples, qc_flags, gates, gate_stats, comparison_rows)
+    )
+    lines.append("")
     lines.append("Samples:")
     lines.extend(f"- {s.sample_id}: {s.filename}, {s.event_count} events, {s.channel_count} channels" for s in samples)
     lines.append("\nChannels:")

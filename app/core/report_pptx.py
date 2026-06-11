@@ -5,6 +5,7 @@ from pathlib import Path
 
 from app import __version__
 from app.core.report_pdf import DISCLAIMER
+from app.core.report_outline import report_outline, report_outline_bullets
 from app.models.gate import GateDefinition
 from app.models.qc_flag import QCFlag
 from app.models.sample import SampleRecord
@@ -31,6 +32,7 @@ def export_pptx_report(
 
     prs = Presentation()
     _title_slide(prs, title)
+    _bullets_slide(prs, "Analysis Review Notes", report_outline_bullets(report_outline(samples, qc_flags, gates, gate_stats, comparison_rows or [])))
     _bullets_slide(prs, "Sample Summary", [f"{s.sample_id}: {s.event_count:,} events, {s.channel_count} channels" for s in samples])
     _bullets_slide(prs, "Channel And Panel Summary", _channel_bullets(samples))
     _bullets_slide(prs, "QC Summary", [f"{f.sample_id} {f.severity}: {f.title}" for f in qc_flags] or ["No QC flags currently present."])

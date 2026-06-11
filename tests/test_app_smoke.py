@@ -101,7 +101,9 @@ def test_report_readiness_preview_is_rendered_and_wired():
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
     assert "report-readiness" in layout_json
-    assert "report-readiness.children" in dash_app.callback_map
+    assert "report-outline-preview" in layout_json
+    assert any("report-readiness.children" in key for key in dash_app.callback_map)
+    assert any("report-outline-preview.children" in key for key in dash_app.callback_map)
 
 
 def test_ask_flow_briefing_is_rendered_and_wired():
