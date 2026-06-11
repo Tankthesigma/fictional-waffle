@@ -32,6 +32,9 @@ def load_csv_file(path: str | Path, sample_id: str | None = None) -> LoadResult:
         limitations.append("CSV has one numeric channel; scatter plots and FSC/SSC QC are limited.")
     if len(numeric) < 10:
         limitations.append("CSV has fewer than 10 event rows; statistics and QC are limited.")
+    missing_numeric = int(numeric.isna().sum().sum())
+    if missing_numeric:
+        limitations.append(f"CSV contains {missing_numeric} missing numeric value(s); affected statistics ignore NaN values.")
     events = numeric.copy()
     record = SampleRecord(
         sample_id=sample_id or _safe_sample_id(target),
