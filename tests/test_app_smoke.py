@@ -42,6 +42,8 @@ def test_panel_setup_upload_is_rendered():
 
     assert "upload-panel" in layout_json
     assert "Optional panel setup CSV" in layout_json
+    assert "load-demo-data" in layout_json
+    assert "Load Demo Dataset" in layout_json
 
 
 def test_candidate_gate_controls_are_rendered_with_review_language():

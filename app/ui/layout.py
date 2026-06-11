@@ -68,6 +68,7 @@ def home_upload_panel():
                     upload_box("upload-data", ".fcs or .csv files", multiple=True),
                     upload_box("upload-manifest", "Optional manifest CSV", multiple=False),
                     upload_box("upload-panel", "Optional panel setup CSV", multiple=False),
+                    html.Button("Load Demo Dataset", id="load-demo-data", n_clicks=0, className="primary"),
                     html.Button("Clear Project", id="clear-project", n_clicks=0),
                     html.Div(id="upload-status", className="status-box"),
                 ],

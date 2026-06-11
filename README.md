@@ -57,6 +57,8 @@ Open http://127.0.0.1:8050.
 
 ## Public Test Data
 
+For a quick local demo without downloading data, click **Load Demo Dataset** in the Upload panel. It creates a deterministic synthetic event-level CSV batch with control/treated labels and example panel annotations. The generated data is for workflow testing only and is not biological reference material.
+
 Download public FCS files from:
 
 - https://github.com/tlnagy/fcsexamples
@@ -67,7 +69,7 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 
 ## User Workflow
 
-1. Upload one or more `.fcs` files, or event-level `.csv` files as fallback.
+1. Click **Load Demo Dataset** for a synthetic local batch, or upload one or more `.fcs` files or event-level `.csv` files as fallback.
 2. Optionally upload a sample manifest CSV with `sample_id,file_name,condition,replicate,control_type,notes`.
 3. Optionally upload a panel setup CSV with a channel key (`channel`, `raw_name`, `pnn`, or `detector`) plus any of `display_label,marker,antibody,fluorochrome,role`.
 4. Review the sample table, metadata inspector, channel inspector, and QC cards.

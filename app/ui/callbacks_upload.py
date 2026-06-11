@@ -22,6 +22,7 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
         Output("metric-events", "children"),
         Output("metric-flags", "children"),
         Input("clear-project", "n_clicks"),
+        Input("load-demo-data", "n_clicks"),
         Input("upload-data", "contents"),
         State("upload-data", "filename"),
         Input("upload-manifest", "contents"),
@@ -30,7 +31,8 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
         State("upload-panel", "filename"),
         prevent_initial_call=True,
     )
-    def handle_upload(clear_clicks, contents, filenames, manifest_contents, manifest_filename, panel_contents, panel_filename):
+    def handle_upload(clear_clicks, demo_clicks, contents, filenames, manifest_contents, manifest_filename, panel_contents, panel_filename):
+        from app.core.demo_data import build_demo_samples
         from app.core.csv_loader import apply_manifest, load_csv_file, parse_manifest
         from app.core.fcs_loader import load_fcs_file
         from app.core.panel_setup import apply_panel_setup, parse_panel_setup
@@ -44,6 +46,19 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
             session.comparison_rows.clear()
             _clear_upload_cache()
             return html.Div("Project cleared."), [], [], None, [], "0", "0", "0"
+        if action == "load-demo-data":
+            _clear_session(session)
+            _clear_upload_cache()
+            project_dir = UPLOAD_ROOT / f"demo-{uuid4().hex[:8]}"
+            loaded = build_demo_samples(project_dir)
+            for sample in loaded:
+                session.samples[sample.sample_id] = sample
+            session.qc_flags = run_batch_qc(session.sample_list())
+            messages = [
+                "Loaded deterministic local synthetic demo dataset.",
+                "Demo samples are for workflow testing only and are not biological reference data.",
+            ]
+            return _upload_response(session, messages, qc_summary)
         if not contents and not manifest_contents and not panel_contents:
             return no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
         filenames = filenames or []
@@ -103,24 +118,7 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
         for sample in loaded:
             session.samples[sample.sample_id] = sample
         session.qc_flags = run_batch_qc(session.sample_list())
-        sample_rows = [
-            sample.to_summary_dict(qc_summary(session.qc_flags.get(sample.sample_id, [])))
-            for sample in session.sample_list()
-        ]
-        options = [{"label": f"{sample.sample_id} ({sample.filename})", "value": sample.sample_id} for sample in session.sample_list()]
-        selected = options[0]["value"] if options else None
-        total_events = sum(sample.event_count for sample in session.sample_list())
-        status = html.Ul([html.Li(message) for message in messages] or [html.Li(f"Loaded {len(loaded)} sample(s).")])
-        return (
-            status,
-            sample_rows,
-            options,
-            selected,
-            [option["value"] for option in options],
-            str(len(session.samples)),
-            f"{total_events:,}",
-            str(len(session.all_qc_flags())),
-        )
+        return _upload_response(session, messages or [f"Loaded {len(loaded)} sample(s)."], qc_summary)
 
 
 def _save_upload(content: str, filename: str, directory: Path) -> Path:
@@ -143,3 +141,31 @@ def _clear_upload_cache() -> None:
             shutil.rmtree(child, ignore_errors=True)
         elif child.is_file():
             child.unlink(missing_ok=True)
+
+
+def _clear_session(session: WorkbenchSession) -> None:
+    session.samples.clear()
+    session.gates.clear()
+    session.qc_flags.clear()
+    session.comparison_rows.clear()
+
+
+def _upload_response(session: WorkbenchSession, messages: list[str], qc_summary):
+    sample_rows = [
+        sample.to_summary_dict(qc_summary(session.qc_flags.get(sample.sample_id, [])))
+        for sample in session.sample_list()
+    ]
+    options = [{"label": f"{sample.sample_id} ({sample.filename})", "value": sample.sample_id} for sample in session.sample_list()]
+    selected = options[0]["value"] if options else None
+    total_events = sum(sample.event_count for sample in session.sample_list())
+    status = html.Ul([html.Li(message) for message in messages])
+    return (
+        status,
+        sample_rows,
+        options,
+        selected,
+        [option["value"] for option in options],
+        str(len(session.samples)),
+        f"{total_events:,}",
+        str(len(session.all_qc_flags())),
+    )

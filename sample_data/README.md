@@ -12,6 +12,8 @@ Download one or more `.fcs` files locally, then upload them through Ask Flow Wor
 
 ## Demo Helpers
 
+For the fastest no-download walkthrough, use **Load Demo Dataset** in the app Upload panel. It generates a deterministic local synthetic CSV batch with control/treated labels and example panel annotations. Those generated samples are for workflow testing only and are not biological reference data.
+
 This folder includes two tiny CSV helpers that are safe to keep in source control:
 
 - `demo_manifest.csv`: sample labels for condition, replicate, control type, and notes.

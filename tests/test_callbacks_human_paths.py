@@ -162,6 +162,7 @@ def test_bad_upload_payload_returns_friendly_status_without_callback_error():
             ],
             "inputs": [
                 {"id": "clear-project", "property": "n_clicks", "value": 0},
+                {"id": "load-demo-data", "property": "n_clicks", "value": 0},
                 {"id": "upload-data", "property": "contents", "value": ["data:application/octet-stream;base64,not-base64"]},
                 {"id": "upload-manifest", "property": "contents", "value": None},
                 {"id": "upload-panel", "property": "contents", "value": None},
@@ -193,6 +194,7 @@ def test_clear_project_callback_resets_visible_tables():
             "outputs": _upload_outputs(),
             "inputs": [
                 {"id": "clear-project", "property": "n_clicks", "value": 1},
+                {"id": "load-demo-data", "property": "n_clicks", "value": 0},
                 {"id": "upload-data", "property": "contents", "value": None},
                 {"id": "upload-manifest", "property": "contents", "value": None},
                 {"id": "upload-panel", "property": "contents", "value": None},
@@ -225,6 +227,7 @@ def test_csv_upload_callback_populates_sample_table():
             "outputs": _upload_outputs(),
             "inputs": [
                 {"id": "clear-project", "property": "n_clicks", "value": 0},
+                {"id": "load-demo-data", "property": "n_clicks", "value": 0},
                 {"id": "upload-data", "property": "contents", "value": [f"data:text/csv;base64,{encoded}"]},
                 {"id": "upload-manifest", "property": "contents", "value": None},
                 {"id": "upload-panel", "property": "contents", "value": None},
@@ -243,6 +246,41 @@ def test_csv_upload_callback_populates_sample_table():
     sample_rows = payload["response"]["sample-table"]["data"]
     assert sample_rows[0]["sample_id"] == "demo"
     assert sample_rows[0]["event_count"] == 10
+
+
+def test_load_demo_dataset_callback_populates_batch_without_files():
+    dash_app = create_app()
+    client = dash_app.server.test_client()
+    output = _callback_key(dash_app, "upload-status.children")
+
+    response = client.post(
+        "/_dash-update-component",
+        json={
+            "output": output,
+            "outputs": _upload_outputs(),
+            "inputs": [
+                {"id": "clear-project", "property": "n_clicks", "value": 0},
+                {"id": "load-demo-data", "property": "n_clicks", "value": 1},
+                {"id": "upload-data", "property": "contents", "value": None},
+                {"id": "upload-manifest", "property": "contents", "value": None},
+                {"id": "upload-panel", "property": "contents", "value": None},
+            ],
+            "state": [
+                {"id": "upload-data", "property": "filename", "value": None},
+                {"id": "upload-manifest", "property": "filename", "value": None},
+                {"id": "upload-panel", "property": "filename", "value": None},
+            ],
+            "changedPropIds": ["load-demo-data.n_clicks"],
+        },
+    )
+
+    assert response.status_code == 200
+    payload = json.loads(response.get_data(as_text=True))
+    sample_rows = payload["response"]["sample-table"]["data"]
+    assert len(sample_rows) == 4
+    assert sample_rows[0]["sample_id"] == "demo_control_1"
+    assert payload["response"]["metric-samples"]["children"] == "4"
+    assert "synthetic demo dataset" in response.get_data(as_text=True)
 
 
 def _upload_outputs():
