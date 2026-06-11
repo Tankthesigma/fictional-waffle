@@ -75,6 +75,8 @@ def test_scatter_graph_is_webgl_downsampled_gated_and_does_not_mutate_events():
     assert fig.layout.dragmode == "zoom"
     assert fig.layout.xaxis.title.text == "FSC-A (arcsinh)"
     assert fig.layout.yaxis.title.text == "SSC-A (arcsinh)"
+    assert fig.layout.xaxis.range is not None
+    assert fig.layout.yaxis.range is not None
     assert "demo: FSC-A vs SSC-A" in fig.layout.title.text
     assert "raw events, arcsinh display, dot plot" in fig.layout.title.text
     assert len(fig.layout.shapes) == 1
@@ -182,6 +184,7 @@ def test_histogram_overlay_uses_density_traces_for_multiple_samples():
     assert all(np.all(np.isfinite(trace.x)) for trace in fig.data)
     assert fig.layout.barmode == "overlay"
     assert fig.layout.xaxis.title.text == "FL1-A (safe_log10)"
+    assert fig.layout.xaxis.range is not None
     assert "raw events, safe_log10 display" in fig.layout.title.text
 
 

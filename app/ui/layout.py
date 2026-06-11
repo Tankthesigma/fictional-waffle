@@ -489,10 +489,28 @@ def ask_flow_tab():
             card(
                 "Ask Flow",
                 [
-                    html.P("Local deterministic summaries only. No cloud call, no API key, no diagnostic claims.", className="muted"),
+                    html.P("Local by default. Optional Vertex Gemini answers use your machine's Google Cloud credentials when enabled; no keys are stored in the app.", className="muted"),
+                    html.Div(id="ask-flow-agent-status", className="status-box small"),
                     html.Div(id="ask-flow-briefing", className="ask-briefing"),
-                    dcc.Textarea(id="ask-flow-question", value="Summarize the QC flags.", className="ask-input"),
+                    dcc.Textarea(
+                        id="ask-flow-question",
+                        value="Summarize the QC flags.",
+                        placeholder="Ask anything about the current analysis, or try: plot FL1-A vs SSC-A as density with arcsinh; histogram FITC; show 100000 events.",
+                        className="ask-input",
+                    ),
                     html.Button("Ask", id="ask-flow-button", n_clicks=0, className="primary"),
+                    html.Div(
+                        [
+                            html.Span("Safe actions:"),
+                            html.Span("set sample"),
+                            html.Span("set axes"),
+                            html.Span("set histogram"),
+                            html.Span("plot mode"),
+                            html.Span("transform"),
+                            html.Span("max events"),
+                        ],
+                        className="agent-action-strip",
+                    ),
                     html.Div(id="ask-flow-answer", className="assistant-answer"),
                 ],
             )

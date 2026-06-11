@@ -52,6 +52,8 @@ def scatter_figure(
     x_values, y_values = _finite_xy(x_values, y_values)
     if len(x_values) == 0:
         return empty_figure("Selected channels have no finite display values.")
+    x_range = _display_range(x_values)
+    y_range = _display_range(y_values)
     fig = go.Figure()
     normalized_mode = _normalize_plot_mode(plot_mode)
     if normalized_mode == "density":
@@ -100,7 +102,7 @@ def scatter_figure(
             continue
         _add_rectangle_shape(fig, gate, display_transform, cofactor)
     _add_transform_warnings(fig, transform_warnings)
-    fig.update_layout(
+    layout = dict(
         template="plotly_white",
         height=560,
         dragmode="zoom",
@@ -111,6 +113,11 @@ def scatter_figure(
         hovermode="closest",
         uirevision=f"{sample.sample_id}:{x_channel}:{y_channel}:{display_transform}:{normalized_mode}",
     )
+    if x_range:
+        layout["xaxis"] = dict(range=x_range)
+    if y_range:
+        layout["yaxis"] = dict(range=y_range)
+    fig.update_layout(**layout)
     return fig
 
 
@@ -131,6 +138,7 @@ def histogram_figure(
     fig = go.Figure()
     warnings: list[str] = []
     transforms_used: set[str] = set()
+    histogram_values = []
     for sample in samples:
         events = event_view(sample, use_compensation)
         if channel not in events:
@@ -152,9 +160,10 @@ def histogram_figure(
                 name=sample.sample_id,
             )
         )
+        histogram_values.extend(_finite_values(transformed))
     _add_transform_warnings(fig, warnings)
     transform_label = next(iter(transforms_used)) if len(transforms_used) == 1 else (transform or "raw")
-    fig.update_layout(
+    layout = dict(
         template="plotly_white",
         barmode="overlay",
         height=420,
@@ -163,6 +172,10 @@ def histogram_figure(
         xaxis_title=f"{_channel_label(samples[0], channel)} ({transform_label})",
         yaxis_title="Density",
     )
+    histogram_range = _display_range(histogram_values)
+    if histogram_range:
+        layout["xaxis"] = dict(range=histogram_range)
+    fig.update_layout(**layout)
     return fig
 
 
@@ -337,6 +350,33 @@ def _finite_xy(x_values, y_values):
     y_arr = np.asarray(y_values, dtype=float)
     finite = np.isfinite(x_arr) & np.isfinite(y_arr)
     return x_arr[finite], y_arr[finite]
+
+
+def _finite_values(values) -> list[float]:
+    import numpy as np
+
+    arr = np.asarray(values, dtype=float)
+    return arr[np.isfinite(arr)].tolist()
+
+
+def _display_range(values) -> list[float] | None:
+    import numpy as np
+
+    arr = np.asarray(values, dtype=float)
+    arr = arr[np.isfinite(arr)]
+    if len(arr) == 0:
+        return None
+    if len(arr) >= 20:
+        low, high = np.percentile(arr, [0.1, 99.9])
+    else:
+        low, high = float(np.min(arr)), float(np.max(arr))
+    if not np.isfinite(low) or not np.isfinite(high):
+        return None
+    if low == high:
+        pad = abs(low) * 0.05 or 1.0
+        return [float(low - pad), float(high + pad)]
+    pad = (high - low) * 0.04
+    return [float(low - pad), float(high + pad)]
 
 
 def _number_or_none(value: object) -> float | None:

@@ -15,7 +15,7 @@ Ask Flow Workbench is not instrument-control software. It does not connect to, c
 - No `.ncf` parsing.
 - No cloud dashboard or required API integration.
 - No diagnosis or unsupported biological claims.
-- Ask Flow is deterministic and local by default.
+- Ask Flow is deterministic and local by default; optional Vertex Gemini answers require explicit environment configuration.
 
 ## Why FCS-First
 
@@ -55,6 +55,18 @@ python app/main.py
 
 Open http://127.0.0.1:8050.
 
+Optional Vertex Gemini mode:
+
+```bash
+export ASK_FLOW_VERTEX_ENABLED=1
+export ASK_FLOW_GEMINI_MODEL=gemini-3.5-flash
+export GOOGLE_CLOUD_PROJECT=your-project-id
+export GOOGLE_CLOUD_LOCATION=global
+python app/main.py
+```
+
+This uses Google Application Default Credentials on the local machine. No API keys or credentials are stored in the repo. If Vertex is not configured or the call fails, Ask Flow falls back to deterministic local answers.
+
 ## Public Test Data
 
 For a quick local demo without downloading data, click **Load Demo Dataset** in the Upload panel. It creates a deterministic synthetic event-level CSV batch with control/treated labels and example panel annotations. The generated data is for workflow testing only and is not biological reference material.
@@ -78,7 +90,7 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 7. Add user-defined rectangle or histogram range gates and review gate statistics.
 8. Compare batches or control-vs-treated groups using exploratory medians and guarded fold-changes.
 9. Save gates or project JSON locally, then export gate statistics, comparison CSVs, PDF reports, or PowerPoint reports from `exports/`.
-10. Use Ask Flow for local deterministic summaries of plots, QC flags, gates, and comparisons.
+10. Use Ask Flow for summaries and safe workbench actions, such as changing plot axes, histogram channel, plot mode, transform, max plotted events, or active sample.
 
 ## What It Does
 
@@ -89,7 +101,7 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 - Metadata and FCS keyword inspection.
 - Fuzzy channel role inference from metadata and channel names.
 - FSC/SSC auto-selection without hard-coded instrument channel maps.
-- Plotly WebGL scatter plots with display downsampling.
+- Plotly WebGL scatter plots with display downsampling and dataset-aware axis auto-fit.
 - Fluorescence histogram overlays.
 - Raw, safe log10, arcsinh, and optional logicle display transforms.
 - Metadata-driven compensation view toggle for FCS files with usable `$SPILL`/`$SPILLOVER` matrices.
@@ -98,7 +110,7 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 - Rule-based QC dashboard with review-needed language.
 - Batch tables, event count chart, median fluorescence table, and exploratory control-vs-treated comparison.
 - Local CSV, PDF, and PowerPoint report export with representative plot images when static export is available.
-- Local deterministic Ask Flow assistant panel.
+- Ask Flow assistant panel with deterministic local answers, safe UI actions, and optional Vertex Gemini responses.
 
 ## Limitations
 
@@ -115,7 +127,7 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 - Reliable compensated/uncompensated view toggle when metadata and matrix support are validated.
 - Candidate gate suggestions that require accept/edit/reject before statistics.
 - Kaleido figure embedding in PDF/PPTX.
-- Optional environment-variable-only LLM adapter, disabled by default.
+- More Ask Flow action tools for report/export workflows, while keeping execution allowlisted.
 
 ## Known Issues
 

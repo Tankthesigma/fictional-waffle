@@ -130,8 +130,11 @@ def test_ask_flow_briefing_is_rendered_and_wired():
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
     assert "ask-flow-briefing" in layout_json
-    assert "Local deterministic summaries only" in layout_json
-    assert "ask-flow-briefing.children" in dash_app.callback_map
+    assert "Optional Vertex Gemini answers" in layout_json
+    assert "ask-flow-agent-status" in layout_json
+    assert "Safe actions:" in layout_json
+    assert any("ask-flow-briefing.children" in key for key in dash_app.callback_map)
+    assert any("ask-flow-agent-status.children" in key for key in dash_app.callback_map)
 
 
 def test_workbench_tabs_have_compact_horizontal_css():
