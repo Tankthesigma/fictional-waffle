@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.core.compare import comparison_summary
+from app.core.compare import comparison_insights, comparison_summary
 from app.core.qc import qc_summary
 from app.core.compensation import compensation_status
 from app.models.gate import GateDefinition
@@ -89,6 +89,69 @@ def answer_question(
     )
 
 
+def analysis_briefing(
+    sample: SampleRecord | None,
+    *,
+    x_channel: str | None = None,
+    y_channel: str | None = None,
+    gates: list[GateDefinition] | None = None,
+    qc_flags: list[QCFlag] | None = None,
+    comparison_rows: list[dict[str, object]] | None = None,
+) -> list[dict[str, str]]:
+    """Build a deterministic local briefing for the Ask Flow tab."""
+    gates = gates or []
+    qc_flags = qc_flags or []
+    comparison_rows = comparison_rows or []
+    if sample is None:
+        return [
+            {
+                "status": "waiting",
+                "title": "No Active Sample",
+                "body": "Upload FCS or event-level CSV files to generate a local analysis briefing.",
+                "detail": "Ask Flow stays local and deterministic.",
+            }
+        ]
+
+    enabled = [gate for gate in gates if gate.enabled and not gate.candidate]
+    candidates = [gate for gate in gates if gate.candidate]
+    disabled = [gate for gate in gates if not gate.enabled and not gate.candidate]
+    severities = _severity_counts(qc_flags)
+    top_qc = _top_qc_flag(qc_flags)
+    compare_note = comparison_insights(comparison_rows)[1] if comparison_rows else None
+    return [
+        {
+            "status": "info",
+            "title": "Active Context",
+            "body": f"{sample.sample_id}: {sample.event_count:,} events, {sample.channel_count} channels, plot {_channel_label(sample, x_channel)} x {_channel_label(sample, y_channel)}.",
+            "detail": f"Panel labels visible: {len(_panel_channel_labels(sample))}; compensation view depends on the plot setting.",
+        },
+        {
+            "status": "review" if qc_flags else "info",
+            "title": "QC Brief",
+            "body": f"{qc_summary(qc_flags)} ({severities['severe']} severe, {severities['warning']} warning, {severities['info']} info).",
+            "detail": top_qc or "No rule-based QC review flags are currently present.",
+        },
+        {
+            "status": "review" if candidates else "info",
+            "title": "Gate Brief",
+            "body": f"{len(enabled)} enabled user/review gate(s), {len(candidates)} candidate gate(s), {len(disabled)} disabled gate(s).",
+            "detail": "Candidate or quick-review gates should be edited or accepted by a human before final reporting.",
+        },
+        {
+            "status": "review" if comparison_rows else "waiting",
+            "title": "Comparison Brief",
+            "body": compare_note["message"] if compare_note else "No control-versus-treated comparison has been generated yet.",
+            "detail": compare_note["detail"] if compare_note else "Use the Compare tab after group labels are assigned.",
+        },
+        {
+            "status": "boundary",
+            "title": "Safety Boundary",
+            "body": "Local post-acquisition analysis support only.",
+            "detail": FORBIDDEN_NOTICE,
+        },
+    ]
+
+
 def _qc_answer(flags: list[QCFlag]) -> str:
     if not flags:
         return "No QC flags are currently present."
@@ -135,3 +198,20 @@ def _panel_channel_labels(sample: SampleRecord) -> list[str]:
         if channel.marker or channel.fluorochrome or channel.display_label:
             labels.append(channel.label)
     return labels
+
+
+def _severity_counts(flags: list[QCFlag]) -> dict[str, int]:
+    return {
+        "severe": sum(flag.severity == "severe" for flag in flags),
+        "warning": sum(flag.severity == "warning" for flag in flags),
+        "info": sum(flag.severity == "info" for flag in flags),
+    }
+
+
+def _top_qc_flag(flags: list[QCFlag]) -> str:
+    priority = {"severe": 0, "warning": 1, "info": 2}
+    if not flags:
+        return ""
+    flag = sorted(flags, key=lambda item: priority.get(item.severity, 99))[0]
+    channel = f" on {flag.channel}" if flag.channel else ""
+    return f"Top review flag: {flag.title}{channel}; suggested check: {flag.suggested_check}"

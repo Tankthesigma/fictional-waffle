@@ -430,6 +430,7 @@ def ask_flow_tab():
                 "Ask Flow",
                 [
                     html.P("Local deterministic summaries only. No cloud call, no API key, no diagnostic claims.", className="muted"),
+                    html.Div(id="ask-flow-briefing", className="ask-briefing"),
                     dcc.Textarea(id="ask-flow-question", value="Summarize the QC flags.", className="ask-input"),
                     html.Button("Ask", id="ask-flow-button", n_clicks=0, className="primary"),
                     html.Div(id="ask-flow-answer", className="assistant-answer"),

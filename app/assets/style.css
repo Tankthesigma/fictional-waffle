@@ -996,6 +996,65 @@ button:hover {
   font: inherit;
 }
 
+.ask-briefing {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.ask-briefing-card {
+  min-height: 126px;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-left: 4px solid #0ea5e9;
+  border-radius: 8px;
+}
+
+.ask-briefing-card.review {
+  border-left-color: var(--warn);
+  background: #fffbeb;
+}
+
+.ask-briefing-card.waiting {
+  border-left-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.ask-briefing-card.boundary {
+  border-left-color: var(--accent);
+  background: #f0fdfa;
+}
+
+.ask-briefing-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.ask-briefing-card strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+.ask-briefing-card p {
+  margin: 7px 0 5px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.ask-briefing-card small {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
 .assistant-answer {
   margin-top: 14px;
   padding: 14px;

@@ -104,6 +104,15 @@ def test_report_readiness_preview_is_rendered_and_wired():
     assert "report-readiness.children" in dash_app.callback_map
 
 
+def test_ask_flow_briefing_is_rendered_and_wired():
+    dash_app = create_app()
+    layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
+
+    assert "ask-flow-briefing" in layout_json
+    assert "Local deterministic summaries only" in layout_json
+    assert "ask-flow-briefing.children" in dash_app.callback_map
+
+
 def test_workbench_analysis_cockpit_is_rendered_and_wired():
     dash_app = create_app()
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)

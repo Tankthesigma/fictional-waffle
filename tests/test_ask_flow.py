@@ -1,9 +1,10 @@
 import pandas as pd
 
-from app.core.ask_flow import answer_question
+from app.core.ask_flow import analysis_briefing, answer_question
 from app.core.compensation import parse_spillover
 from app.models.channel import ChannelSummary
 from app.models.gate import GateDefinition
+from app.models.qc_flag import QCFlag
 from app.models.sample import SampleRecord
 
 
@@ -86,3 +87,62 @@ def test_ask_flow_uses_comparison_summary():
 
     assert "Strongest Increase: +4" in answer
     assert "Guarded Fold-Changes: 1" in answer
+
+
+def test_analysis_briefing_summarizes_context_without_claims():
+    sample = SampleRecord(
+        "s1",
+        "s1.csv",
+        path="unused.csv",
+        file_type="csv",
+        events=pd.DataFrame({"FSC-A": [1, 2], "FL1-A": [10, 20]}),
+        channels=[
+            ChannelSummary(1, "FSC-A", role="fsc-a"),
+            ChannelSummary(2, "FL1-A", role="fluorescence", marker="CD3", fluorochrome="FITC"),
+        ],
+    )
+    gate = GateDefinition("g1", "Current view review gate", "rectangle", ["FSC-A", "FL1-A"], review_status="review_needed")
+    flag = QCFlag(
+        sample_id="s1",
+        severity="warning",
+        code="POSSIBLE_HIGH_CLIPPING",
+        title="Possible high-end clipping",
+        explanation="review distribution",
+        metric_value=2.0,
+        threshold=1.0,
+        suggested_check="Inspect histogram",
+        affects=["plotting"],
+        channel="FL1-A",
+    )
+
+    cards = analysis_briefing(
+        sample,
+        x_channel="FSC-A",
+        y_channel="FL1-A",
+        gates=[gate],
+        qc_flags=[flag],
+        comparison_rows=[{"channel": "FL1-A", "median_difference": 5.0, "notes": "exploratory only"}],
+    )
+    text = " ".join(f"{card['title']} {card['body']} {card['detail']}" for card in cards)
+
+    assert cards[0]["title"] == "Active Context"
+    assert "s1: 2 events, 2 channels" in text
+    assert "FSC-A x CD3 FITC (FL1-A)" in text
+    assert "Top review flag: Possible high-end clipping on FL1-A" in text
+    assert "1 enabled user/review gate(s)" in text
+    assert "FL1-A is higher in treated medians by +5" in text
+    assert "does not infer cell identity, diagnosis" in text
+    assert "biologically correct" in text
+
+
+def test_analysis_briefing_empty_state_is_waiting():
+    cards = analysis_briefing(None)
+
+    assert cards == [
+        {
+            "status": "waiting",
+            "title": "No Active Sample",
+            "body": "Upload FCS or event-level CSV files to generate a local analysis briefing.",
+            "detail": "Ask Flow stays local and deterministic.",
+        }
+    ]
