@@ -19,6 +19,7 @@ def export_pdf_report(
     output_path: str | Path,
     title: str = "Ask Flow Workbench Report",
     figure_paths: list[str | Path] | None = None,
+    comparison_rows: list[dict[str, object]] | None = None,
 ) -> Path:
     """Export a concise PDF report using ReportLab when available."""
     target = Path(output_path)
@@ -28,7 +29,7 @@ def export_pdf_report(
         from reportlab.lib.styles import getSampleStyleSheet
         from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table
     except Exception:
-        target.write_text(_plain_report(samples, qc_flags, gates, gate_stats, title), encoding="utf-8")
+        target.write_text(_plain_report(samples, qc_flags, gates, gate_stats, title, comparison_rows or []), encoding="utf-8")
         return target
 
     styles = getSampleStyleSheet()
@@ -68,11 +69,22 @@ def export_pdf_report(
         story.append(Table([keys] + [[row.get(key, "") for key in keys] for row in gate_stats[:20]]))
     else:
         story.append(Paragraph("No gate statistics available.", styles["Normal"]))
+    if comparison_rows:
+        story.extend([Spacer(1, 12), Paragraph("Exploratory Comparison", styles["Heading2"])])
+        comparison_keys = ["channel", "control_median", "treated_median", "median_difference", "fold_change", "n_control", "n_treated", "notes"]
+        story.append(Table([comparison_keys] + [[row.get(key, "") for key in comparison_keys] for row in comparison_rows[:20]]))
     doc.build(story)
     return target
 
 
-def _plain_report(samples: list[SampleRecord], qc_flags: list[QCFlag], gates: list[GateDefinition], gate_stats: list[dict[str, object]], title: str) -> str:
+def _plain_report(
+    samples: list[SampleRecord],
+    qc_flags: list[QCFlag],
+    gates: list[GateDefinition],
+    gate_stats: list[dict[str, object]],
+    title: str,
+    comparison_rows: list[dict[str, object]],
+) -> str:
     lines = [title, f"Generated: {datetime.now().isoformat(timespec='seconds')}", f"App version: {__version__}", DISCLAIMER, ""]
     lines.append("Samples:")
     lines.extend(f"- {s.sample_id}: {s.filename}, {s.event_count} events, {s.channel_count} channels" for s in samples)
@@ -84,6 +96,11 @@ def _plain_report(samples: list[SampleRecord], qc_flags: list[QCFlag], gates: li
     lines.append("\nGates:")
     lines.extend(f"- {g.name}: {g.gate_type} on {', '.join(g.channels)}" for g in gates)
     lines.append(f"\nGate stat rows: {len(gate_stats)}")
+    lines.append("\nExploratory Comparison:")
+    lines.extend(
+        f"- {row.get('channel')}: difference={row.get('median_difference')}, fold_change={row.get('fold_change')}, notes={row.get('notes')}"
+        for row in comparison_rows
+    )
     return "\n".join(lines)
 
 

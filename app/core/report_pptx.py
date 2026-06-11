@@ -18,6 +18,7 @@ def export_pptx_report(
     output_path: str | Path,
     title: str = "Ask Flow Workbench Report",
     figure_paths: list[str | Path] | None = None,
+    comparison_rows: list[dict[str, object]] | None = None,
 ) -> Path:
     """Export a PowerPoint report."""
     target = Path(output_path)
@@ -40,7 +41,7 @@ def export_pptx_report(
     else:
         _bullets_slide(prs, "Representative Plots", ["No static plot images were available for this export."])
     _bullets_slide(prs, "Gate Statistics", [f"{row.get('gate_name')}: {row.get('event_count')} events" for row in gate_stats[:8]] or ["No gate statistics available."])
-    _bullets_slide(prs, "Comparison", ["Control-versus-treated tables are exploratory and exported from the Compare tab when groups are selected."])
+    _bullets_slide(prs, "Exploratory Comparison", _comparison_bullets(comparison_rows or []))
     _bullets_slide(prs, "Methods and Disclaimer", [f"App version {__version__}", DISCLAIMER])
     prs.save(target)
     return target
@@ -83,3 +84,15 @@ def _channel_bullets(samples: list[SampleRecord]) -> list[str]:
             fluor = f", {channel.fluorochrome}" if channel.fluorochrome else ""
             bullets.append(f"{sample.sample_id}: {channel.raw_name} as {channel.label} ({channel.role}{marker}{fluor})")
     return bullets or ["No channel metadata available."]
+
+
+def _comparison_bullets(rows: list[dict[str, object]]) -> list[str]:
+    if not rows:
+        return ["No control-versus-treated comparison rows were available for this report."]
+    bullets = ["Rows are descriptive and exploratory; review replicate structure before interpreting effects."]
+    for row in rows[:9]:
+        bullets.append(
+            f"{row.get('channel')}: median difference {row.get('median_difference')}; "
+            f"fold-change {row.get('fold_change')}; {row.get('notes', '')}"
+        )
+    return bullets

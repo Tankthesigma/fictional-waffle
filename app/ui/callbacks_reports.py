@@ -86,6 +86,7 @@ def register_report_callbacks(app, session: WorkbenchSession) -> None:
                 gate_stats,
                 EXPORT_ROOT / f"ask-flow-report-{stamp}.pdf",
                 figure_paths=figure_export.paths,
+                comparison_rows=session.comparison_rows,
             )
             return _report_status("PDF", path, figure_export)
         if action == "export-pptx":
@@ -96,6 +97,7 @@ def register_report_callbacks(app, session: WorkbenchSession) -> None:
                 gate_stats,
                 EXPORT_ROOT / f"ask-flow-report-{stamp}.pptx",
                 figure_paths=figure_export.paths,
+                comparison_rows=session.comparison_rows,
             )
             return _report_status("PowerPoint", path, figure_export)
         return ""
