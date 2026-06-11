@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from dash import Input, Output, State, html
+import csv
+from io import StringIO
+
+from dash import Input, Output, State, html, no_update
 
 from app.core.session_store import WorkbenchSession
 
@@ -18,19 +21,36 @@ def register_sample_callbacks(app, session: WorkbenchSession) -> None:
         Output("hist-channel", "value"),
         Output("active-analysis-strip", "children"),
         Output("channel-badge-rail", "children"),
+        Output("panel-readiness-summary", "children"),
+        Output("panel-readiness-table", "data"),
         Input("sample-dropdown", "value"),
         Input("sample-table", "selected_rows"),
         State("sample-table", "data"),
     )
     def select_sample(dropdown_value, selected_rows, sample_table_data):
         from app.core.channel_inference import best_scatter_pair
+        from app.core.panel_setup import panel_readiness_rows, panel_readiness_summary
 
         selected = dropdown_value
         if selected_rows and sample_table_data:
             selected = sample_table_data[selected_rows[0]].get("sample_id")
         sample = session.selected_sample(selected)
         if not sample:
-            return None, [], [], [], [], [], None, None, None, _empty_analysis_strip(), _empty_channel_badges()
+            return (
+                None,
+                [],
+                [],
+                [],
+                [],
+                [],
+                None,
+                None,
+                None,
+                _empty_analysis_strip(),
+                _empty_channel_badges(),
+                _panel_summary_cards(panel_readiness_summary(None)),
+                [],
+            )
         metadata_rows = [{"keyword": str(key), "value": str(value)} for key, value in sorted(sample.keywords.items())]
         channel_rows = [channel.to_dict() for channel in sample.channels]
         options = [{"label": channel.label, "value": channel.raw_name} for channel in sample.channels]
@@ -48,7 +68,31 @@ def register_sample_callbacks(app, session: WorkbenchSession) -> None:
             hist_default,
             _analysis_strip(sample, x_default, y_default, hist_default),
             _channel_badges(sample),
+            _panel_summary_cards(panel_readiness_summary(sample)),
+            panel_readiness_rows(sample),
         )
+
+    @app.callback(
+        Output("panel-template-download", "data"),
+        Input("download-panel-template", "n_clicks"),
+        State("selected-sample-store", "data"),
+        prevent_initial_call=True,
+    )
+    def download_panel_template(_clicks, selected_sample):
+        from app.core.panel_setup import PANEL_TEMPLATE_COLUMNS, panel_template_rows
+
+        rows = panel_template_rows(session.selected_sample(selected_sample))
+        if not rows:
+            return no_update
+        output = StringIO()
+        writer = csv.DictWriter(output, fieldnames=PANEL_TEMPLATE_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+        return {
+            "content": output.getvalue(),
+            "filename": "ask-flow-panel-template.csv",
+            "type": "text/csv",
+        }
 
 
 def _empty_analysis_strip():
@@ -113,3 +157,19 @@ def _channel_badges(sample):
             )
         )
     return badges or _empty_channel_badges()
+
+
+def _panel_summary_cards(summary: dict[str, int | str]):
+    return html.Div(
+        [
+            _panel_metric("Status", str(summary["status"]), "Map fluorescence markers before compare/report." if summary["status"] != "ready" else "Panel context is mapped."),
+            _panel_metric("Fluorescence", str(summary["fluorescence_channels"]), f"{summary['labeled_fluorescence']} labeled"),
+            _panel_metric("Needs Labels", str(summary["unlabeled_fluorescence"]), "Add marker/antibody/fluorochrome rows."),
+            _panel_metric("Role Review", str(summary["unknown_channels"]), "Unknown channels should be checked."),
+        ],
+        className="panel-readiness-metrics",
+    )
+
+
+def _panel_metric(label: str, value: str, detail: str):
+    return html.Div([html.Span(label), html.Strong(value), html.Small(detail)], className="panel-readiness-metric")

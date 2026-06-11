@@ -1,7 +1,13 @@
 import pandas as pd
 
 from app.core.channel_inference import summarize_channels
-from app.core.panel_setup import apply_panel_setup, parse_panel_setup
+from app.core.panel_setup import (
+    apply_panel_setup,
+    panel_readiness_rows,
+    panel_readiness_summary,
+    panel_template_rows,
+    parse_panel_setup,
+)
 from app.models.sample import SampleRecord
 
 
@@ -55,3 +61,38 @@ def test_panel_setup_warns_when_no_channels_match(tmp_path):
     warnings = apply_panel_setup([sample], parse_panel_setup(path))
 
     assert warnings == ["s1.csv: panel setup did not match any channels."]
+
+
+def test_panel_readiness_flags_unlabeled_fluorescence():
+    sample = _sample()
+
+    summary = panel_readiness_summary(sample)
+    rows = panel_readiness_rows(sample)
+
+    assert summary["status"] == "label antibodies"
+    assert summary["fluorescence_channels"] == 1
+    assert summary["unlabeled_fluorescence"] == 1
+    assert rows[1]["channel"] == "FL1-A"
+    assert rows[1]["status"] == "needs label"
+    assert "panel setup CSV" in rows[1]["next_step"]
+
+
+def test_panel_template_rows_follow_selected_sample_channels():
+    sample = _sample()
+    sample.channels[1].marker = "CD3"
+    sample.channels[1].fluorochrome = "FITC"
+
+    rows = panel_template_rows(sample)
+
+    assert rows[0]["channel"] == "FSC-A"
+    assert rows[1]["channel"] == "FL1-A"
+    assert rows[1]["marker"] == "CD3"
+    assert rows[1]["fluorochrome"] == "FITC"
+
+
+def test_generic_panel_template_rows_are_usable_without_sample():
+    rows = panel_template_rows(None)
+
+    assert rows[0]["channel"]
+    assert rows[0]["role"] == "fluorescence"
+    assert {"channel", "marker", "antibody", "fluorochrome", "role"} <= set(rows[0])

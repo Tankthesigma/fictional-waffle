@@ -42,6 +42,9 @@ def test_panel_setup_upload_is_rendered():
 
     assert "upload-panel" in layout_json
     assert "Optional panel setup CSV" in layout_json
+    assert "download-panel-template" in layout_json
+    assert "Download Panel Template" in layout_json
+    assert "panel-template-download" in layout_json
     assert "load-demo-data" in layout_json
     assert "Load Demo Dataset" in layout_json
 
@@ -108,6 +111,11 @@ def test_workbench_analysis_cockpit_is_rendered_and_wired():
     assert "Population workflow" in layout_json
     assert "Display stack" in layout_json
     assert "Stats use full matrix" in layout_json
+    assert "Panel Setup Readiness" in layout_json
+    assert "panel-readiness-summary" in layout_json
+    assert "panel-readiness-table" in layout_json
     assert any("active-analysis-strip.children" in key for key in dash_app.callback_map)
     assert "analysis-guide.children" in dash_app.callback_map
     assert any("plot-context-bar.children" in key for key in dash_app.callback_map)
+    assert any("panel-readiness-summary.children" in key for key in dash_app.callback_map)
+    assert "panel-template-download.data" in dash_app.callback_map

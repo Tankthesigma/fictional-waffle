@@ -68,6 +68,8 @@ def home_upload_panel():
                     upload_box("upload-data", ".fcs or .csv files", multiple=True),
                     upload_box("upload-manifest", "Optional manifest CSV", multiple=False),
                     upload_box("upload-panel", "Optional panel setup CSV", multiple=False),
+                    html.Button("Download Panel Template", id="download-panel-template", n_clicks=0),
+                    dcc.Download(id="panel-template-download"),
                     html.Button("Load Demo Dataset", id="load-demo-data", n_clicks=0, className="primary"),
                     html.Button("Clear Project", id="clear-project", n_clicks=0),
                     html.Div(id="upload-status", className="status-box"),
@@ -222,6 +224,18 @@ def explore_tab():
             dcc.Graph(id="scatter-graph", config={"displayModeBar": True}, className="analysis-graph primary-graph"),
             dcc.Graph(id="histogram-graph", config={"displayModeBar": True}, className="analysis-graph"),
             html.Div(id="channel-badge-rail", className="channel-badge-rail"),
+            card(
+                "Panel Setup Readiness",
+                [
+                    html.Div(id="panel-readiness-summary", className="panel-readiness-summary"),
+                    data_table(
+                        "panel-readiness-table",
+                        ["channel", "display_label", "marker", "antibody", "fluorochrome", "role", "status", "next_step"],
+                        page_size=8,
+                    ),
+                ],
+                "panel-readiness-card",
+            ),
             html.Div(
                 [
                     card("Metadata Inspector", data_table("metadata-table", ["keyword", "value"], page_size=8)),

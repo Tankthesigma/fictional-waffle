@@ -522,6 +522,53 @@ body {
   border-left-color: #0ea5e9;
 }
 
+.panel-readiness-card {
+  margin: 0 12px 14px;
+}
+
+.panel-readiness-summary {
+  margin-bottom: 12px;
+}
+
+.panel-readiness-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.panel-readiness-metric {
+  min-height: 72px;
+  padding: 10px 12px;
+  background: #f8fbff;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+}
+
+.panel-readiness-metric span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.panel-readiness-metric strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.panel-readiness-metric small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
 .upload-box {
   border: 1px dashed #94a3b8;
   border-radius: 8px;
@@ -912,7 +959,8 @@ button:hover {
   .bench-strip,
   .plot-context-bar,
   .analysis-guide-panel,
-  .analysis-guide-steps {
+  .analysis-guide-steps,
+  .panel-readiness-metrics {
     grid-template-columns: 1fr;
   }
 
