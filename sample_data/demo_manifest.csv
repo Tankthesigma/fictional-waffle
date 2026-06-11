@@ -1,0 +1,2 @@
+sample_id,file_name,condition,replicate,control_type,notes
+demo_control,Beckman Coulter - Cyan.fcs,control,1,unstained_or_reference,Example public FCS manifest row; edit file_name to match your downloaded file.

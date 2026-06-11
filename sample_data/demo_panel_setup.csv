@@ -1,0 +1,8 @@
+channel,display_label,marker,antibody,fluorochrome,role
+FS Lin,Forward Scatter,Scatter,,FS,fsc
+SS Lin,Side Scatter,Scatter,,SS,ssc
+SS Log,Side Scatter Log,Scatter,,SS,ssc
+FL 1 Log,FITC detector,Example FITC marker,example clone,FITC,fluorescence
+FL 2 Area,PE detector,Example PE marker,example clone,PE,fluorescence
+FL 6 Log,Violet detector,Example violet marker,example clone,Violet 1,fluorescence
+FL 8 Log,APC detector,Example APC marker,example clone,APC,fluorescence
