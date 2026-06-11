@@ -13,8 +13,9 @@ def register_qc_callbacks(app, session: WorkbenchSession) -> None:
         Output("qc-review-lanes", "children"),
         Input("sample-ids-store", "data"),
         Input("selected-sample-store", "data"),
+        Input("analysis-revision-store", "data"),
     )
-    def update_qc(_sample_ids, selected_sample):
+    def update_qc(_sample_ids, selected_sample, _analysis_revision):
         flags = session.all_qc_flags()
         selected_flags = session.qc_flags.get(selected_sample, []) if selected_sample else flags
         cards = [_qc_card("Severe", sum(1 for flag in flags if flag.severity == "severe"), "severe"), _qc_card("Warnings", sum(1 for flag in flags if flag.severity == "warning"), "warning"), _qc_card("Info", sum(1 for flag in flags if flag.severity == "info"), "info")]

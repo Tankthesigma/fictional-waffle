@@ -1,6 +1,8 @@
 import pandas as pd
 
 from app.core.channel_inference import best_scatter_pair, infer_channel_role, summarize_channels
+from app.core.channel_overrides import update_channel_role
+from app.models.sample import SampleRecord
 
 
 def test_channel_inference_common_roles():
@@ -55,3 +57,27 @@ def test_channel_metadata_prefixes_do_not_bleed_into_double_digit_channels():
     assert sorted(channels[0].metadata) == ["$P1N", "$P1R", "$P1S"]
     assert "$P10N" not in channels[0].metadata
     assert channels[9].display_label == "Marker 10"
+
+
+def test_channel_role_override_updates_role_and_metadata(tmp_path):
+    frame = pd.DataFrame({"A": [1, 2, 3], "B": [2, 3, 4]})
+    sample = SampleRecord("s1", "s1.csv", path=tmp_path / "s1.csv", file_type="csv", events=frame)
+    sample.channels = summarize_channels(frame)
+
+    status = update_channel_role(sample, "A", "fsc-a")
+
+    assert status == "A: unknown -> fsc-a"
+    assert sample.channels[0].role == "fsc-a"
+    assert sample.channels[0].metadata["user_role_override"] == "fsc-a"
+
+
+def test_channel_role_override_rejects_bad_inputs(tmp_path):
+    sample = SampleRecord("s1", "s1.csv", path=tmp_path / "s1.csv", file_type="csv", events=pd.DataFrame({"A": [1]}))
+    sample.channels = summarize_channels(sample.events)
+
+    try:
+        update_channel_role(sample, "A", "hardware-control")
+    except ValueError as exc:
+        assert "unsupported channel role" in str(exc)
+    else:
+        raise AssertionError("unsupported role was accepted")

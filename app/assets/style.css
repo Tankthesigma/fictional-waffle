@@ -569,6 +569,14 @@ body {
   line-height: 1.25;
 }
 
+.channel-override-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(150px, 0.7fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 10px;
+}
+
 .upload-box {
   border: 1px dashed #94a3b8;
   border-radius: 8px;
@@ -1202,7 +1210,8 @@ button:hover {
   .analysis-guide-panel,
   .analysis-guide-steps,
   .panel-readiness-metrics,
-  .grouping-readiness-metrics {
+  .grouping-readiness-metrics,
+  .channel-override-form {
     grid-template-columns: 1fr;
   }
 

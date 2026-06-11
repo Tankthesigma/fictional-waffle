@@ -23,6 +23,8 @@ def register_sample_callbacks(app, session: WorkbenchSession) -> None:
         Output("channel-badge-rail", "children"),
         Output("panel-readiness-summary", "children"),
         Output("panel-readiness-table", "data"),
+        Output("role-override-channel", "options"),
+        Output("role-override-channel", "value"),
         Input("sample-dropdown", "value"),
         Input("sample-table", "selected_rows"),
         State("sample-table", "data"),
@@ -50,6 +52,8 @@ def register_sample_callbacks(app, session: WorkbenchSession) -> None:
                 _empty_channel_badges(),
                 _panel_summary_cards(panel_readiness_summary(None)),
                 [],
+                [],
+                None,
             )
         metadata_rows = [{"keyword": str(key), "value": str(value)} for key, value in sorted(sample.keywords.items())]
         channel_rows = [channel.to_dict() for channel in sample.channels]
@@ -70,6 +74,75 @@ def register_sample_callbacks(app, session: WorkbenchSession) -> None:
             _channel_badges(sample),
             _panel_summary_cards(panel_readiness_summary(sample)),
             panel_readiness_rows(sample),
+            options,
+            x_default or (options[0]["value"] if options else None),
+        )
+
+    @app.callback(
+        Output("channel-table", "data", allow_duplicate=True),
+        Output("x-channel", "options", allow_duplicate=True),
+        Output("y-channel", "options", allow_duplicate=True),
+        Output("hist-channel", "options", allow_duplicate=True),
+        Output("x-channel", "value", allow_duplicate=True),
+        Output("y-channel", "value", allow_duplicate=True),
+        Output("hist-channel", "value", allow_duplicate=True),
+        Output("active-analysis-strip", "children", allow_duplicate=True),
+        Output("channel-badge-rail", "children", allow_duplicate=True),
+        Output("panel-readiness-summary", "children", allow_duplicate=True),
+        Output("panel-readiness-table", "data", allow_duplicate=True),
+        Output("role-override-status", "children"),
+        Output("analysis-revision-store", "data"),
+        Input("apply-role-override", "n_clicks"),
+        State("selected-sample-store", "data"),
+        State("role-override-channel", "value"),
+        State("role-override-value", "value"),
+        State("analysis-revision-store", "data"),
+        prevent_initial_call=True,
+    )
+    def apply_role_override(_clicks, sample_id, raw_name, role, revision):
+        from app.core.channel_inference import best_scatter_pair
+        from app.core.channel_overrides import update_channel_role
+        from app.core.panel_setup import panel_readiness_rows, panel_readiness_summary
+        from app.core.qc import run_batch_qc
+
+        sample = session.selected_sample(sample_id)
+        try:
+            status = update_channel_role(sample, raw_name, role)
+        except ValueError as exc:
+            return (
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+                no_update,
+                str(exc),
+                int(revision or 0),
+            )
+        session.qc_flags = run_batch_qc(session.sample_list())
+        options = [{"label": channel.label, "value": channel.raw_name} for channel in sample.channels]
+        x_default, y_default = best_scatter_pair(sample.channels)
+        hist_default = sample.fluorescence_channels[0] if sample.fluorescence_channels else (sample.events.columns[0] if len(sample.events.columns) else None)
+        next_revision = int(revision or 0) + 1
+        return (
+            [channel.to_dict() for channel in sample.channels],
+            options,
+            options,
+            options,
+            x_default,
+            y_default,
+            hist_default,
+            _analysis_strip(sample, x_default, y_default, hist_default),
+            _channel_badges(sample),
+            _panel_summary_cards(panel_readiness_summary(sample)),
+            panel_readiness_rows(sample),
+            f"Applied channel role override: {status}. QC and plot defaults were refreshed.",
+            next_revision,
         )
 
     @app.callback(

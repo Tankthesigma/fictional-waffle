@@ -125,6 +125,7 @@ def test_workbench_analysis_cockpit_is_rendered_and_wired():
     dash_app = create_app()
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
+    assert "analysis-revision-store" in layout_json
     assert "active-analysis-strip" in layout_json
     assert "analysis-guide" in layout_json
     assert "plot-context-bar" in layout_json
@@ -139,6 +140,9 @@ def test_workbench_analysis_cockpit_is_rendered_and_wired():
     assert "plot-preset" in layout_json
     assert "Apply Preset" in layout_json
     assert "plot-preset-table" in layout_json
+    assert "role-override-channel" in layout_json
+    assert "role-override-value" in layout_json
+    assert "Apply Role Override" in layout_json
     assert any("active-analysis-strip.children" in key for key in dash_app.callback_map)
     assert "analysis-guide.children" in dash_app.callback_map
     assert any("plot-context-bar.children" in key for key in dash_app.callback_map)
@@ -146,3 +150,5 @@ def test_workbench_analysis_cockpit_is_rendered_and_wired():
     assert "panel-template-download.data" in dash_app.callback_map
     assert any("plot-preset.options" in key for key in dash_app.callback_map)
     assert any("plot-preset-status.children" in key for key in dash_app.callback_map)
+    assert any("role-override-status.children" in key for key in dash_app.callback_map)
+    assert any("analysis-revision-store.data" in key for key in dash_app.callback_map)
