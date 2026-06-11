@@ -1,7 +1,7 @@
 import pandas as pd
 
 from app.core.channel_inference import best_scatter_pair, infer_channel_role, summarize_channels
-from app.core.channel_overrides import update_channel_role
+from app.core.channel_overrides import channel_role, update_channel_role
 from app.models.sample import SampleRecord
 
 
@@ -81,3 +81,13 @@ def test_channel_role_override_rejects_bad_inputs(tmp_path):
         assert "unsupported channel role" in str(exc)
     else:
         raise AssertionError("unsupported role was accepted")
+
+
+def test_channel_role_lookup_returns_current_role_for_safe_ui_defaults(tmp_path):
+    frame = pd.DataFrame({"FSC-A": [1, 2, 3], "FL1-A": [2, 3, 4]})
+    sample = SampleRecord("s1", "s1.csv", path=tmp_path / "s1.csv", file_type="csv", events=frame)
+    sample.channels = summarize_channels(frame)
+
+    assert channel_role(sample, "FSC-A") == "fsc-a"
+    assert channel_role(sample, "FL1-A") == "fluorescence"
+    assert channel_role(sample, "missing") is None

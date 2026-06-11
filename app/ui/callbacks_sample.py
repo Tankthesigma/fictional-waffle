@@ -146,6 +146,16 @@ def register_sample_callbacks(app, session: WorkbenchSession) -> None:
         )
 
     @app.callback(
+        Output("role-override-value", "value"),
+        Input("role-override-channel", "value"),
+        State("selected-sample-store", "data"),
+    )
+    def sync_role_override_value(raw_name, sample_id):
+        from app.core.channel_overrides import channel_role
+
+        return channel_role(session.selected_sample(sample_id), raw_name)
+
+    @app.callback(
         Output("panel-template-download", "data"),
         Input("download-panel-template", "n_clicks"),
         State("selected-sample-store", "data"),

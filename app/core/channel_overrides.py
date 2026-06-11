@@ -35,3 +35,13 @@ def update_channel_role(sample: SampleRecord | None, raw_name: str | None, role:
             channel.metadata["user_role_override"] = normalized
             return f"{raw_name}: {old_role} -> {normalized}"
     raise ValueError(f"channel not found: {raw_name}")
+
+
+def channel_role(sample: SampleRecord | None, raw_name: str | None) -> str | None:
+    """Return a channel's current role for safe override UI defaults."""
+    if sample is None or not raw_name:
+        return None
+    for channel in sample.channels:
+        if channel.raw_name == raw_name:
+            return channel.role if channel.role in SUPPORTED_ROLE_OVERRIDES else "unknown"
+    return None

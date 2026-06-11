@@ -253,7 +253,7 @@ def explore_tab():
                                     dcc.Dropdown(id="role-override-channel", options=[], placeholder="Channel to review", clearable=False),
                                     dcc.Dropdown(
                                         id="role-override-value",
-                                        value="fluorescence",
+                                        placeholder="Current role",
                                         clearable=False,
                                         options=[
                                             {"label": "FSC", "value": "fsc"},
