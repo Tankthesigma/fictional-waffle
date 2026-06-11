@@ -15,11 +15,16 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         Output("gate-stats-table", "data"),
         Output("gate-stats-table", "columns"),
         Output("gate-status", "children"),
+        Output("manage-gate-id", "options"),
+        Output("manage-gate-id", "value"),
         Input("add-rectangle-gate", "n_clicks"),
         Input("add-histogram-gate", "n_clicks"),
         Input("suggest-candidate-gates", "n_clicks"),
         Input("accept-candidate-gates", "n_clicks"),
         Input("reject-candidate-gates", "n_clicks"),
+        Input("rename-gate", "n_clicks"),
+        Input("toggle-gate", "n_clicks"),
+        Input("delete-gate", "n_clicks"),
         Input("save-gates", "n_clicks"),
         Input("load-gates", "n_clicks"),
         Input("save-project", "n_clicks"),
@@ -43,6 +48,8 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         State("hist-gate-name", "value"),
         State("hist-gate-min", "value"),
         State("hist-gate-max", "value"),
+        State("manage-gate-id", "value"),
+        State("manage-gate-name", "value"),
         State("compensation-enabled", "value"),
         prevent_initial_call=True,
     )
@@ -52,6 +59,9 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         suggest_clicks,
         accept_clicks,
         reject_clicks,
+        rename_clicks,
+        toggle_clicks,
+        delete_clicks,
         save_clicks,
         load_clicks,
         save_project_clicks,
@@ -75,6 +85,8 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         hist_gate_name,
         hist_min,
         hist_max,
+        manage_gate_id,
+        manage_gate_name,
         compensation_enabled,
     ):
         from dash import callback_context
@@ -86,7 +98,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             from app.core.gating import rectangle_gate
 
             if not all(value is not None for value in [x_channel, y_channel, x_min, x_max, y_min, y_max]):
-                return no_update, no_update, no_update, "Choose x/y channels and complete all rectangle bounds."
+                return no_update, no_update, no_update, "Choose x/y channels and complete all rectangle bounds.", no_update, no_update
             gate = rectangle_gate(
                 uuid4().hex[:8],
                 gate_name or "User rectangle gate",
@@ -106,7 +118,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             from app.core.gating import histogram_range_gate
 
             if not all(value is not None for value in [hist_channel, hist_min, hist_max]):
-                return no_update, no_update, no_update, "Choose a histogram channel and complete range bounds."
+                return no_update, no_update, no_update, "Choose a histogram channel and complete range bounds.", no_update, no_update
             gate = histogram_range_gate(
                 uuid4().hex[:8],
                 hist_gate_name or "User histogram gate",
@@ -125,7 +137,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
 
             sample = session.selected_sample(sample_id)
             if sample is None:
-                return no_update, no_update, no_update, "Upload and select a sample before suggesting candidate gates."
+                return no_update, no_update, no_update, "Upload and select a sample before suggesting candidate gates.", no_update, no_update
             use_compensation = _is_compensation_on(compensation_enabled) and sample.compensated_events is not None
             current_view = "metadata_compensated" if use_compensation else "raw"
             existing_ids = {gate.gate_id for gate in session.gates}
@@ -157,6 +169,22 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             before = len(session.gates)
             session.gates = [gate for gate in session.gates if not gate.candidate]
             status = f"Rejected {before - len(session.gates)} candidate gate(s)."
+        elif action == "rename-gate":
+            from app.core.gating import rename_gate
+
+            gate = rename_gate(session.gates, manage_gate_id, manage_gate_name)
+            status = f"Renamed gate to {gate.name}." if gate else "Select a gate and enter a non-empty name before renaming."
+        elif action == "toggle-gate":
+            from app.core.gating import toggle_gate_enabled
+
+            gate = toggle_gate_enabled(session.gates, manage_gate_id)
+            status = f"{'Enabled' if gate and gate.enabled else 'Disabled'} gate: {gate.name}." if gate else "Select a gate before toggling enabled state."
+        elif action == "delete-gate":
+            from app.core.gating import delete_gate
+
+            session.gates, deleted = delete_gate(session.gates, manage_gate_id)
+            status = "Deleted selected gate. Review any child gates that referenced it." if deleted else "Select a gate before deleting."
+            manage_gate_id = None
         elif action == "save-gates":
             from app.core.gating import save_gates
 
@@ -240,7 +268,9 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             else:
                 status = "No gate statistics available to export."
         stats_columns = _columns_from_rows(stats, ["gate_name", "parent_gate", "channels", "event_count", "percent_total", "percent_parent"])
-        return gate_to_table(session.gates), stats, table_columns(stats_columns), status
+        options = _gate_options(session.gates)
+        selected_gate = manage_gate_id if manage_gate_id in {gate.gate_id for gate in session.gates} else (options[0]["value"] if options else None)
+        return gate_to_table(session.gates), stats, table_columns(stats_columns), status, options, selected_gate
 
 
 def _columns_from_rows(rows: list[dict[str, object]], preferred: list[str]) -> list[str]:
@@ -254,3 +284,7 @@ def _columns_from_rows(rows: list[dict[str, object]], preferred: list[str]) -> l
 
 def _is_compensation_on(value) -> bool:
     return isinstance(value, list) and "on" in value
+
+
+def _gate_options(gates):
+    return [{"label": f"{gate.name} ({gate.gate_id})", "value": gate.gate_id} for gate in gates]

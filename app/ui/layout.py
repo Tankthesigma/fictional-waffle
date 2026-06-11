@@ -279,6 +279,22 @@ def gates_tab():
                             ),
                         ],
                     ),
+                    card(
+                        "Gate Manager",
+                        [
+                            html.Div("Rename, enable/disable, or delete one selected gate. Deleting a parent gate leaves child gates needing review.", className="muted"),
+                            html.Div(
+                                [
+                                    dcc.Dropdown(id="manage-gate-id", options=[], placeholder="Select gate", clearable=False),
+                                    dcc.Input(id="manage-gate-name", type="text", placeholder="New gate name"),
+                                    html.Button("Rename Gate", id="rename-gate", n_clicks=0),
+                                    html.Button("Enable / Disable", id="toggle-gate", n_clicks=0),
+                                    html.Button("Delete Gate", id="delete-gate", n_clicks=0),
+                                ],
+                                className="gate-form",
+                            ),
+                        ],
+                    ),
                     card("Gate Statistics", data_table("gate-stats-table", ["gate_name", "parent_gate", "channels", "event_count", "percent_total", "percent_parent"], page_size=12)),
                     html.Button("Export Gate Stats CSV", id="export-gate-stats", n_clicks=0),
                 ],

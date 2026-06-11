@@ -54,6 +54,16 @@ def test_candidate_gate_controls_are_rendered_with_review_language():
     assert "Candidate gates are review-needed and disabled until accepted" in layout_json
 
 
+def test_gate_manager_controls_are_rendered():
+    dash_app = create_app()
+    layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
+
+    assert "manage-gate-id" in layout_json
+    assert "rename-gate" in layout_json
+    assert "toggle-gate" in layout_json
+    assert "delete-gate" in layout_json
+
+
 def test_compare_summary_container_is_rendered():
     dash_app = create_app()
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)

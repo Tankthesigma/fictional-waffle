@@ -215,6 +215,40 @@ def load_gates(path: str | Path) -> list[GateDefinition]:
     return [GateDefinition.from_dict(item) for item in payload]
 
 
+def rename_gate(gates: list[GateDefinition], gate_id: str | None, new_name: str | None) -> GateDefinition | None:
+    """Rename a gate in place when the id and name are valid."""
+    if not gate_id or not new_name or not new_name.strip():
+        return None
+    gate = find_gate(gates, gate_id)
+    if gate is None:
+        return None
+    gate.name = new_name.strip()
+    return gate
+
+
+def toggle_gate_enabled(gates: list[GateDefinition], gate_id: str | None) -> GateDefinition | None:
+    """Flip one gate between enabled and disabled."""
+    gate = find_gate(gates, gate_id)
+    if gate is None:
+        return None
+    gate.enabled = not gate.enabled
+    return gate
+
+
+def delete_gate(gates: list[GateDefinition], gate_id: str | None) -> tuple[list[GateDefinition], bool]:
+    """Return gates with one id removed."""
+    if not gate_id:
+        return gates, False
+    updated = [gate for gate in gates if gate.gate_id != gate_id]
+    return updated, len(updated) != len(gates)
+
+
+def find_gate(gates: list[GateDefinition], gate_id: str | None) -> GateDefinition | None:
+    if not gate_id:
+        return None
+    return next((gate for gate in gates if gate.gate_id == gate_id), None)
+
+
 def gate_to_table(gates: list[GateDefinition]) -> list[dict[str, Any]]:
     return [
         {

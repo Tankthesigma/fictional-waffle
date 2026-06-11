@@ -1,7 +1,18 @@
 import numpy as np
 import pandas as pd
 
-from app.core.gating import apply_gate, apply_gate_tree, histogram_range_gate, load_gates, rectangle_gate, save_gates, suggest_candidate_gates
+from app.core.gating import (
+    apply_gate,
+    apply_gate_tree,
+    delete_gate,
+    histogram_range_gate,
+    load_gates,
+    rectangle_gate,
+    rename_gate,
+    save_gates,
+    suggest_candidate_gates,
+    toggle_gate_enabled,
+)
 from app.models.channel import ChannelSummary
 from app.models.gate import GateDefinition
 
@@ -101,3 +112,31 @@ def test_candidate_gate_suggestions_are_disabled_review_needed_gates():
     assert all("review" in gate.metadata["candidate_reason"] for gate in gates)
     masks = apply_gate_tree(events, gates)
     assert all(not mask.any() for mask in masks.values())
+
+
+def test_gate_management_helpers_rename_toggle_and_delete():
+    gate = rectangle_gate("g1", "old", "FSC-A", "SSC-A", 0, 1, 0, 1)
+    gates = [gate]
+
+    renamed = rename_gate(gates, "g1", "  main population  ")
+    toggled = toggle_gate_enabled(gates, "g1")
+    updated, deleted = delete_gate(gates, "g1")
+
+    assert renamed is gate
+    assert gate.name == "main population"
+    assert toggled is gate
+    assert gate.enabled is False
+    assert deleted is True
+    assert updated == []
+
+
+def test_gate_management_helpers_ignore_missing_or_empty_inputs():
+    gate = rectangle_gate("g1", "main", "FSC-A", "SSC-A", 0, 1, 0, 1)
+    gates = [gate]
+
+    assert rename_gate(gates, "g1", "  ") is None
+    assert toggle_gate_enabled(gates, "missing") is None
+    updated, deleted = delete_gate(gates, "missing")
+
+    assert updated == gates
+    assert deleted is False
