@@ -1,11 +1,41 @@
 from __future__ import annotations
 
-from dash import Input, Output
+from dash import Input, Output, html
 
 from app.core.session_store import WorkbenchSession
 
 
 def register_plot_callbacks(app, session: WorkbenchSession) -> None:
+    @app.callback(
+        Output("plot-context-bar", "children"),
+        Input("selected-sample-store", "data"),
+        Input("x-channel", "value"),
+        Input("y-channel", "value"),
+        Input("plot-mode", "value"),
+        Input("transform", "value"),
+        Input("max-events", "value"),
+        Input("compensation-enabled", "value"),
+        Input("gate-table", "data"),
+    )
+    def update_plot_context(sample_id, x_channel, y_channel, plot_mode, transform, max_events, compensation_enabled, _gate_rows):
+        sample = session.selected_sample(sample_id)
+        if not sample:
+            return [
+                _context_chip("Plot", "No active sample", "Upload data to populate the analysis workspace."),
+                _context_chip("Display", "Awaiting channels", "FCS metadata and panel CSV labels appear here."),
+            ]
+        use_compensation = _is_compensation_on(compensation_enabled) and sample.compensated_events is not None
+        event_view = "compensated" if use_compensation else "raw"
+        display_events = min(sample.event_count, int(max_events or 50_000))
+        gate_count = _visible_gate_count(session.gates, x_channel, y_channel, use_compensation)
+        qc_count = len(session.qc_flags.get(sample.sample_id, []))
+        return [
+            _context_chip("Sample", sample.sample_id, f"{display_events:,} displayed of {sample.event_count:,} events"),
+            _context_chip("Axes", f"{_channel_label(sample, x_channel)} x {_channel_label(sample, y_channel)}", f"{plot_mode or 'scatter'} | {transform or 'raw'} | {event_view}"),
+            _context_chip("Gates", f"{gate_count} overlay(s)", "Only compatible enabled gates are drawn on this view."),
+            _context_chip("Review", f"{qc_count} QC flag(s)", "Use QC tab for rule details and suggested checks."),
+        ]
+
     @app.callback(
         Output("scatter-graph", "figure"),
         Input("selected-sample-store", "data"),
@@ -83,3 +113,30 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
 
 def _is_compensation_on(value) -> bool:
     return isinstance(value, list) and "on" in value
+
+
+def _context_chip(label: str, value: str, detail: str):
+    return html.Div([html.Span(label), html.Strong(value), html.Small(detail)], className="plot-context-chip")
+
+
+def _channel_label(sample, raw_name: str | None) -> str:
+    if not raw_name:
+        return "Select channel"
+    for channel in sample.channels:
+        if channel.raw_name == raw_name:
+            return channel.label
+    return raw_name
+
+
+def _visible_gate_count(gates, x_channel: str | None, y_channel: str | None, use_compensation: bool) -> int:
+    if not x_channel or not y_channel:
+        return 0
+    current_view = "metadata_compensated" if use_compensation else "raw"
+    return sum(
+        1
+        for gate in gates
+        if gate.enabled
+        and gate.gate_type == "rectangle"
+        and gate.channels[:2] == [x_channel, y_channel]
+        and gate.metadata.get("event_view", "raw") == current_view
+    )

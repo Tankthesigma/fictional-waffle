@@ -17,6 +17,7 @@ def register_sample_callbacks(app, session: WorkbenchSession) -> None:
         Output("y-channel", "value"),
         Output("hist-channel", "value"),
         Output("active-analysis-strip", "children"),
+        Output("channel-badge-rail", "children"),
         Input("sample-dropdown", "value"),
         Input("sample-table", "selected_rows"),
         State("sample-table", "data"),
@@ -29,7 +30,7 @@ def register_sample_callbacks(app, session: WorkbenchSession) -> None:
             selected = sample_table_data[selected_rows[0]].get("sample_id")
         sample = session.selected_sample(selected)
         if not sample:
-            return None, [], [], [], [], [], None, None, None, _empty_analysis_strip()
+            return None, [], [], [], [], [], None, None, None, _empty_analysis_strip(), _empty_channel_badges()
         metadata_rows = [{"keyword": str(key), "value": str(value)} for key, value in sorted(sample.keywords.items())]
         channel_rows = [channel.to_dict() for channel in sample.channels]
         options = [{"label": channel.label, "value": channel.raw_name} for channel in sample.channels]
@@ -46,6 +47,7 @@ def register_sample_callbacks(app, session: WorkbenchSession) -> None:
             y_default,
             hist_default,
             _analysis_strip(sample, x_default, y_default, hist_default),
+            _channel_badges(sample),
         )
 
 
@@ -73,3 +75,41 @@ def _analysis_strip(sample, x_channel: str | None, y_channel: str | None, hist_c
 
 def _bench_tile(label: str, value: str, detail: str):
     return html.Div([html.Span(label), html.Strong(value), html.Small(detail)], className="bench-tile")
+
+
+def _empty_channel_badges():
+    return [
+        html.Div(
+            [
+                html.Span("Detector panel"),
+                html.Strong("No channels loaded"),
+                html.Small("Upload data to review inferred roles and panel labels."),
+            ],
+            className="channel-badge empty",
+        )
+    ]
+
+
+def _channel_badges(sample):
+    badges = []
+    for channel in sample.channels:
+        if not (
+            channel.role == "fluorescence"
+            or channel.role == "time"
+            or channel.role.startswith("fsc")
+            or channel.role.startswith("ssc")
+        ):
+            continue
+        detail_parts = [part for part in [channel.antibody, channel.display_label] if part]
+        detail = " | ".join(detail_parts) if detail_parts else channel.raw_name
+        badges.append(
+            html.Div(
+                [
+                    html.Span(channel.role),
+                    html.Strong(channel.label),
+                    html.Small(detail),
+                ],
+                className=f"channel-badge {channel.role.replace('-', '_')}",
+            )
+        )
+    return badges or _empty_channel_badges()

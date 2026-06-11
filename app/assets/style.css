@@ -269,6 +269,87 @@ body {
   min-height: 520px;
 }
 
+.plot-context-bar {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 10px;
+  padding: 12px 12px 0;
+}
+
+.plot-context-chip {
+  min-height: 66px;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.plot-context-chip span,
+.channel-badge span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.plot-context-chip strong,
+.channel-badge strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.plot-context-chip small,
+.channel-badge small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.channel-badge-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  padding: 0 12px 14px;
+}
+
+.channel-badge {
+  min-height: 68px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  border-left: 4px solid #64748b;
+}
+
+.channel-badge.fluorescence {
+  border-left-color: var(--blue);
+  background: #f8fbff;
+}
+
+.channel-badge.fsc,
+.channel-badge.fsc_a,
+.channel-badge.fsc_h,
+.channel-badge.fsc_w {
+  border-left-color: var(--accent);
+}
+
+.channel-badge.ssc,
+.channel-badge.ssc_a,
+.channel-badge.ssc_h,
+.channel-badge.ssc_w {
+  border-left-color: #7c3aed;
+}
+
+.channel-badge.time {
+  border-left-color: #0ea5e9;
+}
+
 .upload-box {
   border: 1px dashed #94a3b8;
   border-radius: 8px;
@@ -463,7 +544,8 @@ button:hover {
   .upload-grid,
   .workbench-grid,
   .two-col,
-  .bench-strip {
+  .bench-strip,
+  .plot-context-bar {
     grid-template-columns: 1fr;
   }
 

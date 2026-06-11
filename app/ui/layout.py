@@ -215,8 +215,10 @@ def workbench_panel():
 def explore_tab():
     return html.Div(
         [
+            html.Div(id="plot-context-bar", className="plot-context-bar"),
             dcc.Graph(id="scatter-graph", config={"displayModeBar": True}, className="analysis-graph primary-graph"),
             dcc.Graph(id="histogram-graph", config={"displayModeBar": True}, className="analysis-graph"),
+            html.Div(id="channel-badge-rail", className="channel-badge-rail"),
             html.Div(
                 [
                     card("Metadata Inspector", data_table("metadata-table", ["keyword", "value"], page_size=8)),
