@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.core.compare import comparison_summary
 from app.core.qc import qc_summary
 from app.core.compensation import compensation_status
 from app.models.gate import GateDefinition
@@ -31,10 +32,13 @@ def answer_question(
     if not sample:
         return "Upload or select a sample first. " + FORBIDDEN_NOTICE
     if "fsc" in q or "ssc" in q or "plot" in q:
+        x_label = _channel_label(sample, x_channel)
+        y_label = _channel_label(sample, y_channel)
         return (
-            f"The current plot uses {x_channel or 'an unselected x channel'} versus {y_channel or 'an unselected y channel'} "
-            f"for sample {sample.sample_id}. It is a post-acquisition scatter view for human review; clustering or identity "
-            f"labels require marker context from the user. {FORBIDDEN_NOTICE}"
+            f"The current plot uses {x_label} versus {y_label} for sample {sample.sample_id}. "
+            f"Those channels are being displayed as {_role_phrase(sample, x_channel)} and {_role_phrase(sample, y_channel)}. "
+            f"It is a post-acquisition view for human review; clustering or identity labels require marker context from the user. "
+            f"{FORBIDDEN_NOTICE}"
         )
     if "debris" in q:
         debris = [flag for flag in qc_flags if "DEBRIS" in flag.code]
@@ -58,16 +62,25 @@ def answer_question(
     if "gate" in q:
         if not gates:
             return "No gates are currently defined. Rectangle gates can be added from the Gates tab and are labeled user-defined by default."
-        names = ", ".join(f"{gate.name} ({gate.gate_type}, {', '.join(gate.channels)})" for gate in gates)
-        return f"Defined gates: {names}. Gate statistics are descriptive and depend on user review of the gate boundaries."
+        accepted = [gate for gate in gates if not gate.candidate and gate.enabled]
+        candidates = [gate for gate in gates if gate.candidate]
+        disabled = [gate for gate in gates if not gate.enabled and not gate.candidate]
+        names = "; ".join(_gate_phrase(sample, gate) for gate in gates[:8])
+        return (
+            f"Defined gates: {names}. Accepted/enabled gates: {len(accepted)}; candidate review-needed gates: {len(candidates)}; "
+            f"disabled user gates: {len(disabled)}. Candidate gates are suggestions only until accepted or edited."
+        )
     if "treated" in q or "control" in q or "compare" in q:
         if not comparison_rows:
             return "No control-versus-treated comparison has been generated yet. Choose groups in the Compare tab."
-        return f"The comparison table has {len(comparison_rows)} exploratory channel rows. Treat fold-changes and median differences as descriptive until replicate structure is reviewed."
+        summary = comparison_summary(comparison_rows)
+        parts = ", ".join(f"{row['label']}: {row['value']} ({row['detail']})" for row in summary)
+        return f"Exploratory comparison summary: {parts}. Treat fold-changes and median differences as descriptive until replicate structure is reviewed."
     if "report" in q or "paragraph" in q or "summarize" in q:
+        channel_labels = ", ".join(_panel_channel_labels(sample)[:6]) or "no channel labels"
         return (
             f"Sample {sample.sample_id} contains {sample.event_count:,} events across {sample.channel_count} channels. "
-            f"Current QC status is {qc_summary(qc_flags)}. {len(gates)} gate(s) are defined. "
+            f"Panel/channel context includes {channel_labels}. Current QC status is {qc_summary(qc_flags)}. {len(gates)} gate(s) are defined. "
             "These results are post-acquisition analysis support and require expert cytometry review."
         )
     return (
@@ -88,3 +101,37 @@ def _qc_answer(flags: list[QCFlag]) -> str:
         if items:
             parts.append(f"{severity}: " + "; ".join(f"{flag.code} - {flag.title}" for flag in items[:5]))
     return "QC review summary: " + " | ".join(parts)
+
+
+def _channel_label(sample: SampleRecord, raw_name: str | None) -> str:
+    if not raw_name:
+        return "an unselected channel"
+    for channel in sample.channels:
+        if channel.raw_name == raw_name:
+            return channel.label
+    return raw_name
+
+
+def _role_phrase(sample: SampleRecord, raw_name: str | None) -> str:
+    if not raw_name:
+        return "unselected"
+    for channel in sample.channels:
+        if channel.raw_name == raw_name:
+            marker = f", marker {channel.marker}" if channel.marker else ""
+            antibody = f", antibody {channel.antibody}" if channel.antibody else ""
+            return f"{channel.role}{marker}{antibody}"
+    return "unknown role"
+
+
+def _gate_phrase(sample: SampleRecord, gate: GateDefinition) -> str:
+    channels = ", ".join(_channel_label(sample, channel) for channel in gate.channels)
+    state = "candidate review needed" if gate.candidate else ("enabled" if gate.enabled else "disabled")
+    return f"{gate.name} ({gate.gate_type} on {channels}; {state})"
+
+
+def _panel_channel_labels(sample: SampleRecord) -> list[str]:
+    labels = []
+    for channel in sample.channels:
+        if channel.marker or channel.fluorochrome or channel.display_label:
+            labels.append(channel.label)
+    return labels
