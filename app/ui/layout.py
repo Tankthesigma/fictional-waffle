@@ -365,6 +365,19 @@ def compare_tab():
             card(
                 "Batch Comparison",
                 [
+                    html.Div(id="grouping-readiness-summary", className="grouping-readiness-summary"),
+                    html.Div(
+                        [
+                            html.Button("Download Manifest Template", id="download-manifest-template", n_clicks=0),
+                            dcc.Download(id="manifest-template-download"),
+                        ],
+                        className="button-row",
+                    ),
+                    data_table(
+                        "grouping-readiness-table",
+                        ["sample_id", "file_name", "condition", "replicate", "control_type", "status", "next_step"],
+                        page_size=6,
+                    ),
                     html.Div(
                         [
                             html.Label("Control group"),

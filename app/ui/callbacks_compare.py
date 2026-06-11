@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import csv
+from io import StringIO
+
 from dash import Input, Output, html
 
 from app.core.paths import EXPORT_ROOT
@@ -8,6 +11,36 @@ from app.ui.components import table_columns
 
 
 def register_compare_callbacks(app, session: WorkbenchSession) -> None:
+    @app.callback(
+        Output("grouping-readiness-summary", "children"),
+        Output("grouping-readiness-table", "data"),
+        Input("sample-ids-store", "data"),
+    )
+    def update_grouping_readiness(_sample_ids):
+        from app.core.grouping import grouping_readiness_rows, grouping_readiness_summary
+
+        samples = session.sample_list()
+        return _grouping_summary_cards(grouping_readiness_summary(samples)), grouping_readiness_rows(samples)
+
+    @app.callback(
+        Output("manifest-template-download", "data"),
+        Input("download-manifest-template", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def download_manifest_template(_clicks):
+        from app.core.grouping import manifest_template_columns, manifest_template_rows
+
+        output = StringIO()
+        columns = manifest_template_columns()
+        writer = csv.DictWriter(output, fieldnames=columns)
+        writer.writeheader()
+        writer.writerows(manifest_template_rows(session.sample_list()))
+        return {
+            "content": output.getvalue(),
+            "filename": "ask-flow-manifest-template.csv",
+            "type": "text/csv",
+        }
+
     @app.callback(
         Output("control-group", "options"),
         Output("treated-group", "options"),
@@ -112,6 +145,22 @@ def _insight_cards(rows: list[dict[str, str]]):
         )
         for row in rows
     ]
+
+
+def _grouping_summary_cards(summary: dict[str, int | str]):
+    return html.Div(
+        [
+            _grouping_metric("Status", str(summary["status"]), f"{summary['group_count']} condition group(s)"),
+            _grouping_metric("Samples", str(summary["sample_count"]), f"{summary['labeled_samples']} labeled"),
+            _grouping_metric("Needs Labels", str(summary["unlabeled_samples"]), "condition required for Compare"),
+            _grouping_metric("Control/Treated", f"{summary['control_like']} / {summary['treated_like']}", "detected from condition/control_type"),
+        ],
+        className="grouping-readiness-metrics",
+    )
+
+
+def _grouping_metric(label: str, value: str, detail: str):
+    return html.Div([html.Span(label), html.Strong(value), html.Small(detail)], className="grouping-readiness-metric")
 
 
 def _condition_groups(samples) -> list[str]:

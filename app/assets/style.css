@@ -634,6 +634,49 @@ body {
   margin: 12px 0;
 }
 
+.grouping-readiness-summary {
+  margin-bottom: 12px;
+}
+
+.grouping-readiness-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.grouping-readiness-metric {
+  min-height: 76px;
+  padding: 10px 12px;
+  background: #f8fbff;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--blue);
+  border-radius: 8px;
+}
+
+.grouping-readiness-metric span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.grouping-readiness-metric strong {
+  display: block;
+  margin-top: 4px;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.grouping-readiness-metric small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
 .compare-insights {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1158,7 +1201,8 @@ button:hover {
   .plot-context-bar,
   .analysis-guide-panel,
   .analysis-guide-steps,
-  .panel-readiness-metrics {
+  .panel-readiness-metrics,
+  .grouping-readiness-metrics {
     grid-template-columns: 1fr;
   }
 
