@@ -390,6 +390,7 @@ def reports_tab():
                 "Report Builder",
                 [
                     html.P("Exports are local files written to exports/. Static figures are included when the local Plotly image renderer is available.", className="muted"),
+                    html.Div(id="report-readiness", className="report-readiness"),
                     html.Button("Export PDF", id="export-pdf", n_clicks=0, className="primary"),
                     html.Button("Export PowerPoint", id="export-pptx", n_clicks=0),
                     html.Div(id="report-status", className="status-box"),

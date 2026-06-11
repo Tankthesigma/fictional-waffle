@@ -82,6 +82,14 @@ def test_qc_review_lanes_are_rendered_and_wired():
     assert any("qc-review-lanes.children" in key for key in dash_app.callback_map)
 
 
+def test_report_readiness_preview_is_rendered_and_wired():
+    dash_app = create_app()
+    layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
+
+    assert "report-readiness" in layout_json
+    assert "report-readiness.children" in dash_app.callback_map
+
+
 def test_workbench_analysis_cockpit_is_rendered_and_wired():
     dash_app = create_app()
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)

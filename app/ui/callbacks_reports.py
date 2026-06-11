@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from dash import Input, Output, State
+from dash import Input, Output, State, html
 
 from app.core.paths import EXPORT_ROOT
 from app.core.session_store import WorkbenchSession
@@ -17,6 +17,30 @@ class FigureExportResult:
 
 
 def register_report_callbacks(app, session: WorkbenchSession) -> None:
+    @app.callback(
+        Output("report-readiness", "children"),
+        Input("sample-ids-store", "data"),
+        Input("selected-sample-store", "data"),
+        Input("gate-table", "data"),
+        Input("comparison-table", "data"),
+        Input("qc-table", "data"),
+        Input("x-channel", "value"),
+        Input("y-channel", "value"),
+        Input("hist-channel", "value"),
+    )
+    def update_report_readiness(_sample_ids, selected_sample, _gate_rows, comparison_rows, _qc_rows, x_channel, y_channel, hist_channel):
+        sample = session.selected_sample(selected_sample)
+        return _report_readiness_cards(
+            sample_count=len(session.samples),
+            selected_sample_id=sample.sample_id if sample else None,
+            channel_count=sum(sample.channel_count for sample in session.sample_list()),
+            qc_count=len(session.all_qc_flags()),
+            gate_count=len(session.gates),
+            comparison_count=len(comparison_rows or session.comparison_rows or []),
+            has_scatter=bool(sample and x_channel and y_channel),
+            has_histogram=bool(sample and hist_channel),
+        )
+
     @app.callback(
         Output("report-status", "children"),
         Input("export-pdf", "n_clicks"),
@@ -170,3 +194,59 @@ def _report_status(report_type: str, path: Path, figure_export: FigureExportResu
     if not figure_export.paths:
         return f"{report_type} report exported to {path}. No static plot images were included."
     return f"{report_type} report exported to {path} with {len(figure_export.paths)} static plot image(s)."
+
+
+def _report_readiness_cards(
+    *,
+    sample_count: int,
+    selected_sample_id: str | None,
+    channel_count: int,
+    qc_count: int,
+    gate_count: int,
+    comparison_count: int,
+    has_scatter: bool,
+    has_histogram: bool,
+):
+    sections = [
+        ("Samples", "ready" if sample_count else "waiting", f"{sample_count} uploaded sample(s)"),
+        ("Channels", "ready" if channel_count else "waiting", f"{channel_count} channel summary row(s)"),
+        ("QC", "review" if qc_count else ("ready" if sample_count else "waiting"), f"{qc_count} review flag(s)"),
+        ("Representative plots", "ready" if has_scatter or has_histogram else "waiting", _plot_detail(selected_sample_id, has_scatter, has_histogram)),
+        ("Gate statistics", "ready" if gate_count else "review", f"{gate_count} gate definition(s)"),
+        ("Comparison", "ready" if comparison_count else "review", f"{comparison_count} exploratory comparison row(s)"),
+        ("Safety note", "ready", "post-acquisition aid; no instrument control"),
+    ]
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Span("Report contents"),
+                    html.Strong("Export readiness"),
+                ],
+                className="report-readiness-head",
+            ),
+            html.Div([_readiness_item(label, state, detail) for label, state, detail in sections], className="report-readiness-grid"),
+        ],
+        className="report-readiness-panel",
+    )
+
+
+def _readiness_item(label: str, state: str, detail: str):
+    return html.Div(
+        [
+            html.Span(state, className="report-readiness-state"),
+            html.Strong(label),
+            html.Small(detail),
+        ],
+        className=f"report-readiness-item {state}",
+    )
+
+
+def _plot_detail(selected_sample_id: str | None, has_scatter: bool, has_histogram: bool) -> str:
+    if has_scatter and has_histogram:
+        return f"{selected_sample_id}: scatter and histogram selected"
+    if has_scatter:
+        return f"{selected_sample_id}: scatter selected"
+    if has_histogram:
+        return f"{selected_sample_id}: histogram selected"
+    return "select a sample and plot channels for static figures"

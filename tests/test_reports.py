@@ -8,7 +8,7 @@ from app.core.gating import rectangle_gate
 from app.core.report_pdf import export_pdf_report
 from app.core.report_pptx import export_pptx_report
 from app.models.sample import SampleRecord
-from app.ui.callbacks_reports import _export_report_figures, _report_status
+from app.ui.callbacks_reports import _export_report_figures, _report_readiness_cards, _report_status
 
 
 def test_report_exports_create_files(tmp_path):
@@ -108,6 +108,44 @@ def test_report_figure_export_surfaces_static_image_errors(monkeypatch, tmp_path
     status = _report_status("PDF", tmp_path / "report.pdf", result)
     assert "Static plot export needs review" in status
     assert "renderer missing" in status
+
+
+def test_report_readiness_cards_show_included_sections():
+    cards = _report_readiness_cards(
+        sample_count=2,
+        selected_sample_id="s1",
+        channel_count=8,
+        qc_count=3,
+        gate_count=1,
+        comparison_count=4,
+        has_scatter=True,
+        has_histogram=True,
+    )
+    text = str(cards.to_plotly_json())
+
+    assert "Export readiness" in text
+    assert "2 uploaded sample(s)" in text
+    assert "3 review flag(s)" in text
+    assert "s1: scatter and histogram selected" in text
+    assert "post-acquisition aid; no instrument control" in text
+
+
+def test_report_readiness_cards_empty_state_waits_for_data():
+    cards = _report_readiness_cards(
+        sample_count=0,
+        selected_sample_id=None,
+        channel_count=0,
+        qc_count=0,
+        gate_count=0,
+        comparison_count=0,
+        has_scatter=False,
+        has_histogram=False,
+    )
+    text = str(cards.to_plotly_json())
+
+    assert "0 uploaded sample(s)" in text
+    assert "select a sample and plot channels" in text
+    assert "waiting" in text
 
 
 def _pptx_text(path):
