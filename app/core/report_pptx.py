@@ -31,6 +31,7 @@ def export_pptx_report(
     prs = Presentation()
     _title_slide(prs, title)
     _bullets_slide(prs, "Sample Summary", [f"{s.sample_id}: {s.event_count:,} events, {s.channel_count} channels" for s in samples])
+    _bullets_slide(prs, "Channel And Panel Summary", _channel_bullets(samples))
     _bullets_slide(prs, "QC Summary", [f"{f.sample_id} {f.severity}: {f.title}" for f in qc_flags] or ["No QC flags currently present."])
     figures = _existing_figures(figure_paths)
     if figures:
@@ -72,3 +73,13 @@ def _image_slide(prs, title: str, image_path: Path) -> None:
 
 def _existing_figures(figure_paths: list[str | Path] | None) -> list[Path]:
     return [Path(path) for path in figure_paths or [] if Path(path).exists()]
+
+
+def _channel_bullets(samples: list[SampleRecord]) -> list[str]:
+    bullets: list[str] = []
+    for sample in samples:
+        for channel in sample.channels:
+            marker = f", marker {channel.marker}" if channel.marker else ""
+            fluor = f", {channel.fluorochrome}" if channel.fluorochrome else ""
+            bullets.append(f"{sample.sample_id}: {channel.raw_name} as {channel.label} ({channel.role}{marker}{fluor})")
+    return bullets or ["No channel metadata available."]

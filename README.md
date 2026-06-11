@@ -68,20 +68,22 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 ## User Workflow
 
 1. Upload one or more `.fcs` files, or event-level `.csv` files as fallback.
-2. Optionally upload a manifest CSV with `sample_id,file_name,condition,replicate,control_type,notes`.
-3. Review the sample table, metadata inspector, channel inspector, and QC cards.
-4. Explore FSC/SSC scatter plots and fluorescence histograms.
-5. Apply raw, safe log10, or arcsinh display transforms.
-6. Add user-defined rectangle or histogram range gates and review gate statistics.
-7. Compare batches or control-vs-treated groups using exploratory medians and fold-changes.
-8. Save gates or project JSON locally, then export gate statistics, comparison CSVs, PDF reports, or PowerPoint reports from `exports/`.
-9. Use Ask Flow for local deterministic summaries of plots, QC flags, gates, and comparisons.
+2. Optionally upload a sample manifest CSV with `sample_id,file_name,condition,replicate,control_type,notes`.
+3. Optionally upload a panel setup CSV with a channel key (`channel`, `raw_name`, `pnn`, or `detector`) plus any of `display_label,marker,antibody,fluorochrome,role`.
+4. Review the sample table, metadata inspector, channel inspector, and QC cards.
+5. Explore FSC/SSC scatter plots and fluorescence histograms.
+6. Apply raw, safe log10, or arcsinh display transforms.
+7. Add user-defined rectangle or histogram range gates and review gate statistics.
+8. Compare batches or control-vs-treated groups using exploratory medians and guarded fold-changes.
+9. Save gates or project JSON locally, then export gate statistics, comparison CSVs, PDF reports, or PowerPoint reports from `exports/`.
+10. Use Ask Flow for local deterministic summaries of plots, QC flags, gates, and comparisons.
 
 ## What It Does
 
 - Multi-file FCS upload with friendly bad-file handling.
 - CSV fallback with explicit limitations.
 - Optional manifest support.
+- Optional panel setup CSV support for marker, antibody, fluorochrome, and role labels.
 - Metadata and FCS keyword inspection.
 - Fuzzy channel role inference from metadata and channel names.
 - FSC/SSC auto-selection without hard-coded instrument channel maps.

@@ -26,11 +26,14 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
         State("upload-data", "filename"),
         Input("upload-manifest", "contents"),
         State("upload-manifest", "filename"),
+        Input("upload-panel", "contents"),
+        State("upload-panel", "filename"),
         prevent_initial_call=True,
     )
-    def handle_upload(clear_clicks, contents, filenames, manifest_contents, manifest_filename):
+    def handle_upload(clear_clicks, contents, filenames, manifest_contents, manifest_filename, panel_contents, panel_filename):
         from app.core.csv_loader import apply_manifest, load_csv_file, parse_manifest
         from app.core.fcs_loader import load_fcs_file
+        from app.core.panel_setup import apply_panel_setup, parse_panel_setup
         from app.core.qc import qc_summary, run_batch_qc
 
         action = callback_context.triggered[0]["prop_id"].split(".")[0] if callback_context.triggered else ""
@@ -41,7 +44,7 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
             session.comparison_rows.clear()
             _clear_upload_cache()
             return html.Div("Project cleared."), [], [], None, [], "0", "0", "0"
-        if not contents:
+        if not contents and not manifest_contents and not panel_contents:
             return no_update, no_update, no_update, no_update, no_update, no_update, no_update, no_update
         filenames = filenames or []
         if isinstance(contents, str):
@@ -53,7 +56,7 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
 
         loaded = []
         messages = []
-        for content, filename in zip(contents, filenames, strict=False):
+        for content, filename in zip(contents or [], filenames, strict=False):
             if not filename:
                 messages.append("Skipped an upload without a filename.")
                 continue
@@ -83,10 +86,19 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
             try:
                 manifest_path = _save_upload(manifest_contents, manifest_filename, project_dir)
                 manifest = parse_manifest(manifest_path)
-                apply_manifest(loaded, manifest)
+                apply_manifest(loaded or session.sample_list(), manifest)
                 messages.append(f"Applied manifest: {manifest_filename}.")
             except Exception as exc:
                 messages.append(f"Manifest was not applied: {exc}")
+
+        if panel_contents and panel_filename:
+            try:
+                panel_path = _save_upload(panel_contents, panel_filename, project_dir)
+                panel = parse_panel_setup(panel_path)
+                messages.extend(apply_panel_setup(loaded or session.sample_list(), panel))
+                messages.append(f"Applied panel setup: {panel_filename}.")
+            except Exception as exc:
+                messages.append(f"Panel setup was not applied: {exc}")
 
         for sample in loaded:
             session.samples[sample.sample_id] = sample

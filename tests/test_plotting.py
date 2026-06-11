@@ -185,6 +185,17 @@ def test_histogram_overlay_uses_density_traces_for_multiple_samples():
     assert "raw events, safe_log10 display" in fig.layout.title.text
 
 
+def test_plot_titles_use_panel_marker_labels_when_present():
+    sample = _synthetic_flow_sample(n_events=2_000)
+    sample.channels[2].marker = "CD3"
+    sample.channels[2].fluorochrome = "FITC"
+
+    fig = histogram_figure([sample], "FL1-A", transform="arcsinh", max_events=1_000)
+
+    assert fig.layout.xaxis.title.text == "CD3 FITC (FL1-A) (arcsinh)"
+    assert "CD3 FITC (FL1-A) histogram overlay" in fig.layout.title.text
+
+
 def test_plotting_empty_and_missing_channel_paths_are_friendly():
     missing = scatter_figure(_sample(), "FSC-A", "NOPE")
     empty = empty_figure("Nothing to see yet")

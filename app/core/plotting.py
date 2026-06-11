@@ -64,7 +64,7 @@ def scatter_figure(
                 colorscale="Viridis",
                 colorbar=dict(title="Events/bin"),
                 name=sample.sample_id,
-                hovertemplate=f"{x_channel}: %{{x:.3g}}<br>{y_channel}: %{{y:.3g}}<br>Events: %{{z}}<extra></extra>",
+                hovertemplate=f"{_channel_label(sample, x_channel)}: %{{x:.3g}}<br>{_channel_label(sample, y_channel)}: %{{y:.3g}}<br>Events: %{{z}}<extra></extra>",
             )
         )
     elif normalized_mode == "contour":
@@ -78,7 +78,7 @@ def scatter_figure(
                 line=dict(width=0.6, color="rgba(15,23,42,0.35)"),
                 colorbar=dict(title="Density"),
                 name=sample.sample_id,
-                hovertemplate=f"{x_channel}: %{{x:.3g}}<br>{y_channel}: %{{y:.3g}}<br>Density: %{{z}}<extra></extra>",
+                hovertemplate=f"{_channel_label(sample, x_channel)}: %{{x:.3g}}<br>{_channel_label(sample, y_channel)}: %{{y:.3g}}<br>Density: %{{z}}<extra></extra>",
             )
         )
     else:
@@ -105,9 +105,9 @@ def scatter_figure(
         height=560,
         dragmode="zoom",
         margin=dict(l=50, r=24, t=42, b=50),
-        title=f"{sample.sample_id}: {x_channel} vs {y_channel} ({view_label}, {display_transform} display, {_plot_mode_label(normalized_mode)})",
-        xaxis_title=f"{x_channel} ({display_transform})",
-        yaxis_title=f"{y_channel} ({display_transform})",
+        title=f"{sample.sample_id}: {_channel_label(sample, x_channel)} vs {_channel_label(sample, y_channel)} ({view_label}, {display_transform} display, {_plot_mode_label(normalized_mode)})",
+        xaxis_title=f"{_channel_label(sample, x_channel)} ({display_transform})",
+        yaxis_title=f"{_channel_label(sample, y_channel)} ({display_transform})",
         hovermode="closest",
         uirevision=f"{sample.sample_id}:{x_channel}:{y_channel}:{display_transform}:{normalized_mode}",
     )
@@ -159,8 +159,8 @@ def histogram_figure(
         barmode="overlay",
         height=420,
         margin=dict(l=50, r=24, t=42, b=50),
-        title=f"{channel} histogram overlay ({'metadata compensated events' if use_compensation else 'raw events'}, {transform_label} display)",
-        xaxis_title=f"{channel} ({transform_label})",
+        title=f"{_channel_label(samples[0], channel)} histogram overlay ({'metadata compensated events' if use_compensation else 'raw events'}, {transform_label} display)",
+        xaxis_title=f"{_channel_label(samples[0], channel)} ({transform_label})",
         yaxis_title="Density",
     )
     return fig
@@ -195,6 +195,13 @@ def _add_rectangle_shape(fig, gate: GateDefinition, transform: str, cofactor: fl
     y0, y1 = apply_transform([bounds["y_min"], bounds["y_max"]], transform, cofactor=cofactor)
     fig.add_shape(type="rect", x0=x0, x1=x1, y0=y0, y1=y1, line=dict(color="#0f766e", width=2), fillcolor="rgba(15,118,110,0.08)")
     fig.add_annotation(x=x1, y=y1, text=gate.name, showarrow=False, bgcolor="rgba(255,255,255,0.8)", font=dict(size=11, color="#0f172a"))
+
+
+def _channel_label(sample: SampleRecord, raw_name: str) -> str:
+    for channel in sample.channels:
+        if channel.raw_name == raw_name:
+            return channel.label
+    return raw_name
 
 
 def _normalize_plot_mode(plot_mode: str | None) -> str:

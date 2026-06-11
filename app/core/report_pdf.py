@@ -44,6 +44,10 @@ def export_pdf_report(
     sample_rows = [["Sample ID", "Filename", "Events", "Channels", "Condition"]]
     sample_rows.extend([[s.sample_id, s.filename, s.event_count, s.channel_count, s.condition or ""] for s in samples])
     story.append(Table(sample_rows))
+    channel_rows = _channel_summary_rows(samples)
+    if channel_rows:
+        story.extend([Spacer(1, 12), Paragraph("Channel And Panel Summary", styles["Heading2"])])
+        story.append(Table([["Sample", "Channel", "Label", "Role", "Marker", "Fluorochrome"]] + channel_rows[:30]))
     figures = _existing_figures(figure_paths)
     if figures:
         story.extend([Spacer(1, 12), Paragraph("Representative Plots", styles["Heading2"])])
@@ -72,6 +76,9 @@ def _plain_report(samples: list[SampleRecord], qc_flags: list[QCFlag], gates: li
     lines = [title, f"Generated: {datetime.now().isoformat(timespec='seconds')}", f"App version: {__version__}", DISCLAIMER, ""]
     lines.append("Samples:")
     lines.extend(f"- {s.sample_id}: {s.filename}, {s.event_count} events, {s.channel_count} channels" for s in samples)
+    lines.append("\nChannels:")
+    for sample, channel, label, role, marker, fluorochrome in _channel_summary_rows(samples)[:30]:
+        lines.append(f"- {sample} {channel}: {label}, {role}, {marker}, {fluorochrome}")
     lines.append("\nQC:")
     lines.extend(f"- {f.sample_id} {f.severity} {f.code}: {f.title}" for f in qc_flags)
     lines.append("\nGates:")
@@ -82,3 +89,20 @@ def _plain_report(samples: list[SampleRecord], qc_flags: list[QCFlag], gates: li
 
 def _existing_figures(figure_paths: list[str | Path] | None) -> list[Path]:
     return [Path(path) for path in figure_paths or [] if Path(path).exists()]
+
+
+def _channel_summary_rows(samples: list[SampleRecord]) -> list[list[object]]:
+    rows: list[list[object]] = []
+    for sample in samples:
+        for channel in sample.channels:
+            rows.append(
+                [
+                    sample.sample_id,
+                    channel.raw_name,
+                    channel.label,
+                    channel.role,
+                    channel.marker or "",
+                    channel.fluorochrome or "",
+                ]
+            )
+    return rows

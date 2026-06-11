@@ -31,7 +31,7 @@ def register_sample_callbacks(app, session: WorkbenchSession) -> None:
             return None, [], [], [], [], [], None, None, None
         metadata_rows = [{"keyword": str(key), "value": str(value)} for key, value in sorted(sample.keywords.items())]
         channel_rows = [channel.to_dict() for channel in sample.channels]
-        options = [{"label": channel.raw_name, "value": channel.raw_name} for channel in sample.channels]
+        options = [{"label": channel.label, "value": channel.raw_name} for channel in sample.channels]
         x_default, y_default = best_scatter_pair(sample.channels)
         hist_default = sample.fluorescence_channels[0] if sample.fluorescence_channels else (sample.events.columns[0] if len(sample.events.columns) else None)
         return sample.sample_id, metadata_rows, channel_rows, options, options, options, x_default, y_default, hist_default

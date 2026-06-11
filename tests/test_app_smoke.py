@@ -34,3 +34,11 @@ def test_low_key_ui_safety_boundary_is_rendered():
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
     assert "Exploratory only; does not control cytometer hardware and does not replace expert review." in layout_json
+
+
+def test_panel_setup_upload_is_rendered():
+    dash_app = create_app()
+    layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
+
+    assert "upload-panel" in layout_json
+    assert "Optional panel setup CSV" in layout_json

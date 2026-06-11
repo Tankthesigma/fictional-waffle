@@ -11,6 +11,9 @@ class ChannelSummary:
     index: int
     raw_name: str
     display_label: str | None = None
+    marker: str | None = None
+    antibody: str | None = None
+    fluorochrome: str | None = None
     role: str = "unknown"
     minimum: float | None = None
     maximum: float | None = None
@@ -27,6 +30,9 @@ class ChannelSummary:
 
     @property
     def label(self) -> str:
+        panel_parts = [part for part in [self.marker, self.fluorochrome] if part]
+        if panel_parts:
+            return f"{' '.join(panel_parts)} ({self.raw_name})"
         return self.display_label or self.raw_name
 
     def to_dict(self) -> dict[str, Any]:
@@ -34,6 +40,9 @@ class ChannelSummary:
             "index": self.index,
             "raw_name": self.raw_name,
             "display_label": self.display_label,
+            "marker": self.marker,
+            "antibody": self.antibody,
+            "fluorochrome": self.fluorochrome,
             "role": self.role,
             "min": self.minimum,
             "max": self.maximum,
