@@ -13,6 +13,10 @@ def test_channel_inference_common_roles():
     assert infer_channel_role("Speed") == "unknown"
     assert infer_channel_role("Draft") == "unknown"
     assert infer_channel_role("Temperature") == "unknown"
+    assert infer_channel_role("FS Lin", "FS") == "fsc"
+    assert infer_channel_role("SS Lin", "SS") == "ssc"
+    assert infer_channel_role("SS Log", "SS") == "ssc"
+    assert infer_channel_role("FSA status") == "unknown"
 
 
 def test_channel_summary_best_pair():
@@ -21,6 +25,15 @@ def test_channel_summary_best_pair():
 
     assert best_scatter_pair(channels) == ("FSC-A", "SSC-A")
     assert [c.role for c in channels] == ["fsc-a", "ssc-a", "fluorescence"]
+
+
+def test_channel_summary_best_pair_from_exported_fs_ss_aliases():
+    frame = pd.DataFrame({"FS Lin": [1, 2, 3], "SS Lin": [2, 3, 4], "FL 1 Log": [5, 6, 7]})
+    metadata = {"$P1S": "FS", "$P2S": "SS", "$P3S": "FITC"}
+    channels = summarize_channels(frame, metadata)
+
+    assert best_scatter_pair(channels) == ("FS Lin", "SS Lin")
+    assert [c.role for c in channels] == ["fsc", "ssc", "fluorescence"]
 
 
 def test_channel_metadata_prefixes_do_not_bleed_into_double_digit_channels():

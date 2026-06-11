@@ -39,6 +39,7 @@ def gate_statistics(
             "gate_name": gate.name,
             "parent_gate": parent_label,
             "parent_missing": parent_missing,
+            "gate_warning": gate.metadata.get("mask_warning", ""),
             "channels": ", ".join(gate.channels),
             "event_count": count,
             "percent_total": _pct(count, total_count),

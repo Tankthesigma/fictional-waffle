@@ -27,3 +27,10 @@ def test_repeated_shell_disclaimer_is_not_rendered():
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
     assert "Post-acquisition analysis only. This app does not control cytometer hardware and does not replace expert review." not in layout_json
+
+
+def test_low_key_ui_safety_boundary_is_rendered():
+    dash_app = create_app()
+    layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
+
+    assert "Exploratory only; does not control cytometer hardware and does not replace expert review." in layout_json

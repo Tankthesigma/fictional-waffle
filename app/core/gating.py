@@ -10,6 +10,9 @@ import pandas as pd
 from app.models.gate import GateDefinition
 
 
+SUPPORTED_GATE_TYPES = {"rectangle", "histogram_range", "polygon"}
+
+
 def rectangle_gate(
     gate_id: str,
     name: str,
@@ -82,7 +85,8 @@ def apply_gate(events: pd.DataFrame, gate: GateDefinition, parent_mask: np.ndarr
             gate.vertices,
         )
     else:
-        raise ValueError(f"unsupported gate type: {gate.gate_type}")
+        gate.metadata["mask_warning"] = f"unsupported gate type: {gate.gate_type}"
+        return np.zeros(len(events), dtype=bool)
     return mask & current
 
 
@@ -108,11 +112,49 @@ def points_in_polygon(x: np.ndarray, y: np.ndarray, vertices: list[tuple[float, 
 
 
 def apply_gate_tree(events: pd.DataFrame, gates: list[GateDefinition]) -> dict[str, np.ndarray]:
-    """Apply gates with parent-child relationships in list order."""
+    """Apply gates with parent-child relationships independent of list order.
+
+    Missing parents, cyclic parents, malformed gates, and unsupported gate
+    types become empty masks with a warning in ``gate.metadata``. This keeps
+    the UI alive without silently widening a child gate to the root population.
+    """
     masks: dict[str, np.ndarray] = {}
+    gate_map = {gate.gate_id: gate for gate in gates}
+    state: dict[str, str] = {}
+    empty = np.zeros(len(events), dtype=bool)
+
+    def resolve(gate: GateDefinition, stack: list[str]) -> np.ndarray:
+        if gate.gate_id in masks:
+            return masks[gate.gate_id]
+        if state.get(gate.gate_id) == "visiting":
+            cycle = stack[stack.index(gate.gate_id) :] if gate.gate_id in stack else [gate.gate_id]
+            for gate_id in cycle:
+                cyclic_gate = gate_map[gate_id]
+                cyclic_gate.metadata["mask_warning"] = "cyclic parent relationship"
+                masks[gate_id] = empty.copy()
+                state[gate_id] = "done"
+            return masks[gate.gate_id]
+
+        state[gate.gate_id] = "visiting"
+        parent_mask = None
+        if gate.parent_id:
+            parent = gate_map.get(gate.parent_id)
+            if parent is None:
+                gate.metadata["mask_warning"] = f"missing parent gate: {gate.parent_id}"
+                masks[gate.gate_id] = empty.copy()
+                state[gate.gate_id] = "done"
+                return masks[gate.gate_id]
+            parent_mask = resolve(parent, [*stack, gate.gate_id])
+        try:
+            masks[gate.gate_id] = apply_gate(events, gate, parent_mask=parent_mask)
+        except Exception as exc:
+            gate.metadata["mask_warning"] = f"gate could not be applied: {exc}"
+            masks[gate.gate_id] = empty.copy()
+        state[gate.gate_id] = "done"
+        return masks[gate.gate_id]
+
     for gate in gates:
-        parent_mask = masks.get(gate.parent_id) if gate.parent_id else None
-        masks[gate.gate_id] = apply_gate(events, gate, parent_mask=parent_mask)
+        resolve(gate, [])
     return masks
 
 

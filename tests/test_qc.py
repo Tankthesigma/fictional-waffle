@@ -27,6 +27,14 @@ def test_missing_fsc_ssc_qc():
     assert any(flag.code == "MISSING_FSC_SSC" for flag in flags)
 
 
+def test_exported_fs_ss_aliases_do_not_trigger_missing_scatter_qc():
+    sample = _sample(pd.DataFrame({"FS Lin": [1, 2, 3, 4, 5] * 300, "SS Lin": [2, 3, 4, 5, 6] * 300}))
+
+    flags = run_sample_qc(sample)
+
+    assert not any(flag.code == "MISSING_FSC_SSC" for flag in flags)
+
+
 def test_saturation_qc():
     frame = pd.DataFrame({"FSC-A": list(range(1000)), "SSC-A": list(range(1000)), "FITC-A": [0] * 980 + [100] * 20})
     sample = _sample(frame)

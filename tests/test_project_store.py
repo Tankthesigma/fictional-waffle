@@ -3,6 +3,7 @@ import pandas as pd
 from app.core.channel_inference import summarize_channels
 from app.core.gating import rectangle_gate
 from app.core.project_store import build_project_state, gates_from_project, load_project, save_project
+from app.models.gate import GateDefinition
 from app.models.project_schema import ProjectState
 from app.models.sample import SampleRecord
 
@@ -42,3 +43,38 @@ def test_build_project_state_excludes_raw_event_matrix(tmp_path):
     assert "events" not in payload["sample_metadata"][0]
     assert "[1, 2]" not in text
     assert gates_from_project(project)[0].to_dict() == gate.to_dict()
+
+
+def test_project_rejects_non_list_gate_definitions(tmp_path):
+    path = tmp_path / "project.json"
+    path.write_text('{"gate_definitions": "notalist"}', encoding="utf-8")
+
+    try:
+        load_project(path)
+    except ValueError as exc:
+        assert "gate_definitions must be a list" in str(exc)
+    else:
+        raise AssertionError("load_project accepted invalid gate_definitions")
+
+
+def test_gate_definition_rejects_bad_polygon_vertices():
+    payload = {
+        "gate_id": "poly",
+        "gate_type": "polygon",
+        "channels": ["FSC-A", "SSC-A"],
+        "vertices": [[0, 0, 1], [1, 1]],
+    }
+
+    try:
+        GateDefinition.from_dict(payload)
+    except ValueError as exc:
+        assert "polygon vertices must be [x, y] pairs" in str(exc)
+    else:
+        raise AssertionError("bad polygon vertices were accepted")
+
+
+def test_unknown_gate_type_loads_with_warning_for_forward_compatibility():
+    gate = GateDefinition.from_dict({"gate_id": "q1", "gate_type": "quadrant", "channels": ["FSC-A", "SSC-A"]})
+
+    assert gate.gate_type == "quadrant"
+    assert gate.metadata["mask_warning"] == "unsupported gate type: quadrant"

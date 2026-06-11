@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 
 GateType = Literal["rectangle", "polygon", "histogram_range"]
+SUPPORTED_GATE_TYPES = {"rectangle", "polygon", "histogram_range"}
 
 
 @dataclass(slots=True)
@@ -42,17 +43,40 @@ class GateDefinition:
 
     @classmethod
     def from_dict(cls, payload: dict[str, Any]) -> "GateDefinition":
+        if not isinstance(payload, dict):
+            raise ValueError("gate definition must be an object")
+        gate_type = str(payload.get("gate_type", "rectangle"))
+        metadata = dict(payload.get("metadata", {}))
+        if gate_type not in SUPPORTED_GATE_TYPES:
+            metadata["mask_warning"] = f"unsupported gate type: {gate_type}"
         return cls(
             gate_id=str(payload["gate_id"]),
             name=str(payload.get("name") or payload["gate_id"]),
-            gate_type=payload.get("gate_type", "rectangle"),
-            channels=list(payload.get("channels", [])),
+            gate_type=gate_type,  # type: ignore[arg-type]
+            channels=_string_list(payload.get("channels", []), "channels"),
             parent_id=payload.get("parent_id"),
             enabled=bool(payload.get("enabled", True)),
             user_defined=bool(payload.get("user_defined", True)),
             candidate=bool(payload.get("candidate", False)),
             review_status=str(payload.get("review_status", "accepted")),
-            vertices=[tuple(v) for v in payload.get("vertices", [])],
+            vertices=_vertices(payload.get("vertices", [])),
             bounds=dict(payload.get("bounds", {})),
-            metadata=dict(payload.get("metadata", {})),
+            metadata=metadata,
         )
+
+
+def _string_list(value: Any, field_name: str) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError(f"{field_name} must be a list")
+    return [str(item) for item in value]
+
+
+def _vertices(value: Any) -> list[tuple[float, float]]:
+    if not isinstance(value, list):
+        raise ValueError("vertices must be a list")
+    vertices: list[tuple[float, float]] = []
+    for vertex in value:
+        if not isinstance(vertex, (list, tuple)) or len(vertex) != 2:
+            raise ValueError("polygon vertices must be [x, y] pairs")
+        vertices.append((float(vertex[0]), float(vertex[1])))
+    return vertices

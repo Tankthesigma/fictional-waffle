@@ -48,6 +48,9 @@ def infer_channel_role(raw_name: str, display_label: str | None = None) -> str:
     if compact in {"event", "events", "eventnumber", "index"} or "eventnumber" in compact:
         return "index"
 
+    scatter_alias = _scatter_alias_role(norm)
+    if scatter_alias:
+        return scatter_alias
     if "fsc" in compact or "forwardscatter" in compact:
         return _geometry_role("fsc", norm)
     if "ssc" in compact or "sidescatter" in compact:
@@ -83,6 +86,23 @@ def _looks_like_detector_name(norm: str) -> bool:
         or re.search(r"\d{3,4}[/\-]\d{2,4}", norm)
         or re.fullmatch(r"[a-z]{1,3}\d{1,2}[-/]?[ahw]?", compact)
     )
+
+
+def _scatter_alias_role(norm: str) -> str | None:
+    """Recognize common exported FS/SS scatter aliases without overmatching."""
+    tokens = [token for token in re.split(r"[^a-z0-9]+", norm) if token]
+    if not tokens:
+        return None
+    token_set = set(tokens)
+    if token_set <= {"fs", "lin", "linear", "log", "logarithmic"} and "fs" in token_set:
+        return _geometry_role("fsc", norm)
+    if token_set <= {"ss", "lin", "linear", "log", "logarithmic"} and "ss" in token_set:
+        return _geometry_role("ssc", norm)
+    if tokens[:2] == ["forward", "scatter"]:
+        return _geometry_role("fsc", norm)
+    if tokens[:2] == ["side", "scatter"]:
+        return _geometry_role("ssc", norm)
+    return None
 
 
 def _geometry_role(prefix: str, norm: str) -> str:

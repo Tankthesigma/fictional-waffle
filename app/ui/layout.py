@@ -29,6 +29,10 @@ def header():
                 [
                     html.P("Local-only cytometry analysis", className="eyebrow"),
                     html.H1("Ask Flow Workbench"),
+                    html.P(
+                        "Exploratory only; does not control cytometer hardware and does not replace expert review.",
+                        className="safety-line",
+                    ),
                 ]
             ),
             html.Div(

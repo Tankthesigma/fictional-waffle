@@ -37,6 +37,14 @@ body {
   letter-spacing: 0;
 }
 
+.safety-line {
+  margin: 8px 0 0;
+  max-width: 680px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .eyebrow {
   margin: 0 0 6px;
   color: var(--accent);
