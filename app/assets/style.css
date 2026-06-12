@@ -1441,6 +1441,462 @@ button:hover {
   font-size: 12px;
 }
 
+/* Professional laboratory workbench skin.
+   Keeps the Dash component tree intact while making the UI feel like a dense
+   analysis console instead of a marketing-style dashboard. */
+:root {
+  --ink: #111827;
+  --muted: #5b6675;
+  --line: #b9c3cf;
+  --line-strong: #8996a6;
+  --surface: #ffffff;
+  --soft: #f4f6f8;
+  --panel: #e8edf2;
+  --accent: #0f766e;
+  --accent-soft: #e0f2ef;
+  --blue: #1d4ed8;
+  --blue-soft: #e8eefc;
+  --warn: #a16207;
+  --severe: #b42318;
+}
+
+body {
+  background: #e5e8ec;
+  font-size: 13px;
+}
+
+.topbar {
+  align-items: center;
+  gap: 16px;
+  padding: 10px 18px;
+  background: #17202b;
+  border-bottom: 1px solid #0b1220;
+  box-shadow: none;
+}
+
+.topbar h1 {
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 760;
+  line-height: 1.1;
+}
+
+.eyebrow {
+  margin-bottom: 3px;
+  color: #7dd3fc;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.safety-line {
+  margin-top: 4px;
+  max-width: 760px;
+  color: #cbd5e1;
+  font-size: 11px;
+}
+
+.workflow-strip {
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.workflow-strip span {
+  min-height: 20px;
+  padding: 0 7px;
+  color: #dbeafe;
+  background: #223044;
+  border: 1px solid #334155;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.metrics-row {
+  gap: 6px;
+}
+
+.topbar .metric {
+  min-width: 96px;
+  padding: 7px 9px;
+  color: #e5e7eb;
+  background: #111827;
+  border-color: #334155;
+  border-radius: 3px;
+}
+
+.topbar .metric span {
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.topbar .metric strong {
+  color: #ffffff;
+  font-size: 18px;
+}
+
+.app-shell {
+  gap: 10px;
+  padding: 10px;
+}
+
+.upload-grid {
+  grid-template-columns: minmax(320px, 380px) 1fr;
+  gap: 10px;
+}
+
+.workbench-grid {
+  grid-template-columns: 280px minmax(0, 1fr) 310px;
+  gap: 10px;
+}
+
+.card,
+.sidebar,
+.center-panel {
+  border-color: var(--line);
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.card {
+  padding: 12px;
+}
+
+.card h3,
+.sidebar h2 {
+  margin-bottom: 9px;
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.sidebar {
+  top: 8px;
+  padding: 10px;
+  background: #f8fafc;
+}
+
+.sidebar label {
+  margin: 9px 0 4px;
+  color: #475569;
+  font-size: 11px;
+}
+
+.center-panel .tab-container {
+  padding: 0;
+  background: #dfe6ed;
+  border-bottom-color: var(--line-strong);
+}
+
+.center-panel .tab {
+  min-width: 96px;
+  min-height: 36px !important;
+  height: 36px !important;
+  padding: 0 12px !important;
+  color: #334155 !important;
+  border-right: 1px solid #c3ccd7 !important;
+  border-bottom-width: 2px !important;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.center-panel .tab:hover {
+  color: #0f172a !important;
+  background: #eef2f7 !important;
+}
+
+.center-panel .tab--selected {
+  color: #0f172a !important;
+  background: #ffffff !important;
+}
+
+.bench-strip {
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 1px;
+  padding: 1px;
+  background: var(--line);
+  border-bottom-color: var(--line-strong);
+}
+
+.bench-tile {
+  min-height: 58px;
+  padding: 8px 10px;
+  border: 0;
+  border-left: 3px solid var(--accent);
+  border-radius: 0;
+}
+
+.bench-tile span,
+.analysis-step-state,
+.workflow-card span,
+.panel-kicker,
+.plot-context-chip span,
+.channel-badge span,
+.panel-readiness-metric span,
+.grouping-readiness-metric span,
+.gate-stack-status,
+.compare-insight span,
+.qc-lane-head span {
+  font-size: 10px;
+  font-weight: 820;
+}
+
+.bench-tile strong {
+  font-size: 14px;
+}
+
+.bench-tile small,
+.plot-context-chip small,
+.channel-badge small {
+  font-size: 11px;
+}
+
+.analysis-guide {
+  padding: 8px;
+  background: #f1f5f9;
+}
+
+.analysis-guide-panel {
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px;
+  border-radius: 3px;
+}
+
+.analysis-guide-steps {
+  gap: 1px;
+  background: var(--line);
+}
+
+.analysis-step {
+  min-height: 58px;
+  padding: 7px 8px;
+  border: 0;
+  border-left: 3px solid #64748b;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.analysis-step.done {
+  background: #f5fbf9;
+}
+
+.analysis-step.review {
+  background: #fff9eb;
+}
+
+.analysis-step.next {
+  background: #f4f7ff;
+}
+
+.workflow-card,
+.settings-primer,
+.plot-context-chip,
+.channel-badge,
+.panel-readiness-metric,
+.grouping-readiness-metric,
+.compare-insight,
+.gate-stack-card,
+.flag-card,
+.qc-lane,
+.qc-review-item,
+.assistant-answer,
+.assistant-actions {
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.workflow-card,
+.settings-primer {
+  margin: 8px 0 12px;
+  padding: 9px;
+  background: #f6f8fb;
+}
+
+.workflow-card li {
+  font-size: 12px;
+  font-weight: 620;
+}
+
+.mode-chips {
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.mode-chips span,
+.gate-stack-metrics span,
+.workflow-strip span,
+.agent-action-strip span {
+  border-radius: 3px;
+}
+
+.analysis-graph {
+  margin: 8px;
+  border-color: #aab7c4;
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.primary-graph {
+  min-height: 500px;
+}
+
+.plot-context-bar {
+  gap: 6px;
+  padding: 8px 8px 0;
+}
+
+.plot-context-chip,
+.channel-badge {
+  min-height: 56px;
+  padding: 8px 9px;
+}
+
+.channel-badge-rail {
+  gap: 6px;
+  padding: 0 8px 10px;
+}
+
+.panel-readiness-card {
+  margin: 0 8px 10px;
+}
+
+.panel-readiness-metrics,
+.grouping-readiness-metrics {
+  gap: 6px;
+}
+
+.dash-table-container {
+  border-color: var(--line);
+  border-radius: 3px;
+}
+
+.dash-table-container .dash-header {
+  background: #e2e8f0 !important;
+  color: #1f2937;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.dash-table-container .dash-cell {
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.dash-table-container .dash-filter {
+  padding: 3px 4px !important;
+  background: #edf2f7 !important;
+}
+
+.dash-table-container .dash-filter input[type="text"] {
+  min-height: 22px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.upload-box {
+  margin: 8px 0;
+  padding: 14px;
+  background: #f8fafc;
+  border-color: #7c8a9a;
+  border-radius: 3px;
+}
+
+.metric {
+  min-width: 108px;
+  padding: 8px 10px;
+  background: #ffffff;
+  border-radius: 3px;
+}
+
+.metric strong {
+  font-size: 19px;
+}
+
+.two-col {
+  gap: 10px;
+  padding: 0 8px 10px;
+}
+
+.stack {
+  gap: 10px;
+  padding: 10px;
+}
+
+.gate-form,
+.compare-form,
+.button-row {
+  gap: 6px;
+}
+
+.gate-form input,
+.compare-form input,
+input {
+  min-height: 32px;
+  border-color: #aeb9c7;
+  border-radius: 3px;
+}
+
+.dash-dropdown .Select-control,
+.Select-control {
+  min-height: 32px;
+  border-color: #aeb9c7;
+  border-radius: 3px;
+}
+
+button {
+  min-height: 32px;
+  border-color: #9aa7b7;
+  border-radius: 3px;
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+button.primary {
+  border-color: #0f766e;
+  background: #0f766e;
+}
+
+button:hover {
+  background: #eef2f7;
+  border-color: #64748b;
+}
+
+button.primary:hover {
+  background: #115e59;
+  border-color: #115e59;
+}
+
+.status-box {
+  color: #4b5563;
+  font-size: 12px;
+}
+
+.qc-review-lanes,
+.compare-insights,
+.gate-stack,
+.qc-cards {
+  gap: 6px;
+}
+
+.qc-lane,
+.flag-card,
+.compare-insight,
+.gate-stack-card {
+  padding: 8px;
+}
+
+.ask-input {
+  min-height: 104px;
+  border: 1px solid #aeb9c7;
+  border-radius: 3px;
+  background: #ffffff;
+}
+
+.agent-action-strip {
+  border: 1px solid var(--line);
+  background: #f8fafc;
+}
+
 @media (max-width: 1150px) {
   .upload-grid,
   .workbench-grid,

@@ -40,7 +40,7 @@ def test_low_key_ui_safety_boundary_is_rendered():
     dash_app = create_app()
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
-    assert "Exploratory only; does not control cytometer hardware and does not replace expert review." in layout_json
+    assert "Post-acquisition research review | no cytometer control | expert review required." in layout_json
 
 
 def test_panel_setup_upload_is_rendered():
@@ -138,7 +138,7 @@ def test_ask_flow_briefing_is_rendered_and_wired():
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
     assert "ask-flow-briefing" in layout_json
-    assert "Workspace review panel for plots, QC, gates, high-dimensional clusters" in layout_json
+    assert "Analysis review console for plots, QC, gates, high-dimensional clusters" in layout_json
     assert "ask-flow-plan" in layout_json
     assert "Review Plan" in layout_json
     assert "High-Dimensional Review" in layout_json
@@ -173,7 +173,7 @@ def test_workbench_analysis_cockpit_is_rendered_and_wired():
     assert "plot-context-bar" in layout_json
     assert "channel-badge-rail" in layout_json
     assert "Population workflow" in layout_json
-    assert "Display stack" in layout_json
+    assert "Data view" in layout_json
     assert "Stats use full matrix" in layout_json
     assert "Panel Setup Readiness" in layout_json
     assert "panel-readiness-summary" in layout_json

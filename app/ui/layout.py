@@ -29,10 +29,10 @@ def header():
         [
             html.Div(
                 [
-                    html.P("Local-only cytometry analysis", className="eyebrow"),
+                    html.P("FCS / CSV analysis workstation", className="eyebrow"),
                     html.H1("Ask Flow Workbench"),
                     html.P(
-                        "Exploratory only; does not control cytometer hardware and does not replace expert review.",
+                        "Post-acquisition research review | no cytometer control | expert review required.",
                         className="safety-line",
                     ),
                     html.Div(
@@ -110,7 +110,7 @@ def workbench_panel():
         [
             html.Aside(
                 [
-                    html.H2("Analysis Queue"),
+                    html.H2("Samples & Gates"),
                     dcc.Dropdown(id="sample-dropdown", options=[], placeholder="Select sample", clearable=False),
                     html.Div(
                         [
@@ -153,10 +153,10 @@ def workbench_panel():
             ),
             html.Aside(
                 [
-                    html.H2("Plot Settings"),
+                    html.H2("Acquisition View"),
                     html.Div(
                         [
-                            html.Span("Display stack", className="panel-kicker"),
+                            html.Span("Data view", className="panel-kicker"),
                             html.Div(
                                 [
                                     html.Span("Raw data preserved"),
@@ -541,7 +541,7 @@ def ask_flow_tab():
             card(
                 "Ask Flow",
                 [
-                    html.P("Workspace review panel for plots, QC, gates, high-dimensional clusters, and report-ready summaries.", className="muted"),
+                    html.P("Analysis review console for plots, QC, gates, high-dimensional clusters, and report-ready summaries.", className="muted"),
                     html.Div(id="ask-flow-agent-status", className="status-box small"),
                     html.Div(id="ask-flow-briefing", className="ask-briefing"),
                     html.H3("Review Plan"),
