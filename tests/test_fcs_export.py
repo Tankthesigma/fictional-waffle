@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
 from app.core.channel_inference import summarize_channels
 from app.core.fcs_export import export_gated_population_csv, export_gated_population_fcs
@@ -62,3 +63,17 @@ def test_export_gated_population_csv_uses_selected_gate(tmp_path):
     exported = pd.read_csv(result.path)
     assert result.event_count == 2
     assert exported["FSC-A"].tolist() == [3.0, 4.0]
+
+
+def test_empty_gate_fcs_export_returns_clean_error_while_csv_exports(tmp_path):
+    sample = _sample(tmp_path)
+    gate = rectangle_gate("g1", "Empty Gate", "FSC-A", "FL1-A", 50, 60, 500, 600)
+
+    with pytest.raises(ValueError, match="no events to export"):
+        export_gated_population_fcs(sample, [gate], "g1", tmp_path)
+
+    csv_result = export_gated_population_csv(sample, [gate], "g1", tmp_path)
+    exported = pd.read_csv(csv_result.path)
+    assert csv_result.event_count == 0
+    assert exported.empty
+    assert exported.columns.tolist() == ["FSC-A", "FL1-A"]

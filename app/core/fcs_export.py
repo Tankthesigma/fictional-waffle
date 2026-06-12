@@ -51,6 +51,8 @@ def export_gated_population_fcs(
 ) -> PopulationExportResult:
     """Export one gated population to an analysis FCS file using FlowIO."""
     gate, events, mask, view_name = _gated_events(sample, gates, gate_id, use_compensation=use_compensation)
+    if int(mask.sum()) == 0:
+        raise ValueError("this gate has no events to export as FCS")
     frame = _numeric_events(events.loc[mask])
     if frame.empty and int(mask.sum()) > 0:
         raise ValueError("gated population has no numeric event columns to export as FCS")
