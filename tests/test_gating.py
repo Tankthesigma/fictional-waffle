@@ -21,6 +21,7 @@ from app.core.gating import (
     review_scatter_gate,
     save_gates,
     suggest_candidate_gates,
+    suggest_singlet_gate,
     toggle_gate_enabled,
 )
 from app.core.gate_colors import GATE_PALETTE, gate_color
@@ -120,6 +121,19 @@ def test_boolean_gate_missing_operand_is_empty_with_warning():
     assert "missing boolean operand" in gate.metadata["mask_warning"]
 
 
+def test_singlet_preset_uses_pulse_geometry_pair_as_review_needed_candidate():
+    from app.core.channel_inference import summarize_channels
+
+    frame = pd.DataFrame({"FSC-A": range(200), "FSC-H": range(200), "FL1-A": range(200)})
+    gate = suggest_singlet_gate(frame, summarize_channels(frame, {}), "singlets")
+
+    assert gate is not None
+    assert gate.channels == ["FSC-A", "FSC-H"]
+    assert gate.candidate is True
+    assert gate.enabled is False
+    assert gate.review_status == "review_needed"
+
+
 def test_drawn_rectangle_shape_becomes_raw_review_gate():
     relayout = {"shapes": [{"type": "rect", "x0": 1.0, "x1": 2.0, "y0": 3.0, "y1": 4.0}]}
 
@@ -192,6 +206,28 @@ def test_drawn_shape_inverts_logicle_display_for_storage():
     assert gate.bounds["x_max"] == pytest.approx(2000.0)
     assert gate.bounds["y_min"] == pytest.approx(3000.0)
     assert gate.bounds["y_max"] == pytest.approx(4000.0)
+
+
+def test_drawn_shape_inverts_x_and_y_transforms_independently():
+    relayout = {"shapes": [{"type": "rect", "x0": 0.0, "x1": np.arcsinh(2000.0 / 100.0), "y0": 1.0, "y1": 2.0}]}
+
+    gate, _signature = drawn_shape_gate(
+        relayout,
+        gate_id="mixed",
+        name="mixed transform gate",
+        x_channel="FL1-A",
+        y_channel="FL2-A",
+        x_transform="arcsinh",
+        x_cofactor=100,
+        y_transform="safe_log10",
+        y_cofactor=150,
+    )
+
+    assert gate is not None
+    assert gate.bounds["x_min"] == pytest.approx(0.0)
+    assert gate.bounds["x_max"] == pytest.approx(2000.0)
+    assert gate.bounds["y_min"] == pytest.approx(10.0)
+    assert gate.bounds["y_max"] == pytest.approx(100.0)
 
 
 def test_drawn_shape_can_be_child_of_selected_parent():

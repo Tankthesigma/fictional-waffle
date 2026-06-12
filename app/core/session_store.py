@@ -16,6 +16,7 @@ class WorkbenchSession:
     gates: list[GateDefinition] = field(default_factory=list)
     qc_flags: dict[str, list[QCFlag]] = field(default_factory=dict)
     comparison_rows: list[dict[str, object]] = field(default_factory=list)
+    derived_mappings: dict[str, list[dict[str, object]]] = field(default_factory=dict)
 
     def sample_list(self) -> list[SampleRecord]:
         return list(self.samples.values())

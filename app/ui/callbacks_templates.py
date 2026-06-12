@@ -21,6 +21,7 @@ def register_template_callbacks(app, session: WorkbenchSession) -> None:
         Output("transform", "value", allow_duplicate=True),
         Output("cofactor", "value", allow_duplicate=True),
         Output("max-events", "value", allow_duplicate=True),
+        Output("channel-transform-overrides-store", "data", allow_duplicate=True),
         Output("compensation-enabled", "value", allow_duplicate=True),
         Output("control-group", "value", allow_duplicate=True),
         Output("treated-group", "value", allow_duplicate=True),
@@ -41,6 +42,7 @@ def register_template_callbacks(app, session: WorkbenchSession) -> None:
         State("transform", "value"),
         State("cofactor", "value"),
         State("max-events", "value"),
+        State("channel-transform-overrides-store", "data"),
         State("compensation-enabled", "value"),
         State("control-group", "value"),
         State("treated-group", "value"),
@@ -58,6 +60,7 @@ def register_template_callbacks(app, session: WorkbenchSession) -> None:
         transform,
         cofactor,
         max_events,
+        transform_overrides,
         compensation_enabled,
         control_group,
         treated_group,
@@ -85,6 +88,7 @@ def register_template_callbacks(app, session: WorkbenchSession) -> None:
                     "transform": transform,
                     "cofactor": cofactor,
                     "max_events": max_events,
+                    "channel_overrides": transform_overrides.get("channel_overrides", transform_overrides) if isinstance(transform_overrides, dict) else {},
                     "compensation_enabled": compensation_enabled or [],
                 },
                 comparison_settings={
@@ -135,6 +139,7 @@ def register_template_callbacks(app, session: WorkbenchSession) -> None:
                 settings.get("transform") or no_update,
                 settings.get("cofactor") if settings.get("cofactor") is not None else no_update,
                 settings.get("max_events") if settings.get("max_events") is not None else no_update,
+                {"channel_overrides": settings.get("channel_overrides", {})} if isinstance(settings.get("channel_overrides"), dict) else no_update,
                 settings.get("compensation_enabled") if isinstance(settings.get("compensation_enabled"), list) else no_update,
                 comparison.get("control_group") or no_update,
                 comparison.get("treated_group") or no_update,
@@ -153,6 +158,7 @@ def register_template_callbacks(app, session: WorkbenchSession) -> None:
 def _unchanged(status: str, revision) -> tuple[object, ...]:
     return (
         status,
+        no_update,
         no_update,
         no_update,
         no_update,

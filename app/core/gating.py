@@ -175,24 +175,34 @@ def drawn_shape_gate(
     y_channel: str | None,
     transform: str = "raw",
     cofactor: float = 150.0,
+    x_transform: str | None = None,
+    y_transform: str | None = None,
+    x_cofactor: float | None = None,
+    y_cofactor: float | None = None,
     parent_id: str | None = None,
 ) -> tuple[GateDefinition | None, str | None]:
     """Convert the latest Plotly-drawn shape into a review-needed gate."""
     if not x_channel or not y_channel:
         raise ValueError("choose X and Y channels before drawing a gate")
+    x_transform = x_transform or transform
+    y_transform = y_transform or transform
+    x_cofactor = float(x_cofactor if x_cofactor is not None else cofactor)
+    y_cofactor = float(y_cofactor if y_cofactor is not None else cofactor)
     shape = latest_drawn_shape(relayout_data)
     if shape is None:
         return None, None
     shape_type = str(shape.get("type", "")).lower()
     if shape_type == "rect":
-        x0, x1 = _raw_pair(shape.get("x0"), shape.get("x1"), transform, cofactor)
-        y0, y1 = _raw_pair(shape.get("y0"), shape.get("y1"), transform, cofactor)
+        x0, x1 = _raw_pair(shape.get("x0"), shape.get("x1"), x_transform, x_cofactor)
+        y0, y1 = _raw_pair(shape.get("y0"), shape.get("y1"), y_transform, y_cofactor)
         gate = rectangle_gate(gate_id, name, x_channel, y_channel, min(x0, x1), max(x0, x1), min(y0, y1), max(y0, y1), parent_id=parent_id)
         gate.review_status = "review_needed"
         gate.metadata["drawn_gate"] = "rectangle drawn on plot; review/edit before relying on final statistics"
+        gate.metadata["x_display_transform"] = x_transform
+        gate.metadata["y_display_transform"] = y_transform
         return gate, shape_signature(shape)
     if shape_type == "path":
-        vertices = _path_vertices(str(shape.get("path", "")), transform, cofactor)
+        vertices = _path_vertices(str(shape.get("path", "")), x_transform, x_cofactor, y_transform, y_cofactor)
         if len(vertices) < 3:
             raise ValueError("drawn polygon needs at least three points")
         gate = GateDefinition(
@@ -203,7 +213,11 @@ def drawn_shape_gate(
             parent_id=parent_id,
             vertices=vertices,
             review_status="review_needed",
-            metadata={"drawn_gate": "polygon drawn on plot; review/edit before relying on final statistics"},
+            metadata={
+                "drawn_gate": "polygon drawn on plot; review/edit before relying on final statistics",
+                "x_display_transform": x_transform,
+                "y_display_transform": y_transform,
+            },
         )
         return gate, shape_signature(shape)
     return None, None
@@ -321,6 +335,30 @@ def review_current_view_gate(
     gate.review_status = "review_needed"
     gate.metadata.pop("candidate", None)
     gate.metadata["review_gate_reason"] = f"central {x_channel}/{y_channel} quantile gate; review/edit before relying on final statistics"
+    return gate
+
+
+def suggest_singlet_gate(
+    events: pd.DataFrame,
+    channels: list[ChannelSummary],
+    gate_id: str,
+    name: str = "Candidate singlet gate",
+    parent_id: str | None = None,
+) -> GateDefinition | None:
+    """Create a review-needed pulse-geometry singlet preset."""
+    singlet_pair = _singlet_pair(channels)
+    if not singlet_pair or singlet_pair[0] not in events or singlet_pair[1] not in events:
+        return None
+    gate = _quantile_rectangle(gate_id, name, events, singlet_pair[0], singlet_pair[1], 0.08, 0.92)
+    if gate is None:
+        return None
+    gate.parent_id = parent_id
+    gate.candidate = True
+    gate.user_defined = False
+    gate.enabled = False
+    gate.review_status = "review_needed"
+    gate.metadata["candidate_reason"] = "pulse-geometry singlet-style preset; review/edit before using final statistics"
+    gate.metadata["singlet_preset"] = "area-vs-height/width robust central ridge"
     return gate
 
 
@@ -610,7 +648,13 @@ def _raw_pair(value_a: Any, value_b: Any, transform: str, cofactor: float) -> tu
     return float(raw[0]), float(raw[1])
 
 
-def _path_vertices(path: str, transform: str, cofactor: float) -> list[tuple[float, float]]:
+def _path_vertices(
+    path: str,
+    x_transform: str,
+    x_cofactor: float,
+    y_transform: str | None = None,
+    y_cofactor: float | None = None,
+) -> list[tuple[float, float]]:
     pairs = re.findall(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?\s*,\s*[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?", path)
     display_vertices: list[tuple[float, float]] = []
     for pair in pairs:
@@ -618,8 +662,10 @@ def _path_vertices(path: str, transform: str, cofactor: float) -> list[tuple[flo
         display_vertices.append((float(x_text), float(y_text)))
     if not display_vertices:
         return []
-    x_values = invert_transform([vertex[0] for vertex in display_vertices], transform, cofactor=cofactor)
-    y_values = invert_transform([vertex[1] for vertex in display_vertices], transform, cofactor=cofactor)
+    y_transform = y_transform or x_transform
+    y_cofactor = float(y_cofactor if y_cofactor is not None else x_cofactor)
+    x_values = invert_transform([vertex[0] for vertex in display_vertices], x_transform, cofactor=x_cofactor)
+    y_values = invert_transform([vertex[1] for vertex in display_vertices], y_transform, cofactor=y_cofactor)
     return [(float(x), float(y)) for x, y in zip(x_values, y_values, strict=False)]
 
 

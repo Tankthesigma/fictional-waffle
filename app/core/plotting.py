@@ -9,6 +9,7 @@ from app.core.downsample import downsample_events
 from app.core.compensation import event_view
 from app.core.gate_colors import gate_color
 from app.core.transforms import apply_transform, log10_clamp_warning
+from app.core.transform_settings import resolve_channel_transform
 from app.models.gate import GateDefinition
 from app.models.sample import SampleRecord
 
@@ -35,6 +36,7 @@ def scatter_figure(
     max_events: int = 50_000,
     gates: Iterable[GateDefinition] | None = None,
     use_compensation: bool = False,
+    channel_transform_overrides: dict | None = None,
 ):
     """Build a Plotly cytometry scatter/density figure from a display downsample."""
     import plotly.graph_objects as go
@@ -46,14 +48,19 @@ def scatter_figure(
     if x_channel not in events or y_channel not in events:
         return empty_figure("Selected channels are not available for this sample.")
     display = downsample_events(events[[x_channel, y_channel]], max_events=max_events)
-    display_transform, transform_warnings = _resolve_display_transform(sample, transform, use_compensation)
-    transform_warnings.extend(_log10_warnings(events, [x_channel, y_channel], display_transform))
+    x_setting = resolve_channel_transform(x_channel, transform, cofactor, channel_transform_overrides)
+    y_setting = resolve_channel_transform(y_channel, transform, cofactor, channel_transform_overrides)
+    x_transform, x_warnings = _resolve_display_transform(sample, x_setting.transform, use_compensation)
+    y_transform, y_warnings = _resolve_display_transform(sample, y_setting.transform, use_compensation)
+    transform_warnings = [*x_warnings, *y_warnings]
+    transform_warnings.extend(_log10_warnings(events, [x_channel], x_transform))
+    transform_warnings.extend(_log10_warnings(events, [y_channel], y_transform))
     try:
-        x_values = apply_transform(display[x_channel], display_transform, cofactor=cofactor)
-        y_values = apply_transform(display[y_channel], display_transform, cofactor=cofactor)
+        x_values = apply_transform(display[x_channel], x_transform, cofactor=x_setting.cofactor)
+        y_values = apply_transform(display[y_channel], y_transform, cofactor=y_setting.cofactor)
     except Exception as exc:
         logger.exception("Scatter transform failed for %s on %s/%s", sample.sample_id, x_channel, y_channel)
-        return empty_figure(f"{display_transform} transform could not be displayed: {exc}")
+        return empty_figure(f"{_display_label(x_transform, y_transform)} transform could not be displayed: {exc}")
     x_values, y_values = _finite_xy(x_values, y_values)
     if len(x_values) == 0:
         return empty_figure("Selected channels have no finite display values.")
@@ -106,24 +113,24 @@ def scatter_figure(
         if gate_view != current_view:
             continue
         if gate.gate_type in {"rectangle", "bi_range"}:
-            _add_rectangle_shape(fig, gate, display_transform, cofactor)
+            _add_rectangle_shape(fig, gate, x_transform, x_setting.cofactor, y_transform, y_setting.cofactor)
         elif gate.gate_type == "polygon":
-            _add_polygon_shape(fig, gate, display_transform, cofactor)
+            _add_polygon_shape(fig, gate, x_transform, x_setting.cofactor, y_transform, y_setting.cofactor)
         elif gate.gate_type == "ellipse":
-            _add_ellipse_shape(fig, gate, display_transform, cofactor)
+            _add_ellipse_shape(fig, gate, x_transform, x_setting.cofactor, y_transform, y_setting.cofactor)
         elif gate.gate_type == "quadrant":
-            _add_quadrant_shape(fig, gate, display_transform, cofactor)
+            _add_quadrant_shape(fig, gate, x_transform, x_setting.cofactor, y_transform, y_setting.cofactor)
     _add_transform_warnings(fig, transform_warnings)
     layout = dict(
         template="plotly_white",
         height=560,
         dragmode="zoom",
         margin=dict(l=50, r=24, t=42, b=50),
-        title=f"{sample.sample_id}: {_channel_label(sample, x_channel)} vs {_channel_label(sample, y_channel)} ({view_label}, {display_transform} display, {_plot_mode_label(normalized_mode)})",
-        xaxis_title=f"{_channel_label(sample, x_channel)} ({display_transform})",
-        yaxis_title=f"{_channel_label(sample, y_channel)} ({display_transform})",
+        title=f"{sample.sample_id}: {_channel_label(sample, x_channel)} vs {_channel_label(sample, y_channel)} ({view_label}, {_display_label(x_transform, y_transform)} display, {_plot_mode_label(normalized_mode)})",
+        xaxis_title=f"{_channel_label(sample, x_channel)} ({x_transform})",
+        yaxis_title=f"{_channel_label(sample, y_channel)} ({y_transform})",
         hovermode="closest",
-        uirevision=f"{sample.sample_id}:{x_channel}:{y_channel}:{display_transform}:{normalized_mode}",
+        uirevision=f"{sample.sample_id}:{x_channel}:{y_channel}:{x_transform}:{y_transform}:{normalized_mode}",
     )
     if x_range:
         layout["xaxis"] = dict(range=x_range)
@@ -141,6 +148,7 @@ def histogram_figure(
     cofactor: float = 150.0,
     max_events: int = 50_000,
     use_compensation: bool = False,
+    channel_transform_overrides: dict | None = None,
 ):
     """Build overlaid fluorescence histograms."""
     import plotly.graph_objects as go
@@ -155,13 +163,14 @@ def histogram_figure(
         events = event_view(sample, use_compensation)
         if channel not in events:
             continue
-        display_transform, transform_warnings = _resolve_display_transform(sample, transform, use_compensation)
+        setting = resolve_channel_transform(channel, transform, cofactor, channel_transform_overrides)
+        display_transform, transform_warnings = _resolve_display_transform(sample, setting.transform, use_compensation)
         transforms_used.add(display_transform)
         warnings.extend(f"{sample.sample_id}: {warning}" for warning in transform_warnings)
         warnings.extend(f"{sample.sample_id}: {warning}" for warning in _log10_warnings(events, [channel], display_transform))
         display = downsample_events(pd.DataFrame({channel: events[channel]}), max_events=max_events)
         try:
-            transformed = apply_transform(display[channel], display_transform, cofactor=cofactor)
+            transformed = apply_transform(display[channel], display_transform, cofactor=setting.cofactor)
         except Exception as exc:
             logger.exception("Histogram transform failed for %s on %s", sample.sample_id, channel)
             return empty_figure(f"{display_transform} transform could not be displayed: {exc}")
@@ -299,21 +308,21 @@ def high_dimensional_cluster_figure_from_review(review, *, sample_id: str = "sam
     return fig
 
 
-def _add_rectangle_shape(fig, gate: GateDefinition, transform: str, cofactor: float) -> None:
+def _add_rectangle_shape(fig, gate: GateDefinition, x_transform: str, x_cofactor: float, y_transform: str, y_cofactor: float) -> None:
     bounds = gate.bounds
-    x0, x1 = apply_transform([bounds["x_min"], bounds["x_max"]], transform, cofactor=cofactor)
-    y0, y1 = apply_transform([bounds["y_min"], bounds["y_max"]], transform, cofactor=cofactor)
+    x0, x1 = apply_transform([bounds["x_min"], bounds["x_max"]], x_transform, cofactor=x_cofactor)
+    y0, y1 = apply_transform([bounds["y_min"], bounds["y_max"]], y_transform, cofactor=y_cofactor)
     color = gate_color(gate.gate_id)
     fig.add_shape(type="rect", x0=x0, x1=x1, y0=y0, y1=y1, line=dict(color=color, width=2), fillcolor=_hex_rgba(color, 0.08))
     fig.add_annotation(x=x1, y=y1, text=gate.name, showarrow=False, bgcolor="rgba(255,255,255,0.8)", font=dict(size=11, color=color))
 
 
-def _add_polygon_shape(fig, gate: GateDefinition, transform: str, cofactor: float) -> None:
+def _add_polygon_shape(fig, gate: GateDefinition, x_transform: str, x_cofactor: float, y_transform: str, y_cofactor: float) -> None:
     if len(gate.vertices) < 3:
         return
     x_values, y_values = zip(*gate.vertices, strict=False)
-    x_display = apply_transform(x_values, transform, cofactor=cofactor)
-    y_display = apply_transform(y_values, transform, cofactor=cofactor)
+    x_display = apply_transform(x_values, x_transform, cofactor=x_cofactor)
+    y_display = apply_transform(y_values, y_transform, cofactor=y_cofactor)
     path_parts = [f"M {x_display[0]},{y_display[0]}"]
     path_parts.extend(f"L {x},{y}" for x, y in zip(x_display[1:], y_display[1:], strict=False))
     path_parts.append("Z")
@@ -334,23 +343,23 @@ def _add_polygon_shape(fig, gate: GateDefinition, transform: str, cofactor: floa
     )
 
 
-def _add_ellipse_shape(fig, gate: GateDefinition, transform: str, cofactor: float) -> None:
+def _add_ellipse_shape(fig, gate: GateDefinition, x_transform: str, x_cofactor: float, y_transform: str, y_cofactor: float) -> None:
     bounds = gate.bounds
     center_x = float(bounds["center_x"])
     center_y = float(bounds["center_y"])
     radius_x = float(bounds["radius_x"])
     radius_y = float(bounds["radius_y"])
-    x0, x1 = apply_transform([center_x - radius_x, center_x + radius_x], transform, cofactor=cofactor)
-    y0, y1 = apply_transform([center_y - radius_y, center_y + radius_y], transform, cofactor=cofactor)
+    x0, x1 = apply_transform([center_x - radius_x, center_x + radius_x], x_transform, cofactor=x_cofactor)
+    y0, y1 = apply_transform([center_y - radius_y, center_y + radius_y], y_transform, cofactor=y_cofactor)
     color = gate_color(gate.gate_id)
     fig.add_shape(type="circle", x0=x0, x1=x1, y0=y0, y1=y1, line=dict(color=color, width=2), fillcolor=_hex_rgba(color, 0.08))
     fig.add_annotation(x=x1, y=y1, text=gate.name, showarrow=False, bgcolor="rgba(255,255,255,0.8)", font=dict(size=11, color=color))
 
 
-def _add_quadrant_shape(fig, gate: GateDefinition, transform: str, cofactor: float) -> None:
+def _add_quadrant_shape(fig, gate: GateDefinition, x_transform: str, x_cofactor: float, y_transform: str, y_cofactor: float) -> None:
     bounds = gate.bounds
-    x_threshold = float(apply_transform([bounds["x_threshold"]], transform, cofactor=cofactor)[0])
-    y_threshold = float(apply_transform([bounds["y_threshold"]], transform, cofactor=cofactor)[0])
+    x_threshold = float(apply_transform([bounds["x_threshold"]], x_transform, cofactor=x_cofactor)[0])
+    y_threshold = float(apply_transform([bounds["y_threshold"]], y_transform, cofactor=y_cofactor)[0])
     color = gate_color(gate.gate_id)
     fig.add_vline(x=x_threshold, line_color=color, line_width=1.7, line_dash="dash")
     fig.add_hline(y=y_threshold, line_color=color, line_width=1.7, line_dash="dash")
@@ -410,6 +419,12 @@ def _resolve_display_transform(sample: SampleRecord, transform: str, use_compens
             ],
         )
     return requested, []
+
+
+def _display_label(x_transform: str, y_transform: str) -> str:
+    if x_transform == y_transform:
+        return x_transform
+    return f"x={x_transform}, y={y_transform}"
 
 
 def _log10_warnings(events: pd.DataFrame, channels: list[str], transform: str) -> list[str]:

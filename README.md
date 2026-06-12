@@ -111,10 +111,13 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 - Raw, safe log10, arcsinh, and optional logicle display transforms.
 - Metadata-driven compensation view toggle for FCS files with usable `$SPILL`/`$SPILLOVER` matrices, plus a local editable compensation matrix for review/override workflows.
 - Interactive on-plot rectangle/polygon drawing, including raw/log10/arcsinh/logicle coordinate conversion, child-gate drawing from the selected parent, rectangle, polygon, histogram range, quadrant, ellipse, and bi-range gates, gate JSON save/load, parent-ready gate model, and statistics.
+- Per-channel display transform overrides for mixed-axis review; drawn gates store raw coordinates using each axis' own transform inverse.
+- One-click review-needed singlet gate preset when pulse-geometry channels are present.
 - Gate statistics include event counts, percent of total/parent, medians, means, percentiles, SD, %CV, robust CV, and geometric mean for fluorescence channels.
+- Gated population export to local CSV or FCS, with provenance keywords, `$PnR` ranges, and loud compensated-export labeling.
 - Project JSON save/load for metadata, file references, gates, QC, transform settings, comparison settings, and report selections.
 - Rule-based QC dashboard with review-needed language.
-- Batch tables, event count chart, median fluorescence table, batch gate-statistics grid, and exploratory control-vs-treated comparison.
+- Batch tables, event count chart, median fluorescence table, batch gate-statistics grid, population frequency grid, sample concatenation with `AFW_SAMPLE_INDEX`, and exploratory control-vs-treated comparison.
 - High-dimensional review using UMAP with PCA fallback plus clustering for review-needed population exploration without automatic identity claims.
 - Cluster-guided gate review MVP: cluster fluorescence space with UMAP/PCA review, generate disabled review-needed gate candidates on the active plot, and optionally apply enhanced marker-aware cluster labels without sending raw event matrices.
 - Local CSV, PDF, and PowerPoint report export with representative plot images when static export is available.
@@ -123,6 +126,7 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 ## Limitations
 
 - Compensation editing is a lightweight matrix review tool. It is not a full single-stain/FMO compensation wizard or spectral unmixing workflow.
+- Exported FCS files are post-acquisition analysis artifacts. Compensated exports are labeled to avoid accidental double-compensation in downstream software.
 - High-dimensional clustering is exploratory and does not infer cell identities unless the user supplies marker meaning.
 - Static report figures are summarized; richer Kaleido image embedding is a roadmap item.
 - CSV summary tables cannot support full event-level cytometry analysis.

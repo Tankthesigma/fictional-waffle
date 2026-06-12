@@ -163,6 +163,7 @@ def _clear_session(session: WorkbenchSession) -> None:
     session.gates.clear()
     session.qc_flags.clear()
     session.comparison_rows.clear()
+    session.derived_mappings.clear()
 
 
 def _upload_response(session: WorkbenchSession, messages: list[str], qc_summary):

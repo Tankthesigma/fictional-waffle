@@ -23,6 +23,7 @@ def _gate_callback_payload(output: str, action_id: str, state_updates: dict[str,
         "add-ellipse-gate",
         "add-birange-gate",
         "add-boolean-gate",
+        "create-singlet-gate",
         "suggest-candidate-gates",
         "ai-auto-gate-clusters",
         "accept-candidate-gates",
@@ -34,6 +35,8 @@ def _gate_callback_payload(output: str, action_id: str, state_updates: dict[str,
         "load-gates",
         "save-project",
         "load-project",
+        "export-gated-fcs",
+        "export-gated-csv",
         "export-gate-stats",
     ]
     state_values: dict[str, object] = {
@@ -75,6 +78,7 @@ def _gate_callback_payload(output: str, action_id: str, state_updates: dict[str,
         "manage-gate-id": None,
         "manage-gate-name": "",
         "compensation-enabled": [],
+        "channel-transform-overrides-store": {},
     }
     state_values.update(state_updates or {})
     state_order = [
@@ -116,6 +120,7 @@ def _gate_callback_payload(output: str, action_id: str, state_updates: dict[str,
         "manage-gate-id",
         "manage-gate-name",
         "compensation-enabled",
+        "channel-transform-overrides-store",
     ]
     return {
         "output": output,
@@ -129,7 +134,14 @@ def _gate_callback_payload(output: str, action_id: str, state_updates: dict[str,
             {"id": "gate-stack-cards", "property": "children"},
         ],
         "inputs": [{"id": input_id, "property": "n_clicks", "value": 1 if input_id == action_id else 0} for input_id in input_ids],
-        "state": [{"id": state_id, "property": "value", "value": state_values[state_id]} for state_id in state_order],
+        "state": [
+            {
+                "id": state_id,
+                "property": "data" if state_id == "channel-transform-overrides-store" else "value",
+                "value": state_values[state_id],
+            }
+            for state_id in state_order
+        ],
         "changedPropIds": [f"{action_id}.n_clicks"],
     }
 
@@ -161,6 +173,7 @@ def test_incomplete_gate_form_returns_status_without_callback_error():
                 {"id": "add-ellipse-gate", "property": "n_clicks", "value": 0},
                 {"id": "add-birange-gate", "property": "n_clicks", "value": 0},
                 {"id": "add-boolean-gate", "property": "n_clicks", "value": 0},
+                {"id": "create-singlet-gate", "property": "n_clicks", "value": 0},
                 {"id": "suggest-candidate-gates", "property": "n_clicks", "value": 0},
                 {"id": "ai-auto-gate-clusters", "property": "n_clicks", "value": 0},
                 {"id": "accept-candidate-gates", "property": "n_clicks", "value": 0},
@@ -172,6 +185,8 @@ def test_incomplete_gate_form_returns_status_without_callback_error():
                 {"id": "load-gates", "property": "n_clicks", "value": 0},
                 {"id": "save-project", "property": "n_clicks", "value": 0},
                 {"id": "load-project", "property": "n_clicks", "value": 0},
+                {"id": "export-gated-fcs", "property": "n_clicks", "value": 0},
+                {"id": "export-gated-csv", "property": "n_clicks", "value": 0},
                 {"id": "export-gate-stats", "property": "n_clicks", "value": 0},
             ],
             "state": [
@@ -213,6 +228,7 @@ def test_incomplete_gate_form_returns_status_without_callback_error():
                 {"id": "manage-gate-id", "property": "value", "value": None},
                 {"id": "manage-gate-name", "property": "value", "value": ""},
                 {"id": "compensation-enabled", "property": "value", "value": []},
+                {"id": "channel-transform-overrides-store", "property": "data", "value": {}},
             ],
             "changedPropIds": ["add-rectangle-gate.n_clicks"],
         },
@@ -249,6 +265,7 @@ def test_incomplete_histogram_gate_form_returns_status_without_callback_error():
                 {"id": "add-ellipse-gate", "property": "n_clicks", "value": 0},
                 {"id": "add-birange-gate", "property": "n_clicks", "value": 0},
                 {"id": "add-boolean-gate", "property": "n_clicks", "value": 0},
+                {"id": "create-singlet-gate", "property": "n_clicks", "value": 0},
                 {"id": "suggest-candidate-gates", "property": "n_clicks", "value": 0},
                 {"id": "ai-auto-gate-clusters", "property": "n_clicks", "value": 0},
                 {"id": "accept-candidate-gates", "property": "n_clicks", "value": 0},
@@ -260,6 +277,8 @@ def test_incomplete_histogram_gate_form_returns_status_without_callback_error():
                 {"id": "load-gates", "property": "n_clicks", "value": 0},
                 {"id": "save-project", "property": "n_clicks", "value": 0},
                 {"id": "load-project", "property": "n_clicks", "value": 0},
+                {"id": "export-gated-fcs", "property": "n_clicks", "value": 0},
+                {"id": "export-gated-csv", "property": "n_clicks", "value": 0},
                 {"id": "export-gate-stats", "property": "n_clicks", "value": 0},
             ],
             "state": [
@@ -301,6 +320,7 @@ def test_incomplete_histogram_gate_form_returns_status_without_callback_error():
                 {"id": "manage-gate-id", "property": "value", "value": None},
                 {"id": "manage-gate-name", "property": "value", "value": ""},
                 {"id": "compensation-enabled", "property": "value", "value": []},
+                {"id": "channel-transform-overrides-store", "property": "data", "value": {}},
             ],
             "changedPropIds": ["add-histogram-gate.n_clicks"],
         },

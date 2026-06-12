@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 from io import StringIO
 
-from dash import Input, Output, html
+from dash import Input, Output, html, no_update
 
 from app.core.paths import EXPORT_ROOT
 from app.core.session_store import WorkbenchSession
@@ -153,6 +153,49 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
             comparison_delta_chart(comparison_rows),
         )
 
+    @app.callback(
+        Output("compare-status", "children", allow_duplicate=True),
+        Output("sample-table", "data", allow_duplicate=True),
+        Output("sample-dropdown", "options", allow_duplicate=True),
+        Output("sample-dropdown", "value", allow_duplicate=True),
+        Output("sample-ids-store", "data", allow_duplicate=True),
+        Output("metric-samples", "children", allow_duplicate=True),
+        Output("metric-events", "children", allow_duplicate=True),
+        Output("metric-flags", "children", allow_duplicate=True),
+        Input("concatenate-samples", "n_clicks"),
+        Input("export-concatenated-fcs", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def concatenate_or_export(_concat_clicks, _export_clicks):
+        from dash import callback_context
+        from app.core.concat import concatenate_samples, export_concatenated_fcs
+        from app.core.paths import EXPORT_ROOT
+        from app.core.qc import qc_summary, run_batch_qc
+
+        action = callback_context.triggered[0]["prop_id"].split(".")[0] if callback_context.triggered else ""
+        if action == "export-concatenated-fcs":
+            sample = _latest_concatenated_sample(session)
+            if sample is None:
+                return ("Concatenate loaded samples before exporting a concatenated FCS.", no_update, no_update, no_update, no_update, no_update, no_update, no_update)
+            try:
+                fcs_path, mapping_path = export_concatenated_fcs(sample, session.derived_mappings.get(sample.sample_id, []), EXPORT_ROOT / "concatenated")
+                status = f"Exported concatenated FCS to {fcs_path}; sample-index map to {mapping_path}."
+            except Exception as exc:
+                status = f"Concatenated FCS export failed: {exc}"
+            return (status, no_update, no_update, no_update, no_update, no_update, no_update, no_update)
+
+        result = concatenate_samples(session.sample_list())
+        if result.sample is None:
+            return (" ".join(result.skipped), no_update, no_update, no_update, no_update, no_update, no_update, no_update)
+        sample_id = _unique_sample_id(session, result.sample.sample_id)
+        result.sample.sample_id = sample_id
+        session.samples[sample_id] = result.sample
+        session.derived_mappings[sample_id] = result.mapping_rows
+        session.qc_flags = run_batch_qc(session.sample_list())
+        skipped = f" Skipped: {'; '.join(result.skipped)}" if result.skipped else ""
+        status = f"Created derived concatenated sample {sample_id} with {result.sample.event_count:,} events from {len(result.mapping_rows)} sample(s).{skipped}"
+        return (status, *_sample_manager_payload(session, selected=sample_id, qc_summary=qc_summary))
+
 
 def _columns_from_rows(rows: list[dict[str, object]], preferred: list[str]) -> list[str]:
     seen = list(preferred)
@@ -231,3 +274,34 @@ def _first_matching(groups: list[str], tokens: tuple[str, ...]) -> str | None:
         if any(token in normalized for token in tokens):
             return group
     return None
+
+
+def _sample_manager_payload(session: WorkbenchSession, *, selected: str | None, qc_summary):
+    sample_rows = [sample.to_summary_dict(qc_summary(session.qc_flags.get(sample.sample_id, []))) for sample in session.sample_list()]
+    options = [{"label": f"{sample.sample_id} ({sample.filename})", "value": sample.sample_id} for sample in session.sample_list()]
+    total_events = sum(sample.event_count for sample in session.sample_list())
+    return (
+        sample_rows,
+        options,
+        selected,
+        [option["value"] for option in options],
+        str(len(session.samples)),
+        f"{total_events:,}",
+        str(len(session.all_qc_flags())),
+    )
+
+
+def _latest_concatenated_sample(session: WorkbenchSession):
+    for sample in reversed(session.sample_list()):
+        if sample.file_type == "derived" and sample.sample_id in session.derived_mappings:
+            return sample
+    return None
+
+
+def _unique_sample_id(session: WorkbenchSession, base: str) -> str:
+    if base not in session.samples:
+        return base
+    index = 2
+    while f"{base}_{index}" in session.samples:
+        index += 1
+    return f"{base}_{index}"

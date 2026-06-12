@@ -67,6 +67,8 @@ def test_candidate_gate_controls_are_rendered_with_review_language():
     assert "Quick Gate Current View" in layout_json
     assert "add-review-scatter-gate" in layout_json
     assert "Add Review FSC/SSC Gate" in layout_json
+    assert "create-singlet-gate" in layout_json
+    assert "Create Singlet Gate" in layout_json
     assert "ai-auto-gate-clusters" in layout_json
     assert "Cluster-Guided Gate Review" in layout_json
     assert "accept-candidate-gates" in layout_json
@@ -83,6 +85,10 @@ def test_gate_manager_controls_are_rendered():
     assert "rename-gate" in layout_json
     assert "toggle-gate" in layout_json
     assert "delete-gate" in layout_json
+    assert "export-gated-fcs" in layout_json
+    assert "Export Selected Gate as FCS" in layout_json
+    assert "export-gated-csv" in layout_json
+    assert "Export Selected Gate as CSV" in layout_json
     assert "add-boolean-gate" in layout_json
     assert "boolean-gate-a" in layout_json
     assert "boolean-gate-b" in layout_json
@@ -117,6 +123,10 @@ def test_compare_summary_container_is_rendered():
     assert "batch-apply-gates" in layout_json
     assert "population-frequency-table" in layout_json
     assert "export-population-frequency-csv" in layout_json
+    assert "concatenate-samples" in layout_json
+    assert "Concatenate Loaded Samples" in layout_json
+    assert "export-concatenated-fcs" in layout_json
+    assert "Export Concatenated FCS" in layout_json
     assert any("grouping-readiness-summary.children" in key for key in dash_app.callback_map)
     assert "manifest-template-download.data" in dash_app.callback_map
     assert any("comparison-delta-chart.figure" in key for key in dash_app.callback_map)
@@ -197,6 +207,12 @@ def test_workbench_analysis_cockpit_is_rendered_and_wired():
     assert "plot-preset" in layout_json
     assert "Apply Preset" in layout_json
     assert "plot-preset-table" in layout_json
+    assert "channel-transform-overrides-store" in layout_json
+    assert "transform-override-channel" in layout_json
+    assert "transform-override-mode" in layout_json
+    assert "apply-transform-override" in layout_json
+    assert "clear-transform-override" in layout_json
+    assert "transform-overrides-table" in layout_json
     assert "role-override-channel" in layout_json
     assert "role-override-value" in layout_json
     assert "Apply Role Override" in layout_json
@@ -209,5 +225,6 @@ def test_workbench_analysis_cockpit_is_rendered_and_wired():
     assert any("plot-preset.options" in key for key in dash_app.callback_map)
     assert any("plot-preset-status.children" in key for key in dash_app.callback_map)
     assert any("role-override-status.children" in key for key in dash_app.callback_map)
+    assert any("channel-transform-overrides-store.data" in key for key in dash_app.callback_map)
     assert "role-override-value.value" in dash_app.callback_map
     assert any("analysis-revision-store.data" in key for key in dash_app.callback_map)

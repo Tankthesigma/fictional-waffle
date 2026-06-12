@@ -29,6 +29,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         Input("add-ellipse-gate", "n_clicks"),
         Input("add-birange-gate", "n_clicks"),
         Input("add-boolean-gate", "n_clicks"),
+        Input("create-singlet-gate", "n_clicks"),
         Input("suggest-candidate-gates", "n_clicks"),
         Input("ai-auto-gate-clusters", "n_clicks"),
         Input("accept-candidate-gates", "n_clicks"),
@@ -40,6 +41,8 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         Input("load-gates", "n_clicks"),
         Input("save-project", "n_clicks"),
         Input("load-project", "n_clicks"),
+        Input("export-gated-fcs", "n_clicks"),
+        Input("export-gated-csv", "n_clicks"),
         Input("export-gate-stats", "n_clicks"),
         State("selected-sample-store", "data"),
         State("x-channel", "value"),
@@ -79,6 +82,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         State("manage-gate-id", "value"),
         State("manage-gate-name", "value"),
         State("compensation-enabled", "value"),
+        State("channel-transform-overrides-store", "data"),
         prevent_initial_call=True,
     )
     def gate_actions(
@@ -90,6 +94,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         add_ellipse_clicks,
         add_birange_clicks,
         add_boolean_clicks,
+        create_singlet_clicks,
         suggest_clicks,
         ai_auto_gate_clicks,
         accept_clicks,
@@ -101,6 +106,8 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         load_clicks,
         save_project_clicks,
         load_project_clicks,
+        export_gated_fcs_clicks,
+        export_gated_csv_clicks,
         export_clicks,
         sample_id,
         x_channel,
@@ -140,6 +147,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         manage_gate_id,
         manage_gate_name,
         compensation_enabled,
+        transform_overrides,
     ):
         from dash import callback_context
         from app.core.gating import gate_to_table
@@ -341,6 +349,25 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             session.gates.append(gate)
             operand_text = f" {operation} ".join(operands) if operation != "NOT" else f"NOT {operands[0]}"
             status = f"Added review-needed boolean gate: {gate.name} ({operand_text})."
+        elif action == "create-singlet-gate":
+            from app.core.compensation import event_view
+            from app.core.gating import suggest_singlet_gate
+
+            sample = session.selected_sample(sample_id)
+            if sample is None:
+                return no_update, no_update, no_update, "Upload and select a sample before creating a singlet preset.", no_update, no_update, no_update
+            use_compensation = _is_compensation_on(compensation_enabled) and sample.compensated_events is not None
+            gate = suggest_singlet_gate(
+                event_view(sample, use_compensation),
+                sample.channels,
+                uuid4().hex[:8],
+                parent_id=_valid_parent_id(session.gates, manage_gate_id),
+            )
+            if gate is None:
+                return no_update, no_update, no_update, "No compatible pulse-geometry pair was found for a singlet preset.", no_update, no_update, no_update
+            gate.metadata["event_view"] = "metadata_compensated" if use_compensation else "raw"
+            session.gates.append(gate)
+            status = f"Added disabled review-needed singlet preset: {gate.name}. Review/edit and accept before using final statistics."
         elif action == "suggest-candidate-gates":
             from app.core.compensation import event_view
             from app.core.gating import suggest_candidate_gates
@@ -443,6 +470,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
                     "transform": transform,
                     "cofactor": cofactor,
                     "max_events": max_events,
+                    "channel_overrides": transform_overrides.get("channel_overrides", transform_overrides) if isinstance(transform_overrides, dict) else {},
                 },
                 comparison_settings={
                     "control_group": control_group,
@@ -471,6 +499,42 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
                     status = f"Project file could not be loaded: {exc}"
             else:
                 status = f"No saved project file found at {PROJECT_PATH}."
+        elif action == "export-gated-fcs":
+            from app.core.fcs_export import export_gated_population_fcs
+
+            sample = session.selected_sample(sample_id)
+            if sample is None:
+                return no_update, no_update, no_update, "Upload and select a sample before exporting a gated population.", no_update, no_update, no_update
+            try:
+                result = export_gated_population_fcs(
+                    sample,
+                    session.gates,
+                    manage_gate_id,
+                    EXPORT_ROOT / "gated-populations",
+                    use_compensation=_is_compensation_on(compensation_enabled),
+                )
+                status = f"Exported {result.event_count} gated event(s) as {result.view_name} FCS to {result.path}."
+            except Exception as exc:
+                logger.exception("Gated FCS export failed")
+                status = f"Gated FCS export failed: {exc}"
+        elif action == "export-gated-csv":
+            from app.core.fcs_export import export_gated_population_csv
+
+            sample = session.selected_sample(sample_id)
+            if sample is None:
+                return no_update, no_update, no_update, "Upload and select a sample before exporting a gated population.", no_update, no_update, no_update
+            try:
+                result = export_gated_population_csv(
+                    sample,
+                    session.gates,
+                    manage_gate_id,
+                    EXPORT_ROOT / "gated-populations",
+                    use_compensation=_is_compensation_on(compensation_enabled),
+                )
+                status = f"Exported {result.event_count} gated event(s) as {result.view_name} CSV to {result.path}."
+            except Exception as exc:
+                logger.exception("Gated CSV export failed")
+                status = f"Gated CSV export failed: {exc}"
         sample = session.selected_sample(sample_id)
         stats = []
         if sample:
@@ -511,6 +575,24 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         return options, options
 
     @app.callback(
+        Output("channel-transform-overrides-store", "data", allow_duplicate=True),
+        Input("load-project", "n_clicks"),
+        prevent_initial_call=True,
+    )
+    def restore_project_transform_overrides(_clicks):
+        from app.core.project_store import load_project
+
+        if not PROJECT_PATH.exists():
+            return no_update
+        try:
+            project = load_project(PROJECT_PATH)
+        except Exception:
+            logger.exception("Project transform settings could not be loaded from %s", PROJECT_PATH)
+            return no_update
+        overrides = project.transform_settings.get("channel_overrides", {})
+        return {"channel_overrides": overrides} if isinstance(overrides, dict) else {}
+
+    @app.callback(
         Output("gate-table", "data", allow_duplicate=True),
         Output("gate-stats-table", "data", allow_duplicate=True),
         Output("gate-stats-table", "columns", allow_duplicate=True),
@@ -525,14 +607,16 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         State("y-channel", "value"),
         State("transform", "value"),
         State("cofactor", "value"),
+        State("channel-transform-overrides-store", "data"),
         State("compensation-enabled", "value"),
         State("manage-gate-id", "value"),
         State("last-drawn-gate-store", "data"),
         prevent_initial_call=True,
     )
-    def add_drawn_plot_gate(relayout_data, sample_id, x_channel, y_channel, transform, cofactor, compensation_enabled, manage_gate_id, last_signature):
+    def add_drawn_plot_gate(relayout_data, sample_id, x_channel, y_channel, transform, cofactor, transform_overrides, compensation_enabled, manage_gate_id, last_signature):
         from app.core.gating import drawn_shape_gate, gate_to_table, latest_drawn_shape, shape_signature
         from app.core.plotting import _resolve_display_transform
+        from app.core.transform_settings import resolve_channel_transform
 
         shape = latest_drawn_shape(relayout_data)
         if shape is None:
@@ -546,7 +630,10 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             return no_update, no_update, no_update, "Upload and select a sample before drawing a gate.", no_update, no_update, no_update, signature
 
         use_compensation = _is_compensation_on(compensation_enabled) and sample.compensated_events is not None
-        display_transform, _warnings = _resolve_display_transform(sample, transform or "raw", use_compensation)
+        x_setting = resolve_channel_transform(x_channel, transform or "raw", cofactor or 150, transform_overrides)
+        y_setting = resolve_channel_transform(y_channel, transform or "raw", cofactor or 150, transform_overrides)
+        x_transform, _x_warnings = _resolve_display_transform(sample, x_setting.transform, use_compensation)
+        y_transform, _y_warnings = _resolve_display_transform(sample, y_setting.transform, use_compensation)
         try:
             gate, _shape_signature = drawn_shape_gate(
                 relayout_data,
@@ -554,8 +641,10 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
                 name=f"Drawn plot gate {len(session.gates) + 1}",
                 x_channel=x_channel,
                 y_channel=y_channel,
-                transform=display_transform,
-                cofactor=float(cofactor or 150),
+                x_transform=x_transform,
+                y_transform=y_transform,
+                x_cofactor=x_setting.cofactor,
+                y_cofactor=y_setting.cofactor,
                 parent_id=_valid_parent_id(session.gates, manage_gate_id),
             )
         except Exception as exc:

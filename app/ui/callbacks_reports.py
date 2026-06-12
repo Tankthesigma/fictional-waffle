@@ -70,6 +70,7 @@ def register_report_callbacks(app, session: WorkbenchSession) -> None:
         State("plot-mode", "value"),
         State("transform", "value"),
         State("cofactor", "value"),
+        State("channel-transform-overrides-store", "data"),
         State("max-events", "value"),
         prevent_initial_call=True,
     )
@@ -84,6 +85,7 @@ def register_report_callbacks(app, session: WorkbenchSession) -> None:
         plot_mode,
         transform,
         cofactor,
+        transform_overrides,
         max_events,
     ):
         from dash import callback_context
@@ -125,6 +127,7 @@ def register_report_callbacks(app, session: WorkbenchSession) -> None:
             max_events or 50_000,
             session.gates,
             isinstance(compensation_enabled, list) and "on" in compensation_enabled,
+            transform_overrides,
         )
         if action == "export-pdf":
             path = export_pdf_report(
@@ -164,6 +167,7 @@ def _export_report_figures(
     max_events,
     gates,
     use_compensation: bool,
+    transform_overrides=None,
 ) -> FigureExportResult:
     from app.core.plotting import histogram_figure, scatter_figure
 
@@ -183,6 +187,7 @@ def _export_report_figures(
                 plot_mode=plot_mode or "scatter",
                 transform=transform,
                 cofactor=cofactor,
+                channel_transform_overrides=transform_overrides,
                 max_events=max_events,
                 gates=gates,
                 use_compensation=use_compensation,
@@ -195,6 +200,7 @@ def _export_report_figures(
                 hist_channel,
                 transform=transform,
                 cofactor=cofactor,
+                channel_transform_overrides=transform_overrides,
                 max_events=max_events,
                 use_compensation=use_compensation,
             ),

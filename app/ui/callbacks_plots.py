@@ -60,9 +60,12 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
         Input("transform", "value"),
         Input("max-events", "value"),
         Input("compensation-enabled", "value"),
+        Input("channel-transform-overrides-store", "data"),
         Input("gate-table", "data"),
     )
-    def update_plot_context(sample_id, x_channel, y_channel, plot_mode, transform, max_events, compensation_enabled, _gate_rows):
+    def update_plot_context(sample_id, x_channel, y_channel, plot_mode, transform, max_events, compensation_enabled, transform_overrides, _gate_rows):
+        from app.core.transform_settings import normalize_channel_overrides
+
         sample = session.selected_sample(sample_id)
         if not sample:
             return [
@@ -74,9 +77,10 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
         display_events = min(sample.event_count, int(max_events or 50_000))
         gate_count = _visible_gate_count(session.gates, x_channel, y_channel, use_compensation)
         qc_count = len(session.qc_flags.get(sample.sample_id, []))
+        override_count = len(normalize_channel_overrides(transform_overrides))
         return [
             _context_chip("Sample", sample.sample_id, f"{display_events:,} displayed of {sample.event_count:,} events"),
-            _context_chip("Axes", f"{_channel_label(sample, x_channel)} x {_channel_label(sample, y_channel)}", f"{plot_mode or 'scatter'} | {transform or 'raw'} | {event_view}"),
+            _context_chip("Axes", f"{_channel_label(sample, x_channel)} x {_channel_label(sample, y_channel)}", f"{plot_mode or 'scatter'} | {transform or 'raw'} | {event_view} | {override_count} override(s)"),
             _context_chip("Gates", f"{gate_count} overlay(s)", "Only compatible enabled gates are drawn on this view."),
             _context_chip("Review", f"{qc_count} QC flag(s)", "Use QC tab for rule details and suggested checks."),
         ]
@@ -91,9 +95,10 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
         Input("cofactor", "value"),
         Input("max-events", "value"),
         Input("compensation-enabled", "value"),
+        Input("channel-transform-overrides-store", "data"),
         Input("gate-table", "data"),
     )
-    def update_scatter(sample_id, x_channel, y_channel, plot_mode, transform, cofactor, max_events, compensation_enabled, _gate_rows):
+    def update_scatter(sample_id, x_channel, y_channel, plot_mode, transform, cofactor, max_events, compensation_enabled, transform_overrides, _gate_rows):
         from app.core.plotting import scatter_figure
 
         sample = session.selected_sample(sample_id)
@@ -107,6 +112,7 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
             max_events=max_events or 50_000,
             gates=session.gates,
             use_compensation=_is_compensation_on(compensation_enabled),
+            channel_transform_overrides=transform_overrides,
         )
 
     @app.callback(
@@ -116,8 +122,9 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
         Input("cofactor", "value"),
         Input("max-events", "value"),
         Input("compensation-enabled", "value"),
+        Input("channel-transform-overrides-store", "data"),
     )
-    def update_histogram(channel, transform, cofactor, max_events, compensation_enabled):
+    def update_histogram(channel, transform, cofactor, max_events, compensation_enabled, transform_overrides):
         from app.core.plotting import histogram_figure
 
         return histogram_figure(
@@ -127,7 +134,51 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
             cofactor=cofactor or 150,
             max_events=max_events or 50_000,
             use_compensation=_is_compensation_on(compensation_enabled),
+            channel_transform_overrides=transform_overrides,
         )
+
+    @app.callback(
+        Output("transform-override-channel", "options"),
+        Input("selected-sample-store", "data"),
+    )
+    def update_transform_override_channels(sample_id):
+        sample = session.selected_sample(sample_id)
+        if not sample:
+            return []
+        return [{"label": channel.label, "value": channel.raw_name} for channel in sample.channels]
+
+    @app.callback(
+        Output("channel-transform-overrides-store", "data"),
+        Output("transform-overrides-table", "data"),
+        Output("transform-override-status", "children"),
+        Input("apply-transform-override", "n_clicks"),
+        Input("clear-transform-override", "n_clicks"),
+        State("transform-override-channel", "value"),
+        State("transform-override-mode", "value"),
+        State("transform-override-cofactor", "value"),
+        State("channel-transform-overrides-store", "data"),
+        prevent_initial_call=True,
+    )
+    def update_channel_transform_override(_apply_clicks, _clear_clicks, channel, mode, cofactor, overrides):
+        from dash import callback_context
+        from app.core.transform_settings import SUPPORTED_TRANSFORMS, normalize_channel_overrides, override_rows
+
+        action = callback_context.triggered[0]["prop_id"].split(".")[0] if callback_context.triggered else ""
+        current = normalize_channel_overrides(overrides)
+        if not channel:
+            return {"channel_overrides": current}, override_rows(current), "Choose a channel before changing an override."
+        if action == "clear-transform-override":
+            current.pop(str(channel), None)
+            return {"channel_overrides": current}, override_rows(current), f"Cleared transform override for {channel}."
+        transform = str(mode or "raw")
+        if transform not in SUPPORTED_TRANSFORMS:
+            return {"channel_overrides": current}, override_rows(current), "Choose a supported transform override."
+        try:
+            cofactor_value = max(float(cofactor or 150), 1.0)
+        except (TypeError, ValueError):
+            return {"channel_overrides": current}, override_rows(current), "Override cofactor must be numeric."
+        current[str(channel)] = {"transform": transform, "cofactor": cofactor_value}
+        return {"channel_overrides": current}, override_rows(current), f"Applied {transform} display override to {channel}."
 
     @app.callback(Output("event-count-chart", "figure"), Input("sample-ids-store", "data"))
     def update_event_counts(_sample_ids):
