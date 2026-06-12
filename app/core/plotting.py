@@ -7,6 +7,7 @@ import pandas as pd
 
 from app.core.downsample import downsample_events
 from app.core.compensation import event_view
+from app.core.gate_colors import gate_color
 from app.core.transforms import apply_transform, log10_clamp_warning
 from app.models.gate import GateDefinition
 from app.models.sample import SampleRecord
@@ -312,8 +313,9 @@ def _add_rectangle_shape(fig, gate: GateDefinition, transform: str, cofactor: fl
     bounds = gate.bounds
     x0, x1 = apply_transform([bounds["x_min"], bounds["x_max"]], transform, cofactor=cofactor)
     y0, y1 = apply_transform([bounds["y_min"], bounds["y_max"]], transform, cofactor=cofactor)
-    fig.add_shape(type="rect", x0=x0, x1=x1, y0=y0, y1=y1, line=dict(color="#0f766e", width=2), fillcolor="rgba(15,118,110,0.08)")
-    fig.add_annotation(x=x1, y=y1, text=gate.name, showarrow=False, bgcolor="rgba(255,255,255,0.8)", font=dict(size=11, color="#0f172a"))
+    color = gate_color(gate.gate_id)
+    fig.add_shape(type="rect", x0=x0, x1=x1, y0=y0, y1=y1, line=dict(color=color, width=2), fillcolor=_hex_rgba(color, 0.08))
+    fig.add_annotation(x=x1, y=y1, text=gate.name, showarrow=False, bgcolor="rgba(255,255,255,0.8)", font=dict(size=11, color=color))
 
 
 def _add_polygon_shape(fig, gate: GateDefinition, transform: str, cofactor: float) -> None:
@@ -325,11 +327,12 @@ def _add_polygon_shape(fig, gate: GateDefinition, transform: str, cofactor: floa
     path_parts = [f"M {x_display[0]},{y_display[0]}"]
     path_parts.extend(f"L {x},{y}" for x, y in zip(x_display[1:], y_display[1:], strict=False))
     path_parts.append("Z")
+    color = gate_color(gate.gate_id)
     fig.add_shape(
         type="path",
         path=" ".join(path_parts),
-        line=dict(color="#0f766e", width=2),
-        fillcolor="rgba(15,118,110,0.08)",
+        line=dict(color=color, width=2),
+        fillcolor=_hex_rgba(color, 0.08),
     )
     fig.add_annotation(
         x=float(x_display[-1]),
@@ -337,7 +340,7 @@ def _add_polygon_shape(fig, gate: GateDefinition, transform: str, cofactor: floa
         text=gate.name,
         showarrow=False,
         bgcolor="rgba(255,255,255,0.8)",
-        font=dict(size=11, color="#0f172a"),
+        font=dict(size=11, color=color),
     )
 
 
@@ -349,24 +352,36 @@ def _add_ellipse_shape(fig, gate: GateDefinition, transform: str, cofactor: floa
     radius_y = float(bounds["radius_y"])
     x0, x1 = apply_transform([center_x - radius_x, center_x + radius_x], transform, cofactor=cofactor)
     y0, y1 = apply_transform([center_y - radius_y, center_y + radius_y], transform, cofactor=cofactor)
-    fig.add_shape(type="circle", x0=x0, x1=x1, y0=y0, y1=y1, line=dict(color="#7c3aed", width=2), fillcolor="rgba(124,58,237,0.08)")
-    fig.add_annotation(x=x1, y=y1, text=gate.name, showarrow=False, bgcolor="rgba(255,255,255,0.8)", font=dict(size=11, color="#0f172a"))
+    color = gate_color(gate.gate_id)
+    fig.add_shape(type="circle", x0=x0, x1=x1, y0=y0, y1=y1, line=dict(color=color, width=2), fillcolor=_hex_rgba(color, 0.08))
+    fig.add_annotation(x=x1, y=y1, text=gate.name, showarrow=False, bgcolor="rgba(255,255,255,0.8)", font=dict(size=11, color=color))
 
 
 def _add_quadrant_shape(fig, gate: GateDefinition, transform: str, cofactor: float) -> None:
     bounds = gate.bounds
     x_threshold = float(apply_transform([bounds["x_threshold"]], transform, cofactor=cofactor)[0])
     y_threshold = float(apply_transform([bounds["y_threshold"]], transform, cofactor=cofactor)[0])
-    fig.add_vline(x=x_threshold, line_color="#9333ea", line_width=1.7, line_dash="dash")
-    fig.add_hline(y=y_threshold, line_color="#9333ea", line_width=1.7, line_dash="dash")
+    color = gate_color(gate.gate_id)
+    fig.add_vline(x=x_threshold, line_color=color, line_width=1.7, line_dash="dash")
+    fig.add_hline(y=y_threshold, line_color=color, line_width=1.7, line_dash="dash")
     fig.add_annotation(
         x=x_threshold,
         y=y_threshold,
         text="Quadrants",
         showarrow=False,
         bgcolor="rgba(255,255,255,0.82)",
-        font=dict(size=11, color="#581c87"),
+        font=dict(size=11, color=color),
     )
+
+
+def _hex_rgba(color: str, alpha: float) -> str:
+    value = color.lstrip("#")
+    if len(value) != 6:
+        return f"rgba(15,118,110,{alpha})"
+    red = int(value[0:2], 16)
+    green = int(value[2:4], 16)
+    blue = int(value[4:6], 16)
+    return f"rgba({red},{green},{blue},{alpha})"
 
 
 def _channel_label(sample: SampleRecord, raw_name: str) -> str:

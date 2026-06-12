@@ -610,6 +610,8 @@ def _stats_for_sample(session: WorkbenchSession, sample_id: str | None, compensa
 
 
 def _gate_stack_cards(gates, stats: list[dict[str, object]]):
+    from app.core.gate_colors import gate_color
+
     if not gates:
         return html.Div("No gates yet. Add or suggest review-needed gates.", className="gate-stack-card empty")
     stats_by_gate = {row.get("gate_id"): row for row in stats}
@@ -621,9 +623,11 @@ def _gate_stack_cards(gates, stats: list[dict[str, object]]):
         percent_parent = row.get("percent_parent")
         warning = gate.metadata.get("mask_warning") or row.get("gate_warning") or ""
         status = _gate_status_label(gate)
+        color = gate_color(gate.gate_id)
         children = [
             html.Div(
                 [
+                    html.Span("", className="gate-color-swatch", style={"backgroundColor": color}),
                     html.Span(status, className="gate-stack-status"),
                     html.Strong(gate.name),
                 ],
@@ -645,6 +649,7 @@ def _gate_stack_cards(gates, stats: list[dict[str, object]]):
             html.Div(
                 children,
                 className=f"gate-stack-card {'disabled' if not gate.enabled else ''} {'candidate' if gate.candidate else ''}".strip(),
+                style={"borderLeftColor": color},
             )
         )
     return cards

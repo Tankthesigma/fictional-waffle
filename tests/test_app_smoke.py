@@ -20,6 +20,8 @@ def test_layout_offers_wired_draw_gate_tools():
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
     assert "last-drawn-gate-store" in layout_json
+    assert "displaylogo" in layout_json
+    assert "False" in layout_json
     assert "drawrect" in layout_json
     assert "drawclosedpath" in layout_json
     assert "eraseshape" in layout_json
@@ -146,8 +148,13 @@ def test_ask_flow_briefing_is_rendered_and_wired():
     assert "high-dimensional-cluster-table" in layout_json
     assert "ask-flow-agent-status" in layout_json
     assert "Workbench actions:" in layout_json
+    assert "toast-container" in layout_json
+    assert "toast-store" in layout_json
+    assert "toast-timer" in layout_json
     assert "ask-flow-loading" in layout_json
     assert "ask-flow-answer-loading" in layout_json
+    assert any("toast-store.data" in key for key in dash_app.callback_map)
+    assert any("toast-container.children" in key for key in dash_app.callback_map)
     assert any("ask-flow-briefing.children" in key for key in dash_app.callback_map)
     assert any("ask-flow-plan.children" in key for key in dash_app.callback_map)
     assert any("ask-flow-agent-status.children" in key for key in dash_app.callback_map)

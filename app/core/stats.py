@@ -5,6 +5,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from app.core.gate_colors import gate_color
 from app.core.channel_inference import infer_channel_role
 from app.models.gate import GateDefinition
 
@@ -38,6 +39,7 @@ def gate_statistics(
         count = int(np.sum(mask))
         row: dict[str, Any] = {
             "gate_id": gate.gate_id,
+            "gate_color": gate_color(gate.gate_id),
             "gate_name": gate.name,
             "parent_gate": parent_label,
             "parent_missing": parent_missing,

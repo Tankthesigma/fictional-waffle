@@ -9,6 +9,7 @@ from app.core.gating import (
     delete_gate,
     drawn_shape_gate,
     ellipse_gate,
+    gate_to_table,
     histogram_range_gate,
     latest_drawn_shape,
     quadrant_gates,
@@ -21,6 +22,7 @@ from app.core.gating import (
     suggest_candidate_gates,
     toggle_gate_enabled,
 )
+from app.core.gate_colors import GATE_PALETTE, gate_color
 from app.models.channel import ChannelSummary
 from app.models.gate import GateDefinition
 
@@ -42,6 +44,15 @@ def test_gate_serialization(tmp_path):
     loaded = load_gates(path)
 
     assert loaded[0].to_dict() == gate.to_dict()
+
+
+def test_gate_table_includes_deterministic_display_color():
+    gate = rectangle_gate("stable_gate", "Stable", "FSC-A", "SSC-A", 0, 1, 0, 1)
+
+    rows = gate_to_table([gate])
+
+    assert rows[0]["gate_color"] == gate_color("stable_gate")
+    assert rows[0]["gate_color"] in GATE_PALETTE
 
 
 def test_histogram_range_gate_membership():

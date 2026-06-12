@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dash import dash_table, dcc, html
 
+from app.core.gate_colors import GATE_PALETTE
+
 
 def card(title: str, children, class_name: str = ""):
     body = children if isinstance(children, list) else [children]
@@ -19,6 +21,18 @@ def upload_box(component_id: str, label: str, multiple: bool = True):
 
 def data_table(component_id: str, columns: list[str], **kwargs):
     page_size = kwargs.pop("page_size", 10)
+    style_data_conditional = [
+        {"if": {"row_index": "odd"}, "backgroundColor": "#fbfdff"},
+        {"if": {"filter_query": "{severity} = severe"}, "backgroundColor": "#fee2e2"},
+        {"if": {"filter_query": "{severity} = warning"}, "backgroundColor": "#fef3c7"},
+    ]
+    style_data_conditional.extend(
+        {
+            "if": {"filter_query": f'{{gate_color}} = "{color}"'},
+            "borderLeft": f"4px solid {color}",
+        }
+        for color in GATE_PALETTE
+    )
     return dash_table.DataTable(
         id=component_id,
         columns=[{"name": column.replace("_", " ").title(), "id": column} for column in columns],
@@ -39,11 +53,7 @@ def data_table(component_id: str, columns: list[str], **kwargs):
         },
         style_header={"fontWeight": 800, "backgroundColor": "#f8fafc", "borderBottom": "1px solid #dbe3ef"},
         style_filter={"backgroundColor": "#f8fafc", "color": "#64748b", "borderBottom": "1px solid #e7edf5"},
-        style_data_conditional=[
-            {"if": {"row_index": "odd"}, "backgroundColor": "#fbfdff"},
-            {"if": {"filter_query": "{severity} = severe"}, "backgroundColor": "#fee2e2"},
-            {"if": {"filter_query": "{severity} = warning"}, "backgroundColor": "#fef3c7"},
-        ],
+        style_data_conditional=style_data_conditional,
         **kwargs,
     )
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from dash import dcc, html
 
 from app.ui.components import card, data_table, metric_card, upload_box
+from app.ui.plot_config import GATING_CONFIG, PLOT_CONFIG
 
 
 def build_layout():
@@ -12,6 +13,9 @@ def build_layout():
             dcc.Store(id="selected-sample-store"),
             dcc.Store(id="analysis-revision-store", data=0),
             dcc.Store(id="last-drawn-gate-store"),
+            dcc.Store(id="toast-store"),
+            dcc.Interval(id="toast-timer", interval=3500, disabled=True),
+            html.Div(id="toast-container", className="toast-container"),
             header(),
             workspace_toolbar(),
             html.Main(
@@ -171,7 +175,7 @@ def workbench_panel():
                         className="workflow-card",
                     ),
                     html.H2("Gate Tree"),
-                    data_table("gate-table", ["gate_id", "name", "type", "parent", "channels", "status", "enabled", "notes"], page_size=6),
+                    data_table("gate-table", ["gate_color", "gate_id", "name", "type", "parent", "channels", "status", "enabled", "notes"], page_size=6, hidden_columns=["gate_color"]),
                     html.Div("No gates yet. Add or suggest review-needed gates.", id="gate-stack-cards", className="gate-stack"),
                 ],
                 className="sidebar left-sidebar",
@@ -276,13 +280,10 @@ def explore_tab():
             html.Div(id="plot-context-bar", className="plot-context-bar"),
             dcc.Graph(
                 id="scatter-graph",
-                config={
-                    "displayModeBar": True,
-                    "modeBarButtonsToAdd": ["drawrect", "drawclosedpath", "eraseshape"],
-                },
+                config=GATING_CONFIG,
                 className="analysis-graph primary-graph",
             ),
-            dcc.Graph(id="histogram-graph", config={"displayModeBar": True}, className="analysis-graph"),
+            dcc.Graph(id="histogram-graph", config=PLOT_CONFIG, className="analysis-graph"),
             html.Div(id="channel-badge-rail", className="channel-badge-rail"),
             card(
                 "Panel Setup Readiness",
@@ -475,7 +476,15 @@ def gates_tab():
                             ),
                         ],
                     ),
-                    card("Gate Statistics", data_table("gate-stats-table", ["gate_name", "parent_gate", "channels", "event_count", "percent_total", "percent_parent"], page_size=12)),
+                    card(
+                        "Gate Statistics",
+                        data_table(
+                            "gate-stats-table",
+                            ["gate_color", "gate_name", "parent_gate", "channels", "event_count", "percent_total", "percent_parent"],
+                            page_size=12,
+                            hidden_columns=["gate_color"],
+                        ),
+                    ),
                     html.Button("Export Gate Stats CSV", id="export-gate-stats", n_clicks=0),
                 ],
                 className="stack",
@@ -517,8 +526,8 @@ def compare_tab():
                     html.Div(id="compare-status", className="status-box small"),
                     html.Div(id="compare-summary-cards", className="metrics-row compare-summary"),
                     html.Div(id="compare-insights", className="compare-insights"),
-                    dcc.Graph(id="comparison-delta-chart"),
-                    dcc.Graph(id="event-count-chart"),
+                    dcc.Graph(id="comparison-delta-chart", config=PLOT_CONFIG),
+                    dcc.Graph(id="event-count-chart", config=PLOT_CONFIG),
                     data_table("batch-table", ["sample_id", "condition", "replicate", "control_type", "event_count", "fluorescence_channels", "file_type"]),
                     data_table("median-table", ["sample_id", "condition"]),
                     data_table(
@@ -556,7 +565,7 @@ def qc_tab():
                     data_table("qc-table", ["sample_id", "severity", "code", "title", "metric_value", "threshold", "suggested_check", "affects", "channel"]),
                 ],
             ),
-            dcc.Graph(id="time-stability-graph"),
+            dcc.Graph(id="time-stability-graph", config=PLOT_CONFIG),
         ]
     )
 
@@ -568,11 +577,17 @@ def reports_tab():
                 "Report Builder",
                 [
                     html.P("Exports are local files written to exports/. Static figures are included when the local Plotly image renderer is available.", className="muted"),
-                    html.Div(id="report-readiness", className="report-readiness"),
-                    html.Div(id="report-outline-preview", className="report-outline-preview"),
-                    html.Button("Export PDF", id="export-pdf", n_clicks=0, className="primary"),
-                    html.Button("Export PowerPoint", id="export-pptx", n_clicks=0),
-                    html.Div(id="report-status", className="status-box"),
+                    dcc.Loading(
+                        type="dot",
+                        color="#0f766e",
+                        children=[
+                            html.Div(id="report-readiness", className="report-readiness"),
+                            html.Div(id="report-outline-preview", className="report-outline-preview"),
+                            html.Button("Export PDF", id="export-pdf", n_clicks=0, className="primary"),
+                            html.Button("Export PowerPoint", id="export-pptx", n_clicks=0),
+                            html.Div(id="report-status", className="status-box"),
+                        ],
+                    ),
                 ],
             )
         ]
@@ -591,7 +606,11 @@ def ask_flow_tab():
                     html.H3("Review Plan"),
                     html.Div(id="ask-flow-plan", className="analysis-plan-grid"),
                     html.H3("High-Dimensional Review"),
-                    dcc.Graph(id="high-dimensional-graph", config={"displayModeBar": True}, className="analysis-graph"),
+                    dcc.Loading(
+                        type="dot",
+                        color="#0f766e",
+                        children=dcc.Graph(id="high-dimensional-graph", config=PLOT_CONFIG, className="analysis-graph"),
+                    ),
                     data_table("high-dimensional-cluster-table", ["cluster", "event_count", "percent_total"], page_size=8),
                     dcc.Textarea(
                         id="ask-flow-question",

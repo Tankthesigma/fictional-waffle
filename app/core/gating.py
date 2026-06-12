@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from app.core.channel_inference import best_scatter_pair
+from app.core.gate_colors import gate_color
 from app.core.transforms import invert_transform
 from app.models.channel import ChannelSummary
 from app.models.gate import GateDefinition
@@ -496,6 +497,7 @@ def gate_to_table(gates: list[GateDefinition]) -> list[dict[str, Any]]:
     return [
         {
             "gate_id": gate.gate_id,
+            "gate_color": gate_color(gate.gate_id),
             "name": gate.name,
             "type": gate.gate_type,
             "parent": gate.parent_id or "total",

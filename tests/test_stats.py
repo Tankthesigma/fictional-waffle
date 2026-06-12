@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from app.core.gating import rectangle_gate
+from app.core.gate_colors import gate_color
 from app.core.stats import gate_statistics
 
 
@@ -60,6 +61,7 @@ def test_gate_statistics_include_clinical_descriptive_stats():
 
     row = gate_statistics(events, [gate], masks, ["FL1-A"])[0]
 
+    assert row["gate_color"] == gate_color("g1")
     assert row["FL1-A_sd"] > 0
     assert row["FL1-A_cv_percent"] > 0
     assert row["FL1-A_robust_cv_percent"] > 0

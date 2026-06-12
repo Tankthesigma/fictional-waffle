@@ -23,9 +23,11 @@ def test_recommended_plot_presets_cover_scatter_singlet_marker_and_time_views():
     assert ids == ["scatter-cleanup", "singlet-check", "marker-histogram", "time-review"]
     assert presets[0].x_channel == "FSC-A"
     assert presets[0].y_channel == "SSC-A"
+    assert presets[0].hist_channel == "FL1-A"
     assert presets[0].plot_mode == "density"
     assert presets[1].x_channel == "FSC-A"
     assert presets[1].y_channel == "FSC-H"
+    assert presets[1].hist_channel == "FL1-A"
     assert presets[2].label == "CD3 FITC Histogram"
     assert presets[2].hist_channel == "FL1-A"
     assert presets[3].x_channel == "Time"
@@ -47,6 +49,8 @@ def test_plot_preset_rows_explain_why_each_view_exists():
 
     assert rows[0]["preset"] == "Scatter Cleanup"
     assert rows[0]["scatter"] == "FSC-A x SSC-A"
+    assert rows[0]["histogram"] == "FL1-A"
+    assert all(isinstance(value, str) for row in rows for value in row.values())
     assert "main-population review" in rows[0]["why"]
 
 
