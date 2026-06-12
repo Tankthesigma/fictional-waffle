@@ -51,3 +51,16 @@ def test_gate_statistics_include_marker_aware_channel_labels():
     )
 
     assert rows[0]["channel_labels"] == "Forward Scatter Area (FSC-A), Side Scatter Area (SSC-A)"
+
+
+def test_gate_statistics_include_clinical_descriptive_stats():
+    events = pd.DataFrame({"FSC-A": [1, 2, 3], "SSC-A": [1, 2, 3], "FL1-A": [10.0, 20.0, 40.0]})
+    gate = rectangle_gate("g1", "main", "FSC-A", "SSC-A", 0, 4, 0, 4)
+    masks = {"g1": np.array([True, True, True])}
+
+    row = gate_statistics(events, [gate], masks, ["FL1-A"])[0]
+
+    assert row["FL1-A_sd"] > 0
+    assert row["FL1-A_cv_percent"] > 0
+    assert row["FL1-A_robust_cv_percent"] > 0
+    assert row["FL1-A_geometric_mean"] > 0

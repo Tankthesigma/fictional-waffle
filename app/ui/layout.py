@@ -212,6 +212,8 @@ def workbench_panel():
                         className="checklist",
                     ),
                     html.Div(id="compensation-status", className="status-box small"),
+                    data_table("compensation-matrix-table", ["channel"], page_size=6, editable=True),
+                    html.Button("Apply Compensation Matrix", id="apply-compensation-matrix", n_clicks=0),
                     html.Label("Max plotted events"),
                     dcc.Input(id="max-events", type="number", value=50_000, min=1_000, step=1_000),
                     html.H2("QC Cards"),
@@ -376,6 +378,43 @@ def gates_tab():
                         ],
                     ),
                     card(
+                        "Quadrant / Ellipse / Bi-Range Gates",
+                        [
+                            html.Div("Use the current X/Y channels. Bounds are stored on raw event values; drawn/display transforms stay visual.", className="muted"),
+                            html.Div(
+                                [
+                                    dcc.Input(id="quadrant-gate-name", type="text", placeholder="Quadrant name", value="Quadrant gate"),
+                                    dcc.Input(id="quadrant-x-threshold", type="number", placeholder="x threshold"),
+                                    dcc.Input(id="quadrant-y-threshold", type="number", placeholder="y threshold"),
+                                    html.Button("Add Quadrants", id="add-quadrant-gates", n_clicks=0, className="primary"),
+                                ],
+                                className="gate-form",
+                            ),
+                            html.Div(
+                                [
+                                    dcc.Input(id="ellipse-gate-name", type="text", placeholder="Ellipse name", value="Ellipse gate"),
+                                    dcc.Input(id="ellipse-center-x", type="number", placeholder="center x"),
+                                    dcc.Input(id="ellipse-center-y", type="number", placeholder="center y"),
+                                    dcc.Input(id="ellipse-radius-x", type="number", placeholder="radius x"),
+                                    dcc.Input(id="ellipse-radius-y", type="number", placeholder="radius y"),
+                                    html.Button("Add Ellipse", id="add-ellipse-gate", n_clicks=0),
+                                ],
+                                className="gate-form",
+                            ),
+                            html.Div(
+                                [
+                                    dcc.Input(id="birange-gate-name", type="text", placeholder="Bi-range name", value="Bi-range gate"),
+                                    dcc.Input(id="birange-x-min", type="number", placeholder="x min"),
+                                    dcc.Input(id="birange-x-max", type="number", placeholder="x max"),
+                                    dcc.Input(id="birange-y-min", type="number", placeholder="y min"),
+                                    dcc.Input(id="birange-y-max", type="number", placeholder="y max"),
+                                    html.Button("Add Bi-Range", id="add-birange-gate", n_clicks=0),
+                                ],
+                                className="gate-form",
+                            ),
+                        ],
+                    ),
+                    card(
                         "Gate Manager",
                         [
                             html.Div("Rename, enable/disable, or delete one selected gate. Select a gate here before drawing on the plot to make the new drawn gate a child of it.", className="muted"),
@@ -437,6 +476,10 @@ def compare_tab():
                     dcc.Graph(id="event-count-chart"),
                     data_table("batch-table", ["sample_id", "condition", "replicate", "control_type", "event_count", "fluorescence_channels", "file_type"]),
                     data_table("median-table", ["sample_id", "condition"]),
+                    data_table(
+                        "batch-gate-stats-table",
+                        ["sample_id", "condition", "replicate", "gate_name", "parent_gate", "event_count", "percent_total", "percent_parent", "gate_warning"],
+                    ),
                     data_table(
                         "comparison-table",
                         [

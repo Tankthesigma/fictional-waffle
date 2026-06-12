@@ -22,6 +22,9 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         Input("add-review-current-view-gate", "n_clicks"),
         Input("add-review-scatter-gate", "n_clicks"),
         Input("add-histogram-gate", "n_clicks"),
+        Input("add-quadrant-gates", "n_clicks"),
+        Input("add-ellipse-gate", "n_clicks"),
+        Input("add-birange-gate", "n_clicks"),
         Input("suggest-candidate-gates", "n_clicks"),
         Input("accept-candidate-gates", "n_clicks"),
         Input("reject-candidate-gates", "n_clicks"),
@@ -51,6 +54,19 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         State("hist-gate-name", "value"),
         State("hist-gate-min", "value"),
         State("hist-gate-max", "value"),
+        State("quadrant-gate-name", "value"),
+        State("quadrant-x-threshold", "value"),
+        State("quadrant-y-threshold", "value"),
+        State("ellipse-gate-name", "value"),
+        State("ellipse-center-x", "value"),
+        State("ellipse-center-y", "value"),
+        State("ellipse-radius-x", "value"),
+        State("ellipse-radius-y", "value"),
+        State("birange-gate-name", "value"),
+        State("birange-x-min", "value"),
+        State("birange-x-max", "value"),
+        State("birange-y-min", "value"),
+        State("birange-y-max", "value"),
         State("manage-gate-id", "value"),
         State("manage-gate-name", "value"),
         State("compensation-enabled", "value"),
@@ -61,6 +77,9 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         add_review_current_view_clicks,
         add_review_scatter_clicks,
         add_hist_clicks,
+        add_quadrant_clicks,
+        add_ellipse_clicks,
+        add_birange_clicks,
         suggest_clicks,
         accept_clicks,
         reject_clicks,
@@ -90,6 +109,19 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         hist_gate_name,
         hist_min,
         hist_max,
+        quadrant_gate_name,
+        quadrant_x_threshold,
+        quadrant_y_threshold,
+        ellipse_gate_name,
+        ellipse_center_x,
+        ellipse_center_y,
+        ellipse_radius_x,
+        ellipse_radius_y,
+        birange_gate_name,
+        birange_x_min,
+        birange_x_max,
+        birange_y_min,
+        birange_y_max,
         manage_gate_id,
         manage_gate_name,
         compensation_enabled,
@@ -164,6 +196,72 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             gate.metadata["event_view"] = "metadata_compensated" if use_compensation else "raw"
             session.gates.append(gate)
             status = f"Added user-defined histogram range gate: {gate.name} ({gate.metadata['event_view']})."
+        elif action == "add-quadrant-gates":
+            from app.core.gating import quadrant_gates
+
+            if not all(value is not None for value in [x_channel, y_channel, quadrant_x_threshold, quadrant_y_threshold]):
+                return no_update, no_update, no_update, "Choose x/y channels and complete quadrant thresholds.", no_update, no_update, no_update
+            sample = session.selected_sample(sample_id)
+            use_compensation = _is_compensation_on(compensation_enabled) and sample is not None and sample.compensated_events is not None
+            event_view_name = "metadata_compensated" if use_compensation else "raw"
+            gates = quadrant_gates(
+                uuid4().hex[:8],
+                quadrant_gate_name or "Quadrant gate",
+                x_channel,
+                y_channel,
+                float(quadrant_x_threshold),
+                float(quadrant_y_threshold),
+                parent_id=_valid_parent_id(session.gates, manage_gate_id),
+            )
+            for gate in gates:
+                gate.metadata["event_view"] = event_view_name
+                gate.review_status = "review_needed"
+            session.gates.extend(gates)
+            status = f"Added four review-needed quadrant gates ({event_view_name})."
+        elif action == "add-ellipse-gate":
+            from app.core.gating import ellipse_gate
+
+            if not all(value is not None for value in [x_channel, y_channel, ellipse_center_x, ellipse_center_y, ellipse_radius_x, ellipse_radius_y]):
+                return no_update, no_update, no_update, "Choose x/y channels and complete ellipse center/radius values.", no_update, no_update, no_update
+            gate = ellipse_gate(
+                uuid4().hex[:8],
+                ellipse_gate_name or "Ellipse gate",
+                x_channel,
+                y_channel,
+                float(ellipse_center_x),
+                float(ellipse_center_y),
+                float(ellipse_radius_x),
+                float(ellipse_radius_y),
+                parent_id=_valid_parent_id(session.gates, manage_gate_id),
+            )
+            sample = session.selected_sample(sample_id)
+            use_compensation = _is_compensation_on(compensation_enabled) and sample is not None and sample.compensated_events is not None
+            gate.metadata["event_view"] = "metadata_compensated" if use_compensation else "raw"
+            gate.review_status = "review_needed"
+            session.gates.append(gate)
+            status = f"Added review-needed ellipse gate: {gate.name}."
+        elif action == "add-birange-gate":
+            from app.core.gating import bi_range_gate
+
+            if not all(value is not None for value in [x_channel, y_channel, birange_x_min, birange_x_max, birange_y_min, birange_y_max]):
+                return no_update, no_update, no_update, "Choose x/y channels and complete bi-range bounds.", no_update, no_update, no_update
+            gate = bi_range_gate(
+                uuid4().hex[:8],
+                birange_gate_name or "Bi-range gate",
+                x_channel,
+                y_channel,
+                float(min(birange_x_min, birange_x_max)),
+                float(max(birange_x_min, birange_x_max)),
+                float(min(birange_y_min, birange_y_max)),
+                float(max(birange_y_min, birange_y_max)),
+                parent_id=_valid_parent_id(session.gates, manage_gate_id),
+            )
+            sample = session.selected_sample(sample_id)
+            use_compensation = _is_compensation_on(compensation_enabled) and sample is not None and sample.compensated_events is not None
+            gate.metadata["event_view"] = "metadata_compensated" if use_compensation else "raw"
+            gate.review_status = "review_needed"
+            session.gates.append(gate)
+            status = f"Added review-needed bi-range gate: {gate.name}."
         elif action == "suggest-candidate-gates":
             from app.core.compensation import event_view
             from app.core.gating import suggest_candidate_gates

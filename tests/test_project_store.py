@@ -74,10 +74,10 @@ def test_gate_definition_rejects_bad_polygon_vertices():
 
 
 def test_unknown_gate_type_loads_with_warning_for_forward_compatibility():
-    gate = GateDefinition.from_dict({"gate_id": "q1", "gate_type": "quadrant", "channels": ["FSC-A", "SSC-A"]})
+    gate = GateDefinition.from_dict({"gate_id": "future1", "gate_type": "future_gate", "channels": ["FSC-A", "SSC-A"]})
 
-    assert gate.gate_type == "quadrant"
-    assert gate.metadata["mask_warning"] == "unsupported gate type: quadrant"
+    assert gate.gate_type == "future_gate"
+    assert gate.metadata["mask_warning"] == "unsupported gate type: future_gate"
 
 
 def test_project_round_trip_preserves_panel_annotations_and_candidate_state(tmp_path):

@@ -5,10 +5,13 @@ import pytest
 from app.core.gating import (
     apply_gate,
     apply_gate_tree,
+    bi_range_gate,
     delete_gate,
     drawn_shape_gate,
+    ellipse_gate,
     histogram_range_gate,
     latest_drawn_shape,
+    quadrant_gates,
     load_gates,
     rectangle_gate,
     rename_gate,
@@ -48,6 +51,36 @@ def test_histogram_range_gate_membership():
     mask = apply_gate(events, gate)
 
     assert mask.tolist() == [False, True, True, False]
+
+
+def test_ellipse_gate_membership():
+    events = pd.DataFrame({"FSC-A": [0, 1, 2, 3], "SSC-A": [0, 1, 2, 3]})
+    gate = ellipse_gate("e1", "ellipse", "FSC-A", "SSC-A", center_x=1, center_y=1, radius_x=1.5, radius_y=1.5)
+
+    mask = apply_gate(events, gate)
+
+    assert mask.tolist() == [True, True, True, False]
+
+
+def test_quadrant_gates_partition_events():
+    events = pd.DataFrame({"FL1-A": [0, 0, 10, 10], "FL2-A": [0, 10, 0, 10]})
+    gates = quadrant_gates("q", "CD4 CD8", "FL1-A", "FL2-A", x_threshold=5, y_threshold=5)
+
+    masks = apply_gate_tree(events, gates)
+
+    assert masks["q_upper_right"].tolist() == [False, False, False, True]
+    assert masks["q_upper_left"].tolist() == [False, True, False, False]
+    assert masks["q_lower_left"].tolist() == [True, False, False, False]
+    assert masks["q_lower_right"].tolist() == [False, False, True, False]
+
+
+def test_bi_range_gate_membership():
+    events = pd.DataFrame({"FL1-A": [1, 5, 7], "FL2-A": [10, 20, 40]})
+    gate = bi_range_gate("b1", "bi", "FL1-A", "FL2-A", 2, 6, 15, 25)
+
+    mask = apply_gate(events, gate)
+
+    assert mask.tolist() == [False, True, False]
 
 
 def test_drawn_rectangle_shape_becomes_raw_review_gate():
@@ -196,12 +229,12 @@ def test_cyclic_gate_parents_are_empty_and_warned():
 
 def test_unknown_gate_type_is_empty_instead_of_crashing():
     events = pd.DataFrame({"FSC-A": [1, 2, 3], "SSC-A": [1, 2, 3]})
-    gate = GateDefinition("q1", "quadrant", "quadrant", ["FSC-A", "SSC-A"])  # type: ignore[arg-type]
+    gate = GateDefinition("future1", "future", "future_gate", ["FSC-A", "SSC-A"])  # type: ignore[arg-type]
 
     masks = apply_gate_tree(events, [gate])
 
-    np.testing.assert_array_equal(masks["q1"], np.array([False, False, False]))
-    assert gate.metadata["mask_warning"] == "unsupported gate type: quadrant"
+    np.testing.assert_array_equal(masks["future1"], np.array([False, False, False]))
+    assert gate.metadata["mask_warning"] == "unsupported gate type: future_gate"
 
 
 def test_candidate_gate_suggestions_are_disabled_review_needed_gates():

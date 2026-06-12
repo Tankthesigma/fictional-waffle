@@ -104,28 +104,29 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 - Plotly WebGL scatter plots with display downsampling and dataset-aware axis auto-fit.
 - Fluorescence histogram overlays.
 - Raw, safe log10, arcsinh, and optional logicle display transforms.
-- Metadata-driven compensation view toggle for FCS files with usable `$SPILL`/`$SPILLOVER` matrices.
-- Interactive on-plot rectangle/polygon drawing, including raw/log10/arcsinh/logicle coordinate conversion, child-gate drawing from the selected parent, rectangle gates, histogram range gates, gate JSON save/load, parent-ready gate model, and statistics.
+- Metadata-driven compensation view toggle for FCS files with usable `$SPILL`/`$SPILLOVER` matrices, plus a local editable compensation matrix for review/override workflows.
+- Interactive on-plot rectangle/polygon drawing, including raw/log10/arcsinh/logicle coordinate conversion, child-gate drawing from the selected parent, rectangle, polygon, histogram range, quadrant, ellipse, and bi-range gates, gate JSON save/load, parent-ready gate model, and statistics.
+- Gate statistics include event counts, percent of total/parent, medians, means, percentiles, SD, %CV, robust CV, and geometric mean for fluorescence channels.
 - Project JSON save/load for metadata, file references, gates, QC, transform settings, comparison settings, and report selections.
 - Rule-based QC dashboard with review-needed language.
-- Batch tables, event count chart, median fluorescence table, and exploratory control-vs-treated comparison.
+- Batch tables, event count chart, median fluorescence table, batch gate-statistics grid, and exploratory control-vs-treated comparison.
+- Deterministic high-dimensional review primitive using PCA plus clustering for review-needed population exploration without automatic identity claims.
 - Local CSV, PDF, and PowerPoint report export with representative plot images when static export is available.
 - Ask Flow assistant panel with deterministic local answers, state-aware analysis plans, safe UI actions, and optional enhanced responses.
 
 ## Limitations
 
-- Compensation is metadata-driven only. The app can apply usable `$SPILL`/`$SPILLOVER` matrices for display, gate statistics, reports, and exploratory comparisons, but it does not provide a compensation wizard or panel editor.
-- Polygon gates are represented in the core model, but the MVP UI exposes rectangle gates first.
+- Compensation editing is a lightweight matrix review tool. It is not a full single-stain/FMO compensation wizard or spectral unmixing workflow.
+- High-dimensional clustering is exploratory and does not infer cell identities unless the user supplies marker meaning.
 - Static report figures are summarized; richer Kaleido image embedding is a roadmap item.
 - CSV summary tables cannot support full event-level cytometry analysis.
 - QC checks are heuristic review aids, not pass/fail biological conclusions.
 
 ## Roadmap
 
-- Interactive polygon gate drawing in Dash.
 - Robust FlowKit-backed GatingML import/export.
-- Reliable compensated/uncompensated view toggle when metadata and matrix support are validated.
-- Candidate gate suggestions that require accept/edit/reject before statistics.
+- Single-stain/FMO guided auto-compensation and spectral unmixing review.
+- AI-assisted autogating built on review-needed gates and high-dimensional cluster summaries.
 - Kaleido figure embedding in PDF/PPTX.
 - More Ask Flow action tools for report/export workflows, while keeping execution allowlisted.
 

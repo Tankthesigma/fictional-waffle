@@ -3,6 +3,7 @@ from __future__ import annotations
 from dash import Input, Output, State, html, no_update
 
 from app.core.session_store import WorkbenchSession
+from app.ui.components import table_columns
 
 
 def register_plot_callbacks(app, session: WorkbenchSession) -> None:
@@ -151,6 +152,45 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
             return status + " Compensated view is active for plots and comparisons."
         return status
 
+    @app.callback(
+        Output("compensation-matrix-table", "data"),
+        Output("compensation-matrix-table", "columns"),
+        Input("selected-sample-store", "data"),
+    )
+    def update_compensation_matrix(sample_id):
+        from app.core.compensation import spillover_matrix_rows
+
+        sample = session.selected_sample(sample_id)
+        if not sample:
+            return [], table_columns(["channel"])
+        rows = spillover_matrix_rows(sample)
+        columns = ["channel", *[str(row["channel"]) for row in rows]]
+        return rows, table_columns(columns)
+
+    @app.callback(
+        Output("compensation-status", "children", allow_duplicate=True),
+        Output("compensation-enabled", "value", allow_duplicate=True),
+        Input("apply-compensation-matrix", "n_clicks"),
+        State("selected-sample-store", "data"),
+        State("compensation-matrix-table", "data"),
+        prevent_initial_call=True,
+    )
+    def apply_compensation_matrix(_clicks, sample_id, rows):
+        from app.core.compensation import apply_manual_spillover
+
+        sample = session.selected_sample(sample_id)
+        if not sample:
+            return "Upload and select a sample before editing compensation.", no_update
+        try:
+            warnings = apply_manual_spillover(sample, rows or [])
+        except Exception as exc:
+            return f"Compensation matrix was not applied: {exc}", no_update
+        if sample.compensated_events is None:
+            return "Compensation matrix was reviewed but not applied: " + " ".join(warnings), no_update
+        warning_text = (" Review notes: " + " ".join(warnings)) if warnings else ""
+        channel_count = len(sample.spillover.channels) if sample.spillover else 0
+        return f"Applied user-reviewed compensation matrix for {channel_count} channel(s).{warning_text}", ["on"]
+
 
 def _is_compensation_on(value) -> bool:
     return isinstance(value, list) and "on" in value
@@ -177,7 +217,7 @@ def _visible_gate_count(gates, x_channel: str | None, y_channel: str | None, use
         1
         for gate in gates
         if gate.enabled
-        and gate.gate_type in {"rectangle", "polygon"}
+        and gate.gate_type in {"rectangle", "polygon", "ellipse", "quadrant", "bi_range"}
         and gate.channels[:2] == [x_channel, y_channel]
         and gate.metadata.get("event_view", "raw") == current_view
     )

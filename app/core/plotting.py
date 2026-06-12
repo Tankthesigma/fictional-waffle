@@ -100,10 +100,14 @@ def scatter_figure(
         current_view = "metadata_compensated" if use_compensation and getattr(sample, "compensated_events", None) is not None else "raw"
         if gate_view != current_view:
             continue
-        if gate.gate_type == "rectangle":
+        if gate.gate_type in {"rectangle", "bi_range"}:
             _add_rectangle_shape(fig, gate, display_transform, cofactor)
         elif gate.gate_type == "polygon":
             _add_polygon_shape(fig, gate, display_transform, cofactor)
+        elif gate.gate_type == "ellipse":
+            _add_ellipse_shape(fig, gate, display_transform, cofactor)
+        elif gate.gate_type == "quadrant":
+            _add_quadrant_shape(fig, gate, display_transform, cofactor)
     _add_transform_warnings(fig, transform_warnings)
     layout = dict(
         template="plotly_white",
@@ -294,6 +298,34 @@ def _add_polygon_shape(fig, gate: GateDefinition, transform: str, cofactor: floa
         showarrow=False,
         bgcolor="rgba(255,255,255,0.8)",
         font=dict(size=11, color="#0f172a"),
+    )
+
+
+def _add_ellipse_shape(fig, gate: GateDefinition, transform: str, cofactor: float) -> None:
+    bounds = gate.bounds
+    center_x = float(bounds["center_x"])
+    center_y = float(bounds["center_y"])
+    radius_x = float(bounds["radius_x"])
+    radius_y = float(bounds["radius_y"])
+    x0, x1 = apply_transform([center_x - radius_x, center_x + radius_x], transform, cofactor=cofactor)
+    y0, y1 = apply_transform([center_y - radius_y, center_y + radius_y], transform, cofactor=cofactor)
+    fig.add_shape(type="circle", x0=x0, x1=x1, y0=y0, y1=y1, line=dict(color="#7c3aed", width=2), fillcolor="rgba(124,58,237,0.08)")
+    fig.add_annotation(x=x1, y=y1, text=gate.name, showarrow=False, bgcolor="rgba(255,255,255,0.8)", font=dict(size=11, color="#0f172a"))
+
+
+def _add_quadrant_shape(fig, gate: GateDefinition, transform: str, cofactor: float) -> None:
+    bounds = gate.bounds
+    x_threshold = float(apply_transform([bounds["x_threshold"]], transform, cofactor=cofactor)[0])
+    y_threshold = float(apply_transform([bounds["y_threshold"]], transform, cofactor=cofactor)[0])
+    fig.add_vline(x=x_threshold, line_color="#9333ea", line_width=1.7, line_dash="dash")
+    fig.add_hline(y=y_threshold, line_color="#9333ea", line_width=1.7, line_dash="dash")
+    fig.add_annotation(
+        x=x_threshold,
+        y=y_threshold,
+        text="Quadrants",
+        showarrow=False,
+        bgcolor="rgba(255,255,255,0.82)",
+        font=dict(size=11, color="#581c87"),
     )
 
 

@@ -3,7 +3,8 @@ import math
 import pandas as pd
 
 from app.core.channel_inference import summarize_channels
-from app.core.compare import compare_control_treated, comparison_insights, comparison_summary, fluorescence_median_table
+from app.core.compare import batch_gate_statistics_table, compare_control_treated, comparison_insights, comparison_summary, fluorescence_median_table
+from app.core.gating import rectangle_gate
 from app.core.plotting import comparison_delta_chart
 from app.models.sample import SampleRecord
 from app.ui.callbacks_compare import _condition_groups, _default_groups
@@ -65,6 +66,21 @@ def test_fluorescence_median_table_uses_none_not_nan_for_empty_values():
     row = fluorescence_median_table([sample])[0]
 
     assert row["FITC-A"] is None
+
+
+def test_batch_gate_statistics_table_applies_gates_across_samples():
+    control = _sample("c1", "control", [10, 20, 30])
+    treated = _sample("t1", "treated", [40, 50, 60])
+    for sample in (control, treated):
+        sample.events["SSC-A"] = [1, 2, 3]
+        sample.channels = summarize_channels(sample.events)
+    gate = rectangle_gate("g1", "all", "FITC-A", "SSC-A", 0, 100, 0, 5)
+
+    rows = batch_gate_statistics_table([control, treated], [gate])
+
+    assert [row["sample_id"] for row in rows] == ["c1", "t1"]
+    assert all(row["gate_name"] == "all" for row in rows)
+    assert all(row["event_count"] == 3 for row in rows)
 
 
 def test_comparison_summary_highlights_direction_and_guardrails():

@@ -58,6 +58,8 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
         Output("batch-table", "data"),
         Output("median-table", "data"),
         Output("median-table", "columns"),
+        Output("batch-gate-stats-table", "data"),
+        Output("batch-gate-stats-table", "columns"),
         Output("comparison-table", "data"),
         Output("compare-status", "children"),
         Output("compare-summary-cards", "children"),
@@ -69,10 +71,18 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
         Input("compensation-enabled", "value"),
         Input("control-group", "value"),
         Input("treated-group", "value"),
+        Input("gate-table", "data"),
     )
-    def update_compare(_sample_ids, _n_clicks, _export_clicks, compensation_enabled, control_group, treated_group):
+    def update_compare(_sample_ids, _n_clicks, _export_clicks, compensation_enabled, control_group, treated_group, _gate_rows):
         from dash import callback_context
-        from app.core.compare import batch_table, compare_control_treated, comparison_insights, comparison_summary, fluorescence_median_table
+        from app.core.compare import (
+            batch_gate_statistics_table,
+            batch_table,
+            compare_control_treated,
+            comparison_insights,
+            comparison_summary,
+            fluorescence_median_table,
+        )
         from app.core.export_tables import export_rows_csv
         from app.core.plotting import comparison_delta_chart
 
@@ -80,6 +90,7 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
         samples = session.sample_list()
         use_compensation = isinstance(compensation_enabled, list) and "on" in compensation_enabled
         medians = fluorescence_median_table(samples, use_compensation=use_compensation)
+        batch_gate_rows = batch_gate_statistics_table(samples, session.gates, use_compensation=use_compensation)
         comparison_rows = []
         status = ""
         if control_group and treated_group:
@@ -95,10 +106,16 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
             else:
                 status = "Choose control and treated groups before exporting comparison results."
         median_columns = _columns_from_rows(medians, ["sample_id", "condition"])
+        batch_gate_columns = _columns_from_rows(
+            batch_gate_rows,
+            ["sample_id", "condition", "replicate", "gate_name", "parent_gate", "event_count", "percent_total", "percent_parent", "gate_warning"],
+        )
         return (
             batch_table(samples),
             medians,
             table_columns(median_columns),
+            batch_gate_rows,
+            table_columns(batch_gate_columns),
             comparison_rows,
             status,
             _summary_cards(comparison_summary(comparison_rows)),

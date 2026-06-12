@@ -14,7 +14,7 @@ from app.models.channel import ChannelSummary
 from app.models.gate import GateDefinition
 
 
-SUPPORTED_GATE_TYPES = {"rectangle", "histogram_range", "polygon"}
+SUPPORTED_GATE_TYPES = {"rectangle", "histogram_range", "polygon", "ellipse", "quadrant", "bi_range"}
 
 
 def rectangle_gate(
@@ -55,6 +55,85 @@ def histogram_range_gate(
         parent_id=parent_id,
         bounds={"min": minimum, "max": maximum},
     )
+
+
+def ellipse_gate(
+    gate_id: str,
+    name: str,
+    x_channel: str,
+    y_channel: str,
+    center_x: float,
+    center_y: float,
+    radius_x: float,
+    radius_y: float,
+    parent_id: str | None = None,
+) -> GateDefinition:
+    """Create an axis-aligned ellipse gate definition."""
+    return GateDefinition(
+        gate_id=gate_id,
+        name=name,
+        gate_type="ellipse",
+        channels=[x_channel, y_channel],
+        parent_id=parent_id,
+        bounds={
+            "center_x": float(center_x),
+            "center_y": float(center_y),
+            "radius_x": abs(float(radius_x)),
+            "radius_y": abs(float(radius_y)),
+        },
+    )
+
+
+def bi_range_gate(
+    gate_id: str,
+    name: str,
+    x_channel: str,
+    y_channel: str,
+    x_min: float,
+    x_max: float,
+    y_min: float,
+    y_max: float,
+    parent_id: str | None = None,
+) -> GateDefinition:
+    """Create a two-channel range gate, semantically distinct from a drawn rectangle."""
+    return GateDefinition(
+        gate_id=gate_id,
+        name=name,
+        gate_type="bi_range",
+        channels=[x_channel, y_channel],
+        parent_id=parent_id,
+        bounds={"x_min": x_min, "x_max": x_max, "y_min": y_min, "y_max": y_max},
+    )
+
+
+def quadrant_gates(
+    gate_id_prefix: str,
+    name: str,
+    x_channel: str,
+    y_channel: str,
+    x_threshold: float,
+    y_threshold: float,
+    parent_id: str | None = None,
+) -> list[GateDefinition]:
+    """Create the four classic quadrant gates for a two-parameter plot."""
+    quadrants = [
+        ("upper_right", f"{name} Q1 +/+"),
+        ("upper_left", f"{name} Q2 -/+"),
+        ("lower_left", f"{name} Q3 -/-"),
+        ("lower_right", f"{name} Q4 +/-"),
+    ]
+    return [
+        GateDefinition(
+            gate_id=f"{gate_id_prefix}_{quadrant}",
+            name=quadrant_name,
+            gate_type="quadrant",
+            channels=[x_channel, y_channel],
+            parent_id=parent_id,
+            bounds={"x_threshold": float(x_threshold), "y_threshold": float(y_threshold)},
+            metadata={"quadrant": quadrant},
+        )
+        for quadrant, quadrant_name in quadrants
+    ]
 
 
 def drawn_shape_gate(
@@ -245,6 +324,45 @@ def apply_gate(events: pd.DataFrame, gate: GateDefinition, parent_mask: np.ndarr
             events[x].to_numpy(dtype=float),
             events[y].to_numpy(dtype=float),
             gate.vertices,
+        )
+    elif gate.gate_type == "ellipse":
+        x, y = gate.channels[:2]
+        bounds = gate.bounds
+        radius_x = float(bounds.get("radius_x", 0))
+        radius_y = float(bounds.get("radius_y", 0))
+        if radius_x <= 0 or radius_y <= 0:
+            gate.metadata["mask_warning"] = "ellipse radius must be greater than zero"
+            return np.zeros(len(events), dtype=bool)
+        x_values = events[x].to_numpy(dtype=float)
+        y_values = events[y].to_numpy(dtype=float)
+        current = ((x_values - float(bounds["center_x"])) / radius_x) ** 2 + ((y_values - float(bounds["center_y"])) / radius_y) ** 2 <= 1
+    elif gate.gate_type == "quadrant":
+        x, y = gate.channels[:2]
+        bounds = gate.bounds
+        x_values = events[x].to_numpy(dtype=float)
+        y_values = events[y].to_numpy(dtype=float)
+        x_high = x_values >= float(bounds["x_threshold"])
+        y_high = y_values >= float(bounds["y_threshold"])
+        quadrant = str(gate.metadata.get("quadrant", "upper_right"))
+        if quadrant == "upper_right":
+            current = x_high & y_high
+        elif quadrant == "upper_left":
+            current = ~x_high & y_high
+        elif quadrant == "lower_left":
+            current = ~x_high & ~y_high
+        elif quadrant == "lower_right":
+            current = x_high & ~y_high
+        else:
+            gate.metadata["mask_warning"] = f"unsupported quadrant: {quadrant}"
+            return np.zeros(len(events), dtype=bool)
+    elif gate.gate_type == "bi_range":
+        x, y = gate.channels[:2]
+        bounds = gate.bounds
+        current = (
+            (events[x].to_numpy(dtype=float) >= float(bounds["x_min"]))
+            & (events[x].to_numpy(dtype=float) <= float(bounds["x_max"]))
+            & (events[y].to_numpy(dtype=float) >= float(bounds["y_min"]))
+            & (events[y].to_numpy(dtype=float) <= float(bounds["y_max"]))
         )
     else:
         gate.metadata["mask_warning"] = f"unsupported gate type: {gate.gate_type}"

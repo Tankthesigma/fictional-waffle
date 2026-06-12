@@ -7,6 +7,8 @@ import pandas as pd
 
 from app.core.channel_labels import channel_label_map
 from app.core.compensation import event_view
+from app.core.gating import apply_gate_tree
+from app.core.stats import gate_statistics
 from app.models.comparison import ComparisonResult
 from app.models.sample import SampleRecord
 
@@ -40,6 +42,31 @@ def fluorescence_median_table(samples: list[SampleRecord], use_compensation: boo
             else:
                 row[channel] = None
         rows.append(row)
+    return rows
+
+
+def batch_gate_statistics_table(samples: list[SampleRecord], gates, use_compensation: bool = False) -> list[dict[str, object]]:
+    """Apply compatible gates to every sample and return a compact batch grid."""
+    rows: list[dict[str, object]] = []
+    for sample in samples:
+        events = event_view(sample, use_compensation)
+        view_name = "metadata_compensated" if use_compensation and sample.compensated_events is not None else "raw"
+        compatible = [gate for gate in gates if gate.metadata.get("event_view", "raw") == view_name]
+        masks = apply_gate_tree(events, compatible)
+        for row in gate_statistics(events, compatible, masks, sample.fluorescence_channels):
+            rows.append(
+                {
+                    "sample_id": sample.sample_id,
+                    "condition": sample.condition or "",
+                    "replicate": sample.replicate or "",
+                    "gate_name": row.get("gate_name"),
+                    "parent_gate": row.get("parent_gate"),
+                    "event_count": row.get("event_count"),
+                    "percent_total": row.get("percent_total"),
+                    "percent_parent": row.get("percent_parent"),
+                    "gate_warning": row.get("gate_warning", ""),
+                }
+            )
     return rows
 
 
