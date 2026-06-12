@@ -84,5 +84,10 @@ def invert_transform(
             raise ValueError("cofactor must be positive")
         return np.sinh(arr) * cofactor
     if transform == "logicle":
-        raise ValueError("drawn gates cannot be converted from logicle display yet; use raw, log10, or arcsinh")
+        try:
+            from flowutils.transforms import logicle_inverse  # type: ignore
+
+            return logicle_inverse(arr, channel_indices=None)
+        except Exception as exc:  # pragma: no cover - depends on optional compiled package API
+            raise ValueError("logicle inverse transform is unavailable in this environment") from exc
     raise ValueError(f"unsupported transform: {transform}")

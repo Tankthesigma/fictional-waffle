@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from app.core.transforms import arcsinh_transform, log10_clamp_warning, log10_clamped_fraction, safe_log10
+from app.core.transforms import apply_transform, arcsinh_transform, invert_transform, log10_clamp_warning, log10_clamped_fraction, safe_log10
 
 
 def test_safe_log_transform_clamps_non_positive_values():
@@ -22,3 +22,12 @@ def test_arcsinh_transform_uses_cofactor():
 
     assert transformed[0] == 0.0
     assert transformed[1] == pytest.approx(np.arcsinh(1.0))
+
+
+def test_logicle_transform_round_trips_for_drawn_gate_coordinates():
+    raw = np.array([-100.0, 0.0, 1000.0, 10000.0])
+
+    display = apply_transform(raw, "logicle")
+    restored = invert_transform(display, "logicle")
+
+    np.testing.assert_allclose(restored, raw, rtol=1e-9, atol=1e-7)

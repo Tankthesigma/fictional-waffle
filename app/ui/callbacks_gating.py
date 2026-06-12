@@ -322,10 +322,11 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         State("transform", "value"),
         State("cofactor", "value"),
         State("compensation-enabled", "value"),
+        State("manage-gate-id", "value"),
         State("last-drawn-gate-store", "data"),
         prevent_initial_call=True,
     )
-    def add_drawn_plot_gate(relayout_data, sample_id, x_channel, y_channel, transform, cofactor, compensation_enabled, last_signature):
+    def add_drawn_plot_gate(relayout_data, sample_id, x_channel, y_channel, transform, cofactor, compensation_enabled, manage_gate_id, last_signature):
         from app.core.gating import drawn_shape_gate, gate_to_table, latest_drawn_shape, shape_signature
         from app.core.plotting import _resolve_display_transform
 
@@ -351,6 +352,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
                 y_channel=y_channel,
                 transform=display_transform,
                 cofactor=float(cofactor or 150),
+                parent_id=_valid_parent_id(session.gates, manage_gate_id),
             )
         except Exception as exc:
             return no_update, no_update, no_update, f"Drawn gate could not be created: {exc}", no_update, no_update, no_update, signature
@@ -367,7 +369,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             gate_to_table(session.gates),
             stats,
             table_columns(stats_columns),
-            f"Added review-needed {gate.gate_type} gate from plot drawing: {gate.name}. Review/edit before relying on final statistics.",
+            _drawn_gate_status(gate),
             options,
             gate.gate_id,
             _gate_stack_cards(session.gates, stats),
@@ -390,6 +392,17 @@ def _is_compensation_on(value) -> bool:
 
 def _gate_options(gates):
     return [{"label": f"{gate.name} ({gate.gate_id})", "value": gate.gate_id} for gate in gates]
+
+
+def _valid_parent_id(gates, gate_id: str | None) -> str | None:
+    if not gate_id:
+        return None
+    return gate_id if any(gate.gate_id == gate_id for gate in gates) else None
+
+
+def _drawn_gate_status(gate) -> str:
+    parent = f" as child of {gate.parent_id}" if gate.parent_id else " at total-events level"
+    return f"Added review-needed {gate.gate_type} gate from plot drawing{parent}: {gate.name}. Review/edit before relying on final statistics."
 
 
 def _stats_for_sample(session: WorkbenchSession, sample_id: str | None, compensation_enabled) -> list[dict[str, object]]:

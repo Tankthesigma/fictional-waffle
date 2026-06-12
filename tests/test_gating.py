@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from app.core.gating import (
     apply_gate,
@@ -86,6 +87,58 @@ def test_drawn_shape_inverts_display_transform_for_storage():
     assert gate.bounds["x_max"] == 100.0
     assert gate.bounds["y_min"] == 1.0
     assert gate.bounds["y_max"] == 10.0
+
+
+def test_drawn_shape_inverts_logicle_display_for_storage():
+    from app.core.transforms import apply_transform
+
+    raw_x = np.array([1000.0, 2000.0])
+    raw_y = np.array([3000.0, 4000.0])
+    display_x = apply_transform(raw_x, "logicle")
+    display_y = apply_transform(raw_y, "logicle")
+    relayout = {
+        "shapes": [
+            {
+                "type": "rect",
+                "x0": float(display_x[0]),
+                "x1": float(display_x[1]),
+                "y0": float(display_y[0]),
+                "y1": float(display_y[1]),
+            }
+        ]
+    }
+
+    gate, _signature = drawn_shape_gate(
+        relayout,
+        gate_id="drawn",
+        name="drawn gate",
+        x_channel="FL1-A",
+        y_channel="SSC-A",
+        transform="logicle",
+    )
+
+    assert gate is not None
+    assert gate.bounds["x_min"] == pytest.approx(1000.0)
+    assert gate.bounds["x_max"] == pytest.approx(2000.0)
+    assert gate.bounds["y_min"] == pytest.approx(3000.0)
+    assert gate.bounds["y_max"] == pytest.approx(4000.0)
+
+
+def test_drawn_shape_can_be_child_of_selected_parent():
+    relayout = {"shapes": [{"type": "rect", "x0": 1.0, "x1": 2.0, "y0": 3.0, "y1": 4.0}]}
+
+    gate, _signature = drawn_shape_gate(
+        relayout,
+        gate_id="child",
+        name="drawn child",
+        x_channel="FSC-A",
+        y_channel="SSC-A",
+        transform="raw",
+        parent_id="parent",
+    )
+
+    assert gate is not None
+    assert gate.parent_id == "parent"
 
 
 def test_drawn_closed_path_shape_becomes_polygon_gate():

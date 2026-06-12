@@ -378,7 +378,7 @@ def gates_tab():
                     card(
                         "Gate Manager",
                         [
-                            html.Div("Rename, enable/disable, or delete one selected gate. Deleting a parent gate leaves child gates needing review.", className="muted"),
+                            html.Div("Rename, enable/disable, or delete one selected gate. Select a gate here before drawing on the plot to make the new drawn gate a child of it.", className="muted"),
                             html.Div(
                                 [
                                     dcc.Dropdown(id="manage-gate-id", options=[], placeholder="Select gate", clearable=False),

@@ -66,6 +66,7 @@ def drawn_shape_gate(
     y_channel: str | None,
     transform: str = "raw",
     cofactor: float = 150.0,
+    parent_id: str | None = None,
 ) -> tuple[GateDefinition | None, str | None]:
     """Convert the latest Plotly-drawn shape into a review-needed gate."""
     if not x_channel or not y_channel:
@@ -77,7 +78,7 @@ def drawn_shape_gate(
     if shape_type == "rect":
         x0, x1 = _raw_pair(shape.get("x0"), shape.get("x1"), transform, cofactor)
         y0, y1 = _raw_pair(shape.get("y0"), shape.get("y1"), transform, cofactor)
-        gate = rectangle_gate(gate_id, name, x_channel, y_channel, min(x0, x1), max(x0, x1), min(y0, y1), max(y0, y1))
+        gate = rectangle_gate(gate_id, name, x_channel, y_channel, min(x0, x1), max(x0, x1), min(y0, y1), max(y0, y1), parent_id=parent_id)
         gate.review_status = "review_needed"
         gate.metadata["drawn_gate"] = "rectangle drawn on plot; review/edit before relying on final statistics"
         return gate, shape_signature(shape)
@@ -90,6 +91,7 @@ def drawn_shape_gate(
             name=name,
             gate_type="polygon",
             channels=[x_channel, y_channel],
+            parent_id=parent_id,
             vertices=vertices,
             review_status="review_needed",
             metadata={"drawn_gate": "polygon drawn on plot; review/edit before relying on final statistics"},
