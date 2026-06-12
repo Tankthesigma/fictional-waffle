@@ -360,6 +360,15 @@ def global_assistant_bar():
             ),
             html.Div(
                 [
+                    html.Button("QC", id="global-quick-qc", n_clicks=0),
+                    html.Button("Singlets", id="global-quick-singlets", n_clicks=0),
+                    html.Button("Cluster gates", id="global-quick-cluster-gates", n_clicks=0),
+                    html.Button("Report", id="global-quick-report", n_clicks=0),
+                ],
+                className="global-assistant-quick-actions",
+            ),
+            html.Div(
+                [
                     html.Span("Skills"),
                     html.Span("navigate"),
                     html.Span("plot"),

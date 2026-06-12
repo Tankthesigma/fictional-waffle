@@ -64,6 +64,10 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
         Output("gate-stack-cards", "children", allow_duplicate=True),
         Input("ask-flow-button", "n_clicks"),
         Input("global-assistant-button", "n_clicks"),
+        Input("global-quick-qc", "n_clicks"),
+        Input("global-quick-singlets", "n_clicks"),
+        Input("global-quick-cluster-gates", "n_clicks"),
+        Input("global-quick-report", "n_clicks"),
         State("ask-flow-question", "value"),
         State("global-assistant-command", "value"),
         State("selected-sample-store", "data"),
@@ -72,13 +76,26 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
         State("compensation-enabled", "value"),
         prevent_initial_call=True,
     )
-    def ask_flow(_ask_clicks, _global_clicks, tab_question, global_question, sample_id, x_channel, y_channel, compensation_enabled):
+    def ask_flow(
+        _ask_clicks,
+        _global_clicks,
+        _quick_qc,
+        _quick_singlets,
+        _quick_cluster_gates,
+        _quick_report,
+        tab_question,
+        global_question,
+        sample_id,
+        x_channel,
+        y_channel,
+        compensation_enabled,
+    ):
         from app.core.ask_flow import answer_question
         from app.core.ask_flow_actions import plan_actions
         from app.core.vertex_gemini import answer_with_gemini
 
         triggered = callback_context.triggered[0]["prop_id"].split(".")[0] if callback_context.triggered else ""
-        question = global_question if triggered == "global-assistant-button" else tab_question
+        question = _question_from_trigger(triggered, tab_question, global_question)
         sample = session.selected_sample(sample_id)
         plan = plan_actions(question or "", session.sample_list(), sample)
         if plan.updates.get("sample_id"):
@@ -133,6 +150,20 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
             plan.updates.get("max_events", no_update),
             *auto_gate_outputs,
         )
+
+
+def _question_from_trigger(triggered: str, tab_question: str | None, global_question: str | None) -> str:
+    quick_questions = {
+        "global-quick-qc": "show QC and summarize the review flags",
+        "global-quick-singlets": "create singlet gate",
+        "global-quick-cluster-gates": "auto gate clusters",
+        "global-quick-report": "open reports and draft a plain-English report paragraph",
+    }
+    if triggered in quick_questions:
+        return quick_questions[triggered]
+    if triggered == "global-assistant-button":
+        return global_question or ""
+    return tab_question or ""
 
 
 def _briefing_cards(rows: list[dict[str, str]]):

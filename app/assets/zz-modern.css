@@ -113,9 +113,33 @@ table,
   border-radius: 10px;
 }
 
+.global-assistant-quick-actions button {
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.global-assistant-quick-actions button:hover {
+  color: var(--accent);
+  border-color: rgba(79, 70, 229, 0.28);
+  background: #f8fafc;
+}
+
 .global-assistant-answer {
   border-top: 1px solid var(--line);
   padding-top: 8px;
+}
+
+#global-assistant-loading[data-dash-is-loading="true"],
+#ask-flow-answer-loading[data-dash-is-loading="true"] {
+  border-color: rgba(79, 70, 229, 0.28);
+  background:
+    linear-gradient(90deg, rgba(248, 250, 252, 0.35), rgba(238, 242, 255, 0.82), rgba(248, 250, 252, 0.35));
+}
+
+#global-assistant-loading[data-dash-is-loading="true"]::after {
+  background:
+    radial-gradient(circle, var(--accent) 0 35%, transparent 38%) 0 0 / 18px 10px repeat-x;
 }
 
 .toolbar-cell {

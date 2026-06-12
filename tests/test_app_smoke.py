@@ -168,6 +168,10 @@ def test_ask_flow_briefing_is_rendered_and_wired():
     assert "global-assistant-command" in layout_json
     assert "global-assistant-button" in layout_json
     assert "global-assistant-answer" in layout_json
+    assert "global-quick-qc" in layout_json
+    assert "global-quick-singlets" in layout_json
+    assert "global-quick-cluster-gates" in layout_json
+    assert "global-quick-report" in layout_json
     assert "Workbench copilot" in layout_json
     assert "Workbench actions:" in layout_json
     assert "toast-container" in layout_json
