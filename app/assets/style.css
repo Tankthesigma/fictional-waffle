@@ -1237,6 +1237,63 @@ button:hover {
   font: inherit;
 }
 
+.global-assistant-bar {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.8fr) minmax(260px, 1.35fr);
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.global-assistant-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.global-assistant-copy strong {
+  font-size: 15px;
+}
+
+.global-assistant-copy small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.global-assistant-command-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.global-assistant-command-row input {
+  width: 100%;
+  min-width: 0;
+}
+
+.global-skills {
+  grid-column: 1 / -1;
+  margin-top: 0 !important;
+}
+
+.global-assistant-answer {
+  grid-column: 1 / -1;
+  min-height: 10px;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.global-assistant-answer:empty {
+  display: none;
+}
+
+.global-assistant-answer p {
+  margin: 8px 0 4px;
+}
+
 .agent-action-strip {
   display: flex;
   flex-wrap: wrap;

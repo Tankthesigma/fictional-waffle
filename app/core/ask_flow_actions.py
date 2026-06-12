@@ -27,6 +27,11 @@ def plan_actions(question: str, samples: list[SampleRecord], sample: SampleRecor
     if not text:
         return plan
 
+    tab = _tab_from_text(normalized)
+    if tab:
+        plan.updates["tab"] = tab
+        plan.messages.append(f"Opened the {_tab_label(tab)} workspace.")
+
     selected = _sample_from_text(normalized, samples) or sample
     if selected is not None and sample is not None and selected.sample_id != sample.sample_id:
         plan.updates["sample_id"] = selected.sample_id
@@ -87,6 +92,30 @@ def _sample_from_text(normalized: str, samples: list[SampleRecord]) -> SampleRec
         if any(candidate and candidate in normalized for candidate in candidates):
             return sample
     return None
+
+
+def _tab_from_text(normalized: str) -> str | None:
+    tab_aliases = {
+        "explore": ("explore", "plot", "plots", "graph", "graphs"),
+        "gates": ("gate", "gates", "gating", "population", "populations"),
+        "compare": ("compare", "comparison", "batch", "cohort", "treated", "control"),
+        "qc": ("qc", "quality", "review flags", "warnings"),
+        "reports": ("report", "reports", "pdf", "powerpoint", "pptx", "export"),
+        "ask-flow": ("ask flow", "assistant", "copilot", "chat"),
+    }
+    if not any(verb in normalized for verb in ("open", "show", "go to", "switch to", "take me", "bring me")):
+        return None
+    for tab, aliases in tab_aliases.items():
+        if any(re.search(rf"\b{re.escape(alias)}\b", normalized) for alias in aliases):
+            return tab
+    return None
+
+
+def _tab_label(tab: str) -> str:
+    return {
+        "ask-flow": "Ask Flow",
+        "qc": "QC",
+    }.get(tab, tab.replace("-", " ").title())
 
 
 def _scatter_pair_from_text(text: str, sample: SampleRecord) -> tuple[str | None, str | None]:

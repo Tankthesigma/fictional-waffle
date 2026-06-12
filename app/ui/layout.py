@@ -185,6 +185,7 @@ def workbench_panel():
                 [
                     html.Div(id="active-analysis-strip", className="bench-strip"),
                     html.Div(id="analysis-guide", className="analysis-guide"),
+                    global_assistant_bar(),
                     dcc.Tabs(
                         id="main-tabs",
                         value="explore",
@@ -332,6 +333,53 @@ def workbench_panel():
             ),
         ],
         className="workbench-grid",
+    )
+
+
+def global_assistant_bar():
+    return html.Div(
+        [
+            html.Div(
+                [
+                    html.Span("Ask Flow", className="panel-kicker"),
+                    html.Strong("Workbench copilot"),
+                    html.Small("Ask from any tab. It can navigate, set plots, adjust transforms, and create review-needed gates."),
+                ],
+                className="global-assistant-copy",
+            ),
+            html.Div(
+                [
+                    dcc.Input(
+                        id="global-assistant-command",
+                        placeholder="Try: show QC, plot CD3 vs SSC-A as density, create singlet gate, auto gate clusters",
+                        debounce=True,
+                    ),
+                    html.Button("Run", id="global-assistant-button", n_clicks=0, className="primary"),
+                ],
+                className="global-assistant-command-row",
+            ),
+            html.Div(
+                [
+                    html.Span("Skills"),
+                    html.Span("navigate"),
+                    html.Span("plot"),
+                    html.Span("histogram"),
+                    html.Span("transform"),
+                    html.Span("singlets"),
+                    html.Span("cluster gates"),
+                    html.Span("summarize"),
+                ],
+                className="agent-action-strip global-skills",
+            ),
+            dcc.Loading(
+                id="global-assistant-loading",
+                type="dot",
+                color="#0f766e",
+                delay_show=150,
+                children=html.Div(id="global-assistant-answer", className="global-assistant-answer"),
+            ),
+        ],
+        className="global-assistant-bar",
     )
 
 

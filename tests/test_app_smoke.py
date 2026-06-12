@@ -165,6 +165,10 @@ def test_ask_flow_briefing_is_rendered_and_wired():
     assert "high-dimensional-graph" in layout_json
     assert "high-dimensional-cluster-table" in layout_json
     assert "ask-flow-agent-status" in layout_json
+    assert "global-assistant-command" in layout_json
+    assert "global-assistant-button" in layout_json
+    assert "global-assistant-answer" in layout_json
+    assert "Workbench copilot" in layout_json
     assert "Workbench actions:" in layout_json
     assert "toast-container" in layout_json
     assert "toast-store" in layout_json
@@ -177,6 +181,8 @@ def test_ask_flow_briefing_is_rendered_and_wired():
     assert any("ask-flow-plan.children" in key for key in dash_app.callback_map)
     assert any("ask-flow-agent-status.children" in key for key in dash_app.callback_map)
     assert any("high-dimensional-graph.figure" in key for key in dash_app.callback_map)
+    assert any("global-assistant-answer.children" in key for key in dash_app.callback_map)
+    assert any("main-tabs.value" in key for key in dash_app.callback_map)
 
 
 def test_workbench_tabs_have_compact_horizontal_css():

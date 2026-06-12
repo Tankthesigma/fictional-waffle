@@ -36,6 +36,15 @@ def test_ask_flow_can_select_sample_by_id():
     assert plan.updates["sample_id"] == "treated"
 
 
+def test_ask_flow_plans_safe_tab_navigation():
+    sample = _sample()
+
+    plan = plan_actions("show QC for this sample", [sample], sample)
+
+    assert plan.updates["tab"] == "qc"
+    assert "Opened the QC workspace." in plan.messages
+
+
 def _sample(sample_id: str = "s1") -> SampleRecord:
     frame = pd.DataFrame({"FSC-A": [1, 2], "SSC-A": [1, 4], "FL1-A": [10, 20]})
     sample = SampleRecord(sample_id, f"{sample_id}.csv", path="unused.csv", file_type="csv", events=frame)

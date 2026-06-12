@@ -92,11 +92,30 @@ table,
 .workspace-toolbar,
 .bench-strip,
 .plot-context-bar,
+.global-assistant-bar,
 .agent-action-strip {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
+}
+
+.global-assistant-bar {
+  border-color: rgba(79, 70, 229, 0.2);
+}
+
+.global-assistant-copy strong {
+  letter-spacing: 0;
+}
+
+.global-assistant-command-row input {
+  min-height: 38px;
+  border-radius: 10px;
+}
+
+.global-assistant-answer {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
 }
 
 .toolbar-cell {
