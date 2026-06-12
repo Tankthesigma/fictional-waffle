@@ -37,6 +37,7 @@ def test_ai_auto_gates_create_disabled_review_needed_cluster_candidates():
     assert all(gate.review_status == "review_needed" for gate in result.gates)
     assert all("review" in gate.metadata["candidate_reason"].lower() for gate in result.gates)
     assert all(gate.metadata["identity_warning"].startswith("Review-needed") for gate in result.gates)
+    assert {gate.metadata["embedding"] for gate in result.gates} <= {"umap", "pca"}
     assert all("CD" in gate.name for gate in result.gates)
     masks = apply_gate_tree(sample.events, result.gates)
     assert all(not mask.any() for mask in masks.values())

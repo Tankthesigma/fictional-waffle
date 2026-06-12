@@ -138,6 +138,24 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
 
         return time_stability_figure(session.selected_sample(sample_id))
 
+    @app.callback(
+        Output("high-dimensional-graph", "figure"),
+        Output("high-dimensional-cluster-table", "data"),
+        Output("high-dimensional-cluster-table", "columns"),
+        Input("selected-sample-store", "data"),
+        Input("max-events", "value"),
+    )
+    def update_high_dimensional_review(sample_id, max_events):
+        from app.core.high_dimensional import umap_cluster_review
+        from app.core.plotting import high_dimensional_cluster_figure_from_review
+
+        sample = session.selected_sample(sample_id)
+        review = umap_cluster_review(sample, max_events=min(int(max_events or 25_000), 25_000))
+        rows = review.clusters.to_dict("records") if not review.clusters.empty else []
+        columns = _columns_from_rows(rows, ["cluster", "event_count", "percent_total"])
+        sample_id_label = sample.sample_id if sample else "sample"
+        return high_dimensional_cluster_figure_from_review(review, sample_id=sample_id_label), rows, table_columns(columns)
+
     @app.callback(Output("compensation-status", "children"), Input("selected-sample-store", "data"), Input("compensation-enabled", "value"))
     def update_compensation_status(sample_id, compensation_enabled):
         from app.core.compensation import compensation_status
@@ -221,3 +239,12 @@ def _visible_gate_count(gates, x_channel: str | None, y_channel: str | None, use
         and gate.channels[:2] == [x_channel, y_channel]
         and gate.metadata.get("event_view", "raw") == current_view
     )
+
+
+def _columns_from_rows(rows: list[dict[str, object]], preferred: list[str]) -> list[str]:
+    seen = list(preferred)
+    for row in rows:
+        for key in row:
+            if key not in seen:
+                seen.append(key)
+    return seen

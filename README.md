@@ -110,8 +110,8 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 - Project JSON save/load for metadata, file references, gates, QC, transform settings, comparison settings, and report selections.
 - Rule-based QC dashboard with review-needed language.
 - Batch tables, event count chart, median fluorescence table, batch gate-statistics grid, and exploratory control-vs-treated comparison.
-- Deterministic high-dimensional review primitive using PCA plus clustering for review-needed population exploration without automatic identity claims.
-- AI-assisted autogating MVP: cluster fluorescence space, generate disabled review-needed gate candidates on the active plot, and optionally apply enhanced marker-aware cluster labels without sending raw event matrices.
+- High-dimensional review using UMAP with PCA fallback plus clustering for review-needed population exploration without automatic identity claims.
+- AI-assisted autogating MVP: cluster fluorescence space with UMAP/PCA review, generate disabled review-needed gate candidates on the active plot, and optionally apply enhanced marker-aware cluster labels without sending raw event matrices.
 - Local CSV, PDF, and PowerPoint report export with representative plot images when static export is available.
 - Ask Flow assistant panel with deterministic local answers, state-aware analysis plans, safe UI actions, optional enhanced responses, and chat-triggered autogate review.
 
@@ -127,7 +127,7 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 
 - Robust FlowKit-backed GatingML import/export.
 - Single-stain/FMO guided auto-compensation and spectral unmixing review.
-- UMAP-backed high-dimensional maps and richer marker-aware cluster annotation.
+- Richer marker-aware cluster annotation and editable high-dimensional population review.
 - Kaleido figure embedding in PDF/PPTX.
 - More Ask Flow action tools for report/export workflows, while keeping execution allowlisted.
 

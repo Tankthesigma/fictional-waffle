@@ -8,7 +8,7 @@ import pandas as pd
 
 from app.core.channel_inference import best_scatter_pair
 from app.core.gating import rectangle_gate
-from app.core.high_dimensional import pca_cluster_review
+from app.core.high_dimensional import high_dimensional_review
 from app.models.gate import GateDefinition
 from app.models.sample import SampleRecord
 
@@ -31,6 +31,7 @@ def suggest_ai_auto_gates(
     y_channel: str | None = None,
     n_clusters: int = 6,
     max_events: int = 50_000,
+    reducer: str = "umap",
     id_prefix: str = "ai_auto",
     labeler: ClusterLabeler | None = None,
 ) -> AutoGateResult:
@@ -49,7 +50,7 @@ def suggest_ai_auto_gates(
     if x_channel not in sample.events or y_channel not in sample.events:
         return AutoGateResult([], [], ["Selected plot channels are not available in the sample event table."])
 
-    review = pca_cluster_review(sample, n_clusters=n_clusters, max_events=max_events)
+    review = high_dimensional_review(sample, n_clusters=n_clusters, max_events=max_events, reducer=reducer)
     if review.embedding.empty or review.clusters.empty:
         return AutoGateResult([], [], list(review.warnings))
     cluster_rows = review.clusters.to_dict("records")
@@ -81,6 +82,7 @@ def suggest_ai_auto_gates(
                 "event_view": "raw",
                 "candidate_reason": "AI-assisted cluster footprint; review/edit before using final statistics",
                 "auto_gate": "cluster-derived rectangle on current plot",
+                "embedding": review.reducer,
                 "cluster_id": cluster_id,
                 "cluster_event_count": int(row.get("event_count", 0)),
                 "cluster_percent_total": float(row.get("percent_total", 0.0)),

@@ -546,6 +546,9 @@ def ask_flow_tab():
                     html.Div(id="ask-flow-briefing", className="ask-briefing"),
                     html.H3("Suggested Analysis Plan"),
                     html.Div(id="ask-flow-plan", className="analysis-plan-grid"),
+                    html.H3("High-Dimensional Review"),
+                    dcc.Graph(id="high-dimensional-graph", config={"displayModeBar": True}, className="analysis-graph"),
+                    data_table("high-dimensional-cluster-table", ["cluster", "event_count", "percent_total"], page_size=8),
                     dcc.Textarea(
                         id="ask-flow-question",
                         value="Plan the analysis for this sample.",

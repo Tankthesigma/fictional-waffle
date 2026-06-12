@@ -268,6 +268,41 @@ def time_stability_figure(sample: SampleRecord | None):
     return px.histogram(frame, x="Time", nbins=40, template="plotly_white", title=f"{sample.sample_id}: event rate over Time")
 
 
+def high_dimensional_cluster_figure(sample: SampleRecord | None, *, max_events: int = 25_000):
+    """Build a UMAP/PCA cluster review figure for the current sample."""
+    if sample is None:
+        return empty_figure("Select a sample to run high-dimensional cluster review.")
+    from app.core.high_dimensional import umap_cluster_review
+
+    review = umap_cluster_review(sample, max_events=max_events)
+    return high_dimensional_cluster_figure_from_review(review, sample_id=sample.sample_id)
+
+
+def high_dimensional_cluster_figure_from_review(review, *, sample_id: str = "sample"):
+    """Render a precomputed high-dimensional review result."""
+    import plotly.express as px
+
+    if review.embedding.empty:
+        message = review.warnings[0] if review.warnings else "High-dimensional review is unavailable for this sample."
+        return empty_figure(message)
+    frame = review.embedding.copy()
+    frame["cluster"] = frame["cluster"].astype(str)
+    fig = px.scatter(
+        frame,
+        x="dim1",
+        y="dim2",
+        color="cluster",
+        render_mode="webgl",
+        template="plotly_white",
+        title=f"{sample_id}: {review.reducer.upper()} cluster review",
+        labels={"dim1": f"{review.reducer.upper()} 1", "dim2": f"{review.reducer.upper()} 2", "cluster": "Cluster"},
+    )
+    fig.update_traces(marker=dict(size=4, opacity=0.62), hovertemplate="Cluster %{marker.color}<br>%{x:.3g}, %{y:.3g}<extra></extra>")
+    fig.update_layout(height=460, margin=dict(l=50, r=24, t=54, b=50))
+    _add_transform_warnings(fig, review.warnings)
+    return fig
+
+
 def _add_rectangle_shape(fig, gate: GateDefinition, transform: str, cofactor: float) -> None:
     bounds = gate.bounds
     x0, x1 = apply_transform([bounds["x_min"], bounds["x_max"]], transform, cofactor=cofactor)
