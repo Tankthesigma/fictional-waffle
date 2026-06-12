@@ -1,6 +1,6 @@
 import pandas as pd
 
-from app.core.vertex_gemini import answer_with_gemini, vertex_enabled, vertex_status
+from app.core.vertex_gemini import _parse_cluster_labels, answer_with_gemini, vertex_enabled, vertex_status
 from app.models.sample import SampleRecord
 
 
@@ -40,3 +40,10 @@ def test_cloud_assistant_status_hides_provider_details(monkeypatch):
     assert "Assistant: enhanced mode enabled" in status
     assert "Gemini" not in status
     assert "Vertex" not in status
+
+
+def test_parse_cluster_labels_keeps_review_language_and_rejects_bad_claims():
+    labels = _parse_cluster_labels('[{"cluster": 2, "label": "CD3 high"}, {"cluster": 3, "label": "confirmed disease"}]')
+
+    assert labels[2] == "CD3 high review"
+    assert labels[3] == "Cluster review: marker-pattern review needed"

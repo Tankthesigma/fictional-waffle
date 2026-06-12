@@ -92,6 +92,59 @@ def answer_with_gemini(
         return GeminiAnswer(fallback, used_vertex=False, status=f"Enhanced assistant unavailable: {exc}. Local answer shown.")
 
 
+def label_clusters_with_gemini(sample: SampleRecord, cluster_rows: list[dict[str, object]]) -> dict[int, str]:
+    """Optionally label cluster summaries using the enhanced assistant.
+
+    Only aggregate medians/counts and marker metadata are sent. Labels must stay
+    review-needed and may not claim a confirmed cell identity.
+    """
+    if not vertex_enabled() or not cluster_rows:
+        return {}
+    try:
+        from google import genai
+        from google.genai.types import HttpOptions
+    except Exception:
+        return {}
+    project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT_ID")
+    location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
+    model = os.getenv("ASK_FLOW_CLOUD_MODEL") or os.getenv("ASK_FLOW_GEMINI_MODEL", DEFAULT_VERTEX_MODEL)
+    if not project:
+        return {}
+    context = {
+        "sample_id": sample.sample_id,
+        "instruction": (
+            "Return compact review labels for clusters. Use marker names only when provided. "
+            "Do not diagnose, do not claim cell identity is confirmed, and include 'review' language."
+        ),
+        "channels": [
+            {
+                "raw_name": channel.raw_name,
+                "label": channel.label,
+                "role": channel.role,
+                "marker": channel.marker,
+                "fluorochrome": channel.fluorochrome,
+            }
+            for channel in sample.channels
+            if channel.role == "fluorescence"
+        ],
+        "clusters": cluster_rows[:12],
+        "response_schema": [{"cluster": 0, "label": "Cluster 0 review: marker-pattern summary"}],
+    }
+    try:
+        client = genai.Client(vertexai=True, project=project, location=location, http_options=HttpOptions(api_version="v1"))
+        response = client.models.generate_content(
+            model=model,
+            contents=(
+                "You are labeling exploratory flow cytometry clusters for human review. "
+                "Return JSON only: a list of objects with integer cluster and short label. "
+                "Never claim the label is confirmed. Context JSON:\n" + json.dumps(context, default=str)
+            ),
+        )
+        return _parse_cluster_labels(getattr(response, "text", "") or "")
+    except Exception:
+        return {}
+
+
 def _prompt(
     question: str,
     sample: SampleRecord | None,
@@ -155,6 +208,40 @@ def _sample_context(sample: SampleRecord | None, x_channel: str | None, y_channe
             for channel in sample.channels[:80]
         ],
     }
+
+
+def _parse_cluster_labels(text: str) -> dict[int, str]:
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.strip("`")
+        cleaned = cleaned.removeprefix("json").strip()
+    try:
+        payload = json.loads(cleaned)
+    except Exception:
+        return {}
+    if not isinstance(payload, list):
+        return {}
+    labels: dict[int, str] = {}
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        try:
+            cluster = int(item["cluster"])
+            label = str(item["label"]).strip()
+        except (KeyError, TypeError, ValueError):
+            continue
+        if label:
+            labels[cluster] = _safe_cluster_label(label)
+    return labels
+
+
+def _safe_cluster_label(label: str) -> str:
+    lower = label.lower()
+    if "diagnos" in lower or "disease" in lower or "confirmed" in lower:
+        return "Cluster review: marker-pattern review needed"
+    if "review" not in lower:
+        return f"{label} review"
+    return label
 
 
 def _gate_context(gate: GateDefinition) -> dict[str, Any]:

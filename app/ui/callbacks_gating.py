@@ -26,6 +26,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         Input("add-ellipse-gate", "n_clicks"),
         Input("add-birange-gate", "n_clicks"),
         Input("suggest-candidate-gates", "n_clicks"),
+        Input("ai-auto-gate-clusters", "n_clicks"),
         Input("accept-candidate-gates", "n_clicks"),
         Input("reject-candidate-gates", "n_clicks"),
         Input("rename-gate", "n_clicks"),
@@ -81,6 +82,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         add_ellipse_clicks,
         add_birange_clicks,
         suggest_clicks,
+        ai_auto_gate_clicks,
         accept_clicks,
         reject_clicks,
         rename_clicks,
@@ -323,6 +325,22 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
                 if suggestions
                 else "No stable candidate gates were suggested for this sample."
             )
+        elif action == "ai-auto-gate-clusters":
+            from app.core.auto_gating import suggest_ai_auto_gates
+            from app.core.vertex_gemini import label_clusters_with_gemini
+
+            sample = session.selected_sample(sample_id)
+            if sample is None:
+                return no_update, no_update, no_update, "Upload and select a sample before running AI-assisted autogating.", no_update, no_update, no_update
+            result = suggest_ai_auto_gates(
+                sample,
+                x_channel=x_channel,
+                y_channel=y_channel,
+                id_prefix=f"ai_{uuid4().hex[:6]}",
+                labeler=label_clusters_with_gemini,
+            )
+            session.gates.extend(result.gates)
+            status = _auto_gate_status(result.gates, result.warnings)
         elif action == "accept-candidate-gates":
             accepted = 0
             for gate in session.gates:
@@ -551,6 +569,18 @@ def _valid_parent_id(gates, gate_id: str | None) -> str | None:
 def _drawn_gate_status(gate) -> str:
     parent = f" as child of {gate.parent_id}" if gate.parent_id else " at total-events level"
     return f"Added review-needed {gate.gate_type} gate from plot drawing{parent}: {gate.name}. Review/edit before relying on final statistics."
+
+
+def _auto_gate_status(gates, warnings: list[str]) -> str:
+    if not gates:
+        return "AI-assisted autogating did not add gates. " + " ".join(warnings)
+    enhanced = sum(gate.metadata.get("label_source") == "enhanced_assistant" for gate in gates)
+    note = f" Enhanced labels applied to {enhanced} cluster(s)." if enhanced else ""
+    warning_text = " ".join(warnings)
+    return (
+        f"Added {len(gates)} disabled review-needed auto-gate candidate(s) from cluster footprints."
+        f"{note} Review/edit and accept before using final statistics. {warning_text}"
+    ).strip()
 
 
 def _stats_for_sample(session: WorkbenchSession, sample_id: str | None, compensation_enabled) -> list[dict[str, object]]:

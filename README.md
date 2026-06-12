@@ -111,8 +111,9 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 - Rule-based QC dashboard with review-needed language.
 - Batch tables, event count chart, median fluorescence table, batch gate-statistics grid, and exploratory control-vs-treated comparison.
 - Deterministic high-dimensional review primitive using PCA plus clustering for review-needed population exploration without automatic identity claims.
+- AI-assisted autogating MVP: cluster fluorescence space, generate disabled review-needed gate candidates on the active plot, and optionally apply enhanced marker-aware cluster labels without sending raw event matrices.
 - Local CSV, PDF, and PowerPoint report export with representative plot images when static export is available.
-- Ask Flow assistant panel with deterministic local answers, state-aware analysis plans, safe UI actions, and optional enhanced responses.
+- Ask Flow assistant panel with deterministic local answers, state-aware analysis plans, safe UI actions, optional enhanced responses, and chat-triggered autogate review.
 
 ## Limitations
 
@@ -126,7 +127,7 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 
 - Robust FlowKit-backed GatingML import/export.
 - Single-stain/FMO guided auto-compensation and spectral unmixing review.
-- AI-assisted autogating built on review-needed gates and high-dimensional cluster summaries.
+- UMAP-backed high-dimensional maps and richer marker-aware cluster annotation.
 - Kaleido figure embedding in PDF/PPTX.
 - More Ask Flow action tools for report/export workflows, while keeping execution allowlisted.
 

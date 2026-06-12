@@ -65,6 +65,8 @@ def test_candidate_gate_controls_are_rendered_with_review_language():
     assert "Quick Gate Current View" in layout_json
     assert "add-review-scatter-gate" in layout_json
     assert "Add Review FSC/SSC Gate" in layout_json
+    assert "ai-auto-gate-clusters" in layout_json
+    assert "AI Auto-Gate Clusters" in layout_json
     assert "accept-candidate-gates" in layout_json
     assert "reject-candidate-gates" in layout_json
     assert "Candidate gates are review-needed and disabled until accepted" in layout_json

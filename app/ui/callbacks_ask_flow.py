@@ -53,14 +53,22 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
         Output("plot-mode", "value", allow_duplicate=True),
         Output("transform", "value", allow_duplicate=True),
         Output("max-events", "value", allow_duplicate=True),
+        Output("gate-table", "data", allow_duplicate=True),
+        Output("gate-stats-table", "data", allow_duplicate=True),
+        Output("gate-stats-table", "columns", allow_duplicate=True),
+        Output("gate-status", "children", allow_duplicate=True),
+        Output("manage-gate-id", "options", allow_duplicate=True),
+        Output("manage-gate-id", "value", allow_duplicate=True),
+        Output("gate-stack-cards", "children", allow_duplicate=True),
         Input("ask-flow-button", "n_clicks"),
         State("ask-flow-question", "value"),
         State("selected-sample-store", "data"),
         State("x-channel", "value"),
         State("y-channel", "value"),
+        State("compensation-enabled", "value"),
         prevent_initial_call=True,
     )
-    def ask_flow(_clicks, question, sample_id, x_channel, y_channel):
+    def ask_flow(_clicks, question, sample_id, x_channel, y_channel, compensation_enabled):
         from app.core.ask_flow import answer_question
         from app.core.ask_flow_actions import plan_actions
         from app.core.vertex_gemini import answer_with_gemini
@@ -69,6 +77,17 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
         plan = plan_actions(question or "", session.sample_list(), sample)
         if plan.updates.get("sample_id"):
             sample = session.selected_sample(plan.updates["sample_id"])
+        auto_gate_status = None
+        auto_gate_outputs = _empty_gate_outputs()
+        if _requests_auto_gate(question or ""):
+            auto_gate_status, auto_gate_outputs = _run_auto_gate_from_chat(
+                session,
+                sample,
+                plan.updates.get("x_channel", x_channel),
+                plan.updates.get("y_channel", y_channel),
+                compensation_enabled,
+            )
+            plan.messages.append(auto_gate_status)
         flags = session.qc_flags.get(sample.sample_id, []) if sample else []
         fallback = answer_question(
             question or "",
@@ -99,6 +118,7 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
             plan.updates.get("plot_mode", no_update),
             plan.updates.get("transform", no_update),
             plan.updates.get("max_events", no_update),
+            *auto_gate_outputs,
         )
 
 
@@ -143,3 +163,47 @@ def _answer_panel(answer: str, status: str, action_messages: list[str]):
         )
     children.extend([html.P(answer), html.Small(status)])
     return children
+
+
+def _requests_auto_gate(question: str) -> bool:
+    normalized = question.lower()
+    return any(phrase in normalized for phrase in ("auto gate", "autogate", "cluster gate", "ai gate", "suggest gates from clusters"))
+
+
+def _empty_gate_outputs():
+    return (no_update, no_update, no_update, no_update, no_update, no_update, no_update)
+
+
+def _run_auto_gate_from_chat(session: WorkbenchSession, sample, x_channel, y_channel, compensation_enabled):
+    from uuid import uuid4
+
+    from app.core.auto_gating import suggest_ai_auto_gates
+    from app.core.gating import gate_to_table
+    from app.core.vertex_gemini import label_clusters_with_gemini
+    from app.ui.callbacks_gating import _auto_gate_status, _columns_from_rows, _gate_options, _gate_stack_cards, _stats_for_sample
+    from app.ui.components import table_columns
+
+    if sample is None:
+        return "Auto-gate review skipped: select a sample first.", _empty_gate_outputs()
+    result = suggest_ai_auto_gates(
+        sample,
+        x_channel=x_channel,
+        y_channel=y_channel,
+        id_prefix=f"ai_{uuid4().hex[:6]}",
+        labeler=label_clusters_with_gemini,
+    )
+    session.gates.extend(result.gates)
+    stats = _stats_for_sample(session, sample.sample_id, compensation_enabled)
+    columns = _columns_from_rows(stats, ["gate_name", "parent_gate", "channel_labels", "channels", "event_count", "percent_total", "percent_parent"])
+    options = _gate_options(session.gates)
+    selected = result.gates[0].gate_id if result.gates else (options[0]["value"] if options else None)
+    status = _auto_gate_status(result.gates, result.warnings)
+    return status, (
+        gate_to_table(session.gates),
+        stats,
+        table_columns(columns),
+        status,
+        options,
+        selected,
+        _gate_stack_cards(session.gates, stats),
+    )

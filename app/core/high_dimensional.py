@@ -50,7 +50,16 @@ def pca_cluster_review(
     embedding_values = PCA(n_components=2, random_state=random_state).fit_transform(scaled)
     cluster_count = max(2, min(int(n_clusters), len(numeric)))
     labels = MiniBatchKMeans(n_clusters=cluster_count, random_state=random_state, n_init=5, batch_size=4096).fit_predict(scaled)
-    embedding = pd.DataFrame({"sample_id": sample.sample_id, "pc1": embedding_values[:, 0], "pc2": embedding_values[:, 1], "cluster": labels})
+    embedding = pd.DataFrame(
+        {
+            "sample_id": sample.sample_id,
+            "event_index": numeric.index.to_list(),
+            "pc1": embedding_values[:, 0],
+            "pc2": embedding_values[:, 1],
+            "cluster": labels,
+        },
+        index=numeric.index,
+    )
     clusters = _cluster_summary(numeric, labels)
     return ClusterReviewResult(embedding, clusters, ["Clusters are exploratory review aids; assign biological labels only with marker context."])
 

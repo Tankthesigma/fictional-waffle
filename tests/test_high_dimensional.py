@@ -23,6 +23,7 @@ def test_pca_cluster_review_is_deterministic_and_review_labeled():
 
     assert first.warnings == ["Clusters are exploratory review aids; assign biological labels only with marker context."]
     assert first.embedding[["pc1", "pc2", "cluster"]].round(8).equals(second.embedding[["pc1", "pc2", "cluster"]].round(8))
+    assert first.embedding["event_index"].tolist() == list(range(len(frame)))
     assert first.clusters["event_count"].sum() == len(frame)
     assert set(first.clusters["cluster"]) == {0, 1}
 
