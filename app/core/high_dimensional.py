@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import logging
+import threading
 
 import numpy as np
 import pandas as pd
@@ -10,6 +11,7 @@ from app.core.downsample import downsample_events
 from app.models.sample import SampleRecord
 
 logger = logging.getLogger(__name__)
+_UMAP_LOCK = threading.Lock()
 
 
 @dataclass(slots=True)
@@ -129,13 +131,14 @@ def _embed_events(scaled: np.ndarray, *, reducer: str, random_state: int) -> tup
             import umap  # type: ignore
 
             n_neighbors = max(2, min(15, len(scaled) - 1))
-            embedding = umap.UMAP(
-                n_components=2,
-                n_neighbors=n_neighbors,
-                min_dist=0.12,
-                metric="euclidean",
-                random_state=random_state,
-            ).fit_transform(scaled)
+            with _UMAP_LOCK:
+                embedding = umap.UMAP(
+                    n_components=2,
+                    n_neighbors=n_neighbors,
+                    min_dist=0.12,
+                    metric="euclidean",
+                    random_state=random_state,
+                ).fit_transform(scaled)
             return np.asarray(embedding, dtype=float), "umap", []
         except Exception as exc:
             logger.exception("UMAP embedding failed; falling back to PCA")
