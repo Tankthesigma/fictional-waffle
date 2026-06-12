@@ -105,6 +105,23 @@ def test_scatter_graph_gate_overlay_respects_raw_vs_compensated_views():
     assert "metadata compensated events" in compensated_fig.layout.title.text
 
 
+def test_scatter_graph_draws_polygon_gate_overlay():
+    sample = _synthetic_flow_sample(n_events=5_000)
+    gate = GateDefinition(
+        gate_id="poly",
+        name="Drawn polygon",
+        gate_type="polygon",
+        channels=["FSC-A", "SSC-A"],
+        vertices=[(45_000, 20_000), (85_000, 24_000), (72_000, 48_000)],
+    )
+
+    fig = scatter_figure(sample, "FSC-A", "SSC-A", gates=[gate])
+
+    assert len(fig.layout.shapes) == 1
+    assert fig.layout.shapes[0].type == "path"
+    assert fig.layout.annotations[0].text == "Drawn polygon"
+
+
 def test_density_plot_mode_uses_2d_bins_and_gate_overlay():
     sample = _synthetic_flow_sample(n_events=90_000)
     gate = GateDefinition(

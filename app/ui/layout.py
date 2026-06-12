@@ -11,6 +11,7 @@ def build_layout():
             dcc.Store(id="sample-ids-store", data=[]),
             dcc.Store(id="selected-sample-store"),
             dcc.Store(id="analysis-revision-store", data=0),
+            dcc.Store(id="last-drawn-gate-store"),
             header(),
             html.Main(
                 [
@@ -227,7 +228,14 @@ def explore_tab():
     return html.Div(
         [
             html.Div(id="plot-context-bar", className="plot-context-bar"),
-            dcc.Graph(id="scatter-graph", config={"displayModeBar": True}, className="analysis-graph primary-graph"),
+            dcc.Graph(
+                id="scatter-graph",
+                config={
+                    "displayModeBar": True,
+                    "modeBarButtonsToAdd": ["drawrect", "drawclosedpath", "eraseshape"],
+                },
+                className="analysis-graph primary-graph",
+            ),
             dcc.Graph(id="histogram-graph", config={"displayModeBar": True}, className="analysis-graph"),
             html.Div(id="channel-badge-rail", className="channel-badge-rail"),
             card(

@@ -65,3 +65,24 @@ def apply_transform(
         except Exception as exc:  # pragma: no cover - depends on optional compiled package API
             raise ValueError("logicle transform is unavailable in this environment") from exc
     raise ValueError(f"unsupported transform: {transform}")
+
+
+def invert_transform(
+    values: np.ndarray | pd.Series | list[float],
+    transform: str = "raw",
+    *,
+    cofactor: float = 150.0,
+) -> np.ndarray:
+    """Map display coordinates back to raw event coordinates for gate storage."""
+    arr = np.asarray(values, dtype=float)
+    if transform in {"raw", "linear"}:
+        return arr
+    if transform in {"log", "log10", "safe_log10"}:
+        return np.power(10.0, arr)
+    if transform == "arcsinh":
+        if cofactor <= 0:
+            raise ValueError("cofactor must be positive")
+        return np.sinh(arr) * cofactor
+    if transform == "logicle":
+        raise ValueError("drawn gates cannot be converted from logicle display yet; use raw, log10, or arcsinh")
+    raise ValueError(f"unsupported transform: {transform}")

@@ -105,7 +105,7 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 - Fluorescence histogram overlays.
 - Raw, safe log10, arcsinh, and optional logicle display transforms.
 - Metadata-driven compensation view toggle for FCS files with usable `$SPILL`/`$SPILLOVER` matrices.
-- Rectangle gates, histogram range gates, gate JSON save/load, parent-ready gate model, and statistics.
+- Interactive on-plot rectangle/polygon drawing, rectangle gates, histogram range gates, gate JSON save/load, parent-ready gate model, and statistics.
 - Project JSON save/load for metadata, file references, gates, QC, transform settings, comparison settings, and report selections.
 - Rule-based QC dashboard with review-needed language.
 - Batch tables, event count chart, median fluorescence table, and exploratory control-vs-treated comparison.

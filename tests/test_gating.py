@@ -5,7 +5,9 @@ from app.core.gating import (
     apply_gate,
     apply_gate_tree,
     delete_gate,
+    drawn_shape_gate,
     histogram_range_gate,
+    latest_drawn_shape,
     load_gates,
     rectangle_gate,
     rename_gate,
@@ -45,6 +47,64 @@ def test_histogram_range_gate_membership():
     mask = apply_gate(events, gate)
 
     assert mask.tolist() == [False, True, True, False]
+
+
+def test_drawn_rectangle_shape_becomes_raw_review_gate():
+    relayout = {"shapes": [{"type": "rect", "x0": 1.0, "x1": 2.0, "y0": 3.0, "y1": 4.0}]}
+
+    gate, signature = drawn_shape_gate(
+        relayout,
+        gate_id="drawn",
+        name="drawn gate",
+        x_channel="FSC-A",
+        y_channel="SSC-A",
+        transform="raw",
+    )
+
+    assert gate is not None
+    assert signature is not None
+    assert gate.gate_type == "rectangle"
+    assert gate.review_status == "review_needed"
+    assert gate.bounds == {"x_min": 1.0, "x_max": 2.0, "y_min": 3.0, "y_max": 4.0}
+    assert "drawn on plot" in gate.metadata["drawn_gate"]
+
+
+def test_drawn_shape_inverts_display_transform_for_storage():
+    relayout = {"shapes": [{"type": "rect", "x0": 0.0, "x1": 2.0, "y0": 0.0, "y1": 1.0}]}
+
+    gate, _signature = drawn_shape_gate(
+        relayout,
+        gate_id="drawn",
+        name="drawn gate",
+        x_channel="FL1-A",
+        y_channel="SSC-A",
+        transform="safe_log10",
+    )
+
+    assert gate is not None
+    assert gate.bounds["x_min"] == 1.0
+    assert gate.bounds["x_max"] == 100.0
+    assert gate.bounds["y_min"] == 1.0
+    assert gate.bounds["y_max"] == 10.0
+
+
+def test_drawn_closed_path_shape_becomes_polygon_gate():
+    relayout = {"shapes[0].type": "path", "shapes[0].path": "M 1,1 L 5,1 L 3,4 Z"}
+
+    gate, signature = drawn_shape_gate(
+        relayout,
+        gate_id="poly",
+        name="drawn polygon",
+        x_channel="FSC-A",
+        y_channel="SSC-A",
+        transform="raw",
+    )
+
+    assert latest_drawn_shape(relayout)["type"] == "path"
+    assert gate is not None
+    assert signature is not None
+    assert gate.gate_type == "polygon"
+    assert gate.vertices == [(1.0, 1.0), (5.0, 1.0), (3.0, 4.0)]
 
 
 def test_child_gate_is_constrained_even_when_listed_before_parent():

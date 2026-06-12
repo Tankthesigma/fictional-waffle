@@ -306,6 +306,74 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         selected_gate = manage_gate_id if manage_gate_id in {gate.gate_id for gate in session.gates} else (options[0]["value"] if options else None)
         return gate_to_table(session.gates), stats, table_columns(stats_columns), status, options, selected_gate, _gate_stack_cards(session.gates, stats)
 
+    @app.callback(
+        Output("gate-table", "data", allow_duplicate=True),
+        Output("gate-stats-table", "data", allow_duplicate=True),
+        Output("gate-stats-table", "columns", allow_duplicate=True),
+        Output("gate-status", "children", allow_duplicate=True),
+        Output("manage-gate-id", "options", allow_duplicate=True),
+        Output("manage-gate-id", "value", allow_duplicate=True),
+        Output("gate-stack-cards", "children", allow_duplicate=True),
+        Output("last-drawn-gate-store", "data"),
+        Input("scatter-graph", "relayoutData"),
+        State("selected-sample-store", "data"),
+        State("x-channel", "value"),
+        State("y-channel", "value"),
+        State("transform", "value"),
+        State("cofactor", "value"),
+        State("compensation-enabled", "value"),
+        State("last-drawn-gate-store", "data"),
+        prevent_initial_call=True,
+    )
+    def add_drawn_plot_gate(relayout_data, sample_id, x_channel, y_channel, transform, cofactor, compensation_enabled, last_signature):
+        from app.core.gating import drawn_shape_gate, gate_to_table, latest_drawn_shape, shape_signature
+        from app.core.plotting import _resolve_display_transform
+
+        shape = latest_drawn_shape(relayout_data)
+        if shape is None:
+            return no_update, no_update, no_update, no_update, no_update, no_update, no_update, last_signature
+        signature = shape_signature(shape)
+        if signature == last_signature:
+            return no_update, no_update, no_update, no_update, no_update, no_update, no_update, last_signature
+
+        sample = session.selected_sample(sample_id)
+        if sample is None:
+            return no_update, no_update, no_update, "Upload and select a sample before drawing a gate.", no_update, no_update, no_update, signature
+
+        use_compensation = _is_compensation_on(compensation_enabled) and sample.compensated_events is not None
+        display_transform, _warnings = _resolve_display_transform(sample, transform or "raw", use_compensation)
+        try:
+            gate, _shape_signature = drawn_shape_gate(
+                relayout_data,
+                gate_id=uuid4().hex[:8],
+                name=f"Drawn plot gate {len(session.gates) + 1}",
+                x_channel=x_channel,
+                y_channel=y_channel,
+                transform=display_transform,
+                cofactor=float(cofactor or 150),
+            )
+        except Exception as exc:
+            return no_update, no_update, no_update, f"Drawn gate could not be created: {exc}", no_update, no_update, no_update, signature
+        if gate is None:
+            return no_update, no_update, no_update, "Draw a rectangle or closed polygon on the scatter plot to create a gate.", no_update, no_update, no_update, signature
+
+        gate.metadata["event_view"] = "metadata_compensated" if use_compensation else "raw"
+        gate.metadata["source_sample_id"] = sample.sample_id
+        session.gates.append(gate)
+        stats = _stats_for_sample(session, sample_id, compensation_enabled)
+        stats_columns = _columns_from_rows(stats, ["gate_name", "parent_gate", "channel_labels", "channels", "event_count", "percent_total", "percent_parent"])
+        options = _gate_options(session.gates)
+        return (
+            gate_to_table(session.gates),
+            stats,
+            table_columns(stats_columns),
+            f"Added review-needed {gate.gate_type} gate from plot drawing: {gate.name}. Review/edit before relying on final statistics.",
+            options,
+            gate.gate_id,
+            _gate_stack_cards(session.gates, stats),
+            signature,
+        )
+
 
 def _columns_from_rows(rows: list[dict[str, object]], preferred: list[str]) -> list[str]:
     seen = list(preferred)
@@ -322,6 +390,26 @@ def _is_compensation_on(value) -> bool:
 
 def _gate_options(gates):
     return [{"label": f"{gate.name} ({gate.gate_id})", "value": gate.gate_id} for gate in gates]
+
+
+def _stats_for_sample(session: WorkbenchSession, sample_id: str | None, compensation_enabled) -> list[dict[str, object]]:
+    sample = session.selected_sample(sample_id)
+    if sample is None:
+        return []
+    from app.core.channel_labels import channel_label_map
+    from app.core.compensation import event_view
+    from app.core.gating import apply_gate_tree
+    from app.core.stats import gate_statistics
+
+    use_compensation = _is_compensation_on(compensation_enabled) and sample.compensated_events is not None
+    events = event_view(sample, use_compensation)
+    compatible_gates = [
+        gate
+        for gate in session.gates
+        if gate.metadata.get("event_view", "raw") == ("metadata_compensated" if use_compensation else "raw")
+    ]
+    masks = apply_gate_tree(events, compatible_gates)
+    return gate_statistics(events, compatible_gates, masks, sample.fluorescence_channels, channel_label_map([sample]))
 
 
 def _gate_stack_cards(gates, stats: list[dict[str, object]]):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +9,7 @@ import numpy as np
 import pandas as pd
 
 from app.core.channel_inference import best_scatter_pair
+from app.core.transforms import invert_transform
 from app.models.channel import ChannelSummary
 from app.models.gate import GateDefinition
 
@@ -53,6 +55,74 @@ def histogram_range_gate(
         parent_id=parent_id,
         bounds={"min": minimum, "max": maximum},
     )
+
+
+def drawn_shape_gate(
+    relayout_data: dict[str, Any] | None,
+    *,
+    gate_id: str,
+    name: str,
+    x_channel: str | None,
+    y_channel: str | None,
+    transform: str = "raw",
+    cofactor: float = 150.0,
+) -> tuple[GateDefinition | None, str | None]:
+    """Convert the latest Plotly-drawn shape into a review-needed gate."""
+    if not x_channel or not y_channel:
+        raise ValueError("choose X and Y channels before drawing a gate")
+    shape = latest_drawn_shape(relayout_data)
+    if shape is None:
+        return None, None
+    shape_type = str(shape.get("type", "")).lower()
+    if shape_type == "rect":
+        x0, x1 = _raw_pair(shape.get("x0"), shape.get("x1"), transform, cofactor)
+        y0, y1 = _raw_pair(shape.get("y0"), shape.get("y1"), transform, cofactor)
+        gate = rectangle_gate(gate_id, name, x_channel, y_channel, min(x0, x1), max(x0, x1), min(y0, y1), max(y0, y1))
+        gate.review_status = "review_needed"
+        gate.metadata["drawn_gate"] = "rectangle drawn on plot; review/edit before relying on final statistics"
+        return gate, shape_signature(shape)
+    if shape_type == "path":
+        vertices = _path_vertices(str(shape.get("path", "")), transform, cofactor)
+        if len(vertices) < 3:
+            raise ValueError("drawn polygon needs at least three points")
+        gate = GateDefinition(
+            gate_id=gate_id,
+            name=name,
+            gate_type="polygon",
+            channels=[x_channel, y_channel],
+            vertices=vertices,
+            review_status="review_needed",
+            metadata={"drawn_gate": "polygon drawn on plot; review/edit before relying on final statistics"},
+        )
+        return gate, shape_signature(shape)
+    return None, None
+
+
+def latest_drawn_shape(relayout_data: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Return the newest user-drawn Plotly shape from relayoutData."""
+    if not isinstance(relayout_data, dict):
+        return None
+    shapes = relayout_data.get("shapes")
+    if isinstance(shapes, list) and shapes:
+        shape = shapes[-1]
+        return dict(shape) if isinstance(shape, dict) else None
+    indexed: dict[int, dict[str, Any]] = {}
+    for key, value in relayout_data.items():
+        match = re.fullmatch(r"shapes\[(\d+)\]\.(.+)", str(key))
+        if not match:
+            continue
+        index = int(match.group(1))
+        field = match.group(2)
+        indexed.setdefault(index, {})[field] = value
+    if not indexed:
+        return None
+    return indexed[max(indexed)]
+
+
+def shape_signature(shape: dict[str, Any]) -> str:
+    """Build a stable signature so one drawn shape is not added repeatedly."""
+    keys = ("type", "x0", "x1", "y0", "y1", "path")
+    return json.dumps({key: shape.get(key) for key in keys if key in shape}, sort_keys=True, default=str)
 
 
 def suggest_candidate_gates(events: pd.DataFrame, channels: list[ChannelSummary], id_prefix: str = "candidate") -> list[GateDefinition]:
@@ -337,6 +407,24 @@ def _quantile_rectangle(
     gate.review_status = "review_needed"
     gate.metadata["candidate"] = "review needed; disabled until accepted"
     return gate
+
+
+def _raw_pair(value_a: Any, value_b: Any, transform: str, cofactor: float) -> tuple[float, float]:
+    raw = invert_transform([float(value_a), float(value_b)], transform, cofactor=cofactor)
+    return float(raw[0]), float(raw[1])
+
+
+def _path_vertices(path: str, transform: str, cofactor: float) -> list[tuple[float, float]]:
+    pairs = re.findall(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?\s*,\s*[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?", path)
+    display_vertices: list[tuple[float, float]] = []
+    for pair in pairs:
+        x_text, y_text = pair.split(",", maxsplit=1)
+        display_vertices.append((float(x_text), float(y_text)))
+    if not display_vertices:
+        return []
+    x_values = invert_transform([vertex[0] for vertex in display_vertices], transform, cofactor=cofactor)
+    y_values = invert_transform([vertex[1] for vertex in display_vertices], transform, cofactor=cofactor)
+    return [(float(x), float(y)) for x, y in zip(x_values, y_values, strict=False)]
 
 
 def _singlet_pair(channels: list[ChannelSummary]) -> tuple[str, str] | None:

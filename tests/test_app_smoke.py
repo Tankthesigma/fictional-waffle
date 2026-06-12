@@ -15,12 +15,18 @@ def test_app_registers_expected_callbacks():
     assert any("gate-stats-table.columns" in key for key in dash_app.callback_map)
 
 
-def test_layout_does_not_offer_unwired_draw_gate_tools():
+def test_layout_offers_wired_draw_gate_tools():
     dash_app = create_app()
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
-    assert "drawrect" not in layout_json
-    assert "eraseshape" not in layout_json
+    assert "last-drawn-gate-store" in layout_json
+    assert "drawrect" in layout_json
+    assert "drawclosedpath" in layout_json
+    assert "eraseshape" in layout_json
+    assert any(
+        any(item.get("id") == "scatter-graph" and item.get("property") == "relayoutData" for item in callback.get("inputs", []))
+        for callback in dash_app.callback_map.values()
+    )
 
 
 def test_repeated_shell_disclaimer_is_not_rendered():

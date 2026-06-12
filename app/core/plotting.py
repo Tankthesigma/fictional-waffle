@@ -94,13 +94,16 @@ def scatter_figure(
             )
         )
     for gate in gates or []:
-        if not gate.enabled or gate.gate_type != "rectangle" or gate.channels[:2] != [x_channel, y_channel]:
+        if not gate.enabled or gate.channels[:2] != [x_channel, y_channel]:
             continue
         gate_view = gate.metadata.get("event_view", "raw")
         current_view = "metadata_compensated" if use_compensation and getattr(sample, "compensated_events", None) is not None else "raw"
         if gate_view != current_view:
             continue
-        _add_rectangle_shape(fig, gate, display_transform, cofactor)
+        if gate.gate_type == "rectangle":
+            _add_rectangle_shape(fig, gate, display_transform, cofactor)
+        elif gate.gate_type == "polygon":
+            _add_polygon_shape(fig, gate, display_transform, cofactor)
     _add_transform_warnings(fig, transform_warnings)
     layout = dict(
         template="plotly_white",
@@ -267,6 +270,31 @@ def _add_rectangle_shape(fig, gate: GateDefinition, transform: str, cofactor: fl
     y0, y1 = apply_transform([bounds["y_min"], bounds["y_max"]], transform, cofactor=cofactor)
     fig.add_shape(type="rect", x0=x0, x1=x1, y0=y0, y1=y1, line=dict(color="#0f766e", width=2), fillcolor="rgba(15,118,110,0.08)")
     fig.add_annotation(x=x1, y=y1, text=gate.name, showarrow=False, bgcolor="rgba(255,255,255,0.8)", font=dict(size=11, color="#0f172a"))
+
+
+def _add_polygon_shape(fig, gate: GateDefinition, transform: str, cofactor: float) -> None:
+    if len(gate.vertices) < 3:
+        return
+    x_values, y_values = zip(*gate.vertices, strict=False)
+    x_display = apply_transform(x_values, transform, cofactor=cofactor)
+    y_display = apply_transform(y_values, transform, cofactor=cofactor)
+    path_parts = [f"M {x_display[0]},{y_display[0]}"]
+    path_parts.extend(f"L {x},{y}" for x, y in zip(x_display[1:], y_display[1:], strict=False))
+    path_parts.append("Z")
+    fig.add_shape(
+        type="path",
+        path=" ".join(path_parts),
+        line=dict(color="#0f766e", width=2),
+        fillcolor="rgba(15,118,110,0.08)",
+    )
+    fig.add_annotation(
+        x=float(x_display[-1]),
+        y=float(y_display[-1]),
+        text=gate.name,
+        showarrow=False,
+        bgcolor="rgba(255,255,255,0.8)",
+        font=dict(size=11, color="#0f172a"),
+    )
 
 
 def _channel_label(sample: SampleRecord, raw_name: str) -> str:

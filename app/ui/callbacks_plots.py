@@ -177,7 +177,7 @@ def _visible_gate_count(gates, x_channel: str | None, y_channel: str | None, use
         1
         for gate in gates
         if gate.enabled
-        and gate.gate_type == "rectangle"
+        and gate.gate_type in {"rectangle", "polygon"}
         and gate.channels[:2] == [x_channel, y_channel]
         and gate.metadata.get("event_view", "raw") == current_view
     )
