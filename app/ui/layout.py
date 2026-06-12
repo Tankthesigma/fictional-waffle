@@ -501,6 +501,13 @@ def ask_flow_tab():
                         className="ask-input",
                     ),
                     html.Button("Ask", id="ask-flow-button", n_clicks=0, className="primary"),
+                    dcc.Loading(
+                        id="ask-flow-loading",
+                        type="circle",
+                        color="#0f766e",
+                        delay_show=150,
+                        children=html.Div(id="ask-flow-loading-anchor", className="ask-loading-anchor"),
+                    ),
                     html.Div(
                         [
                             html.Span("Safe actions:"),
@@ -513,7 +520,13 @@ def ask_flow_tab():
                         ],
                         className="agent-action-strip",
                     ),
-                    html.Div(id="ask-flow-answer", className="assistant-answer"),
+                    dcc.Loading(
+                        id="ask-flow-answer-loading",
+                        type="default",
+                        color="#0f766e",
+                        delay_show=150,
+                        children=html.Div(id="ask-flow-answer", className="assistant-answer"),
+                    ),
                 ],
             )
         ]

@@ -1246,6 +1246,15 @@ button:hover {
   border-color: #99f6e4;
 }
 
+.ask-loading-anchor {
+  min-height: 4px;
+}
+
+#ask-flow-loading .dash-spinner,
+#ask-flow-answer-loading .dash-spinner {
+  color: var(--accent) !important;
+}
+
 .ask-briefing {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -1357,6 +1366,37 @@ button:hover {
   color: var(--muted);
   font-size: 11px;
   line-height: 1.3;
+}
+
+#ask-flow-answer-loading[data-dash-is-loading="true"] {
+  position: relative;
+  min-height: 96px;
+  border: 1px dashed #99f6e4;
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgba(240, 253, 250, 0.15), rgba(204, 251, 241, 0.65), rgba(240, 253, 250, 0.15));
+  background-size: 220% 100%;
+  animation: ask-flow-sheen 1.15s ease-in-out infinite;
+}
+
+#ask-flow-answer-loading[data-dash-is-loading="true"]::after {
+  content: "Ask Flow is working...";
+  position: absolute;
+  left: 18px;
+  bottom: 14px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+@keyframes ask-flow-sheen {
+  0% {
+    background-position: 0 0;
+  }
+
+  100% {
+    background-position: 220% 0;
+  }
 }
 
 .assistant-answer {

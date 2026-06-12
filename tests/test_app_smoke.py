@@ -135,6 +135,8 @@ def test_ask_flow_briefing_is_rendered_and_wired():
     assert "Suggested Analysis Plan" in layout_json
     assert "ask-flow-agent-status" in layout_json
     assert "Safe actions:" in layout_json
+    assert "ask-flow-loading" in layout_json
+    assert "ask-flow-answer-loading" in layout_json
     assert any("ask-flow-briefing.children" in key for key in dash_app.callback_map)
     assert any("ask-flow-plan.children" in key for key in dash_app.callback_map)
     assert any("ask-flow-agent-status.children" in key for key in dash_app.callback_map)
