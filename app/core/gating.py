@@ -18,7 +18,7 @@ from app.models.gate import GateDefinition
 logger = logging.getLogger(__name__)
 
 
-SUPPORTED_GATE_TYPES = {"rectangle", "histogram_range", "polygon", "ellipse", "quadrant", "bi_range"}
+SUPPORTED_GATE_TYPES = {"rectangle", "histogram_range", "polygon", "ellipse", "quadrant", "bi_range", "boolean"}
 
 
 def rectangle_gate(
@@ -138,6 +138,32 @@ def quadrant_gates(
         )
         for quadrant, quadrant_name in quadrants
     ]
+
+
+def boolean_gate(
+    gate_id: str,
+    name: str,
+    operation: str,
+    operand_gate_ids: list[str],
+    parent_id: str | None = None,
+) -> GateDefinition:
+    """Create a boolean gate combining existing gate masks."""
+    normalized = operation.strip().upper()
+    if normalized not in {"AND", "OR", "NOT"}:
+        raise ValueError("boolean operation must be AND, OR, or NOT")
+    operands = [gate_id for gate_id in operand_gate_ids if gate_id]
+    if normalized in {"AND", "OR"} and len(operands) < 2:
+        raise ValueError(f"{normalized} boolean gates need two operands")
+    if normalized == "NOT" and len(operands) < 1:
+        raise ValueError("NOT boolean gates need one operand")
+    return GateDefinition(
+        gate_id=gate_id,
+        name=name,
+        gate_type="boolean",
+        channels=[],
+        parent_id=parent_id,
+        metadata={"operation": normalized, "operand_gate_ids": operands[:2] if normalized in {"AND", "OR"} else operands[:1]},
+    )
 
 
 def drawn_shape_gate(
@@ -430,7 +456,10 @@ def apply_gate_tree(events: pd.DataFrame, gates: list[GateDefinition]) -> dict[s
                 return masks[gate.gate_id]
             parent_mask = resolve(parent, [*stack, gate.gate_id])
         try:
-            masks[gate.gate_id] = apply_gate(events, gate, parent_mask=parent_mask)
+            if gate.gate_type == "boolean":
+                masks[gate.gate_id] = _apply_boolean_gate(events, gate, gate_map, resolve, parent_mask, [*stack, gate.gate_id])
+            else:
+                masks[gate.gate_id] = apply_gate(events, gate, parent_mask=parent_mask)
         except Exception as exc:
             logger.exception("Gate %s could not be applied", gate.gate_id)
             gate.metadata["mask_warning"] = f"gate could not be applied: {exc}"
@@ -441,6 +470,39 @@ def apply_gate_tree(events: pd.DataFrame, gates: list[GateDefinition]) -> dict[s
     for gate in gates:
         resolve(gate, [])
     return masks
+
+
+def _apply_boolean_gate(
+    events: pd.DataFrame,
+    gate: GateDefinition,
+    gate_map: dict[str, GateDefinition],
+    resolve,
+    parent_mask: np.ndarray | None,
+    stack: list[str],
+) -> np.ndarray:
+    operation = str(gate.metadata.get("operation", "")).upper()
+    operand_ids = [str(gate_id) for gate_id in gate.metadata.get("operand_gate_ids", []) if str(gate_id)]
+    if operation not in {"AND", "OR", "NOT"}:
+        gate.metadata["mask_warning"] = f"unsupported boolean operation: {operation or 'missing'}"
+        return np.zeros(len(events), dtype=bool)
+    required = 1 if operation == "NOT" else 2
+    if len(operand_ids) < required:
+        gate.metadata["mask_warning"] = f"{operation} boolean gate needs {required} operand gate(s)"
+        return np.zeros(len(events), dtype=bool)
+    missing = [gate_id for gate_id in operand_ids[:required] if gate_id not in gate_map]
+    if missing:
+        gate.metadata["mask_warning"] = f"missing boolean operand gate(s): {', '.join(missing)}"
+        return np.zeros(len(events), dtype=bool)
+
+    base = np.ones(len(events), dtype=bool) if parent_mask is None else parent_mask.copy()
+    operand_masks = [resolve(gate_map[gate_id], stack) for gate_id in operand_ids[:required]]
+    if operation == "AND":
+        current = operand_masks[0] & operand_masks[1]
+    elif operation == "OR":
+        current = operand_masks[0] | operand_masks[1]
+    else:
+        current = base & ~operand_masks[0]
+    return base & current
 
 
 def save_gates(gates: list[GateDefinition], path: str | Path) -> Path:
@@ -501,13 +563,21 @@ def gate_to_table(gates: list[GateDefinition]) -> list[dict[str, Any]]:
             "name": gate.name,
             "type": gate.gate_type,
             "parent": gate.parent_id or "total",
-            "channels": ", ".join(gate.channels),
+            "channels": _gate_channel_label(gate),
             "status": "candidate - review needed" if gate.candidate else "user-defined",
             "enabled": "yes" if gate.enabled else "no",
             "notes": gate.metadata.get("candidate_reason") or gate.metadata.get("mask_warning", ""),
         }
         for gate in gates
     ]
+
+
+def _gate_channel_label(gate: GateDefinition) -> str:
+    if gate.gate_type == "boolean":
+        operation = str(gate.metadata.get("operation", "boolean")).upper()
+        operands = ", ".join(str(item) for item in gate.metadata.get("operand_gate_ids", []))
+        return f"{operation}: {operands}" if operands else operation
+    return ", ".join(gate.channels)
 
 
 def _quantile_rectangle(

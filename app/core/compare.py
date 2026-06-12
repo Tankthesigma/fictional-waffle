@@ -56,6 +56,7 @@ def batch_gate_statistics_table(samples: list[SampleRecord], gates, use_compensa
         for row in gate_statistics(events, compatible, masks, sample.fluorescence_channels):
             rows.append(
                 {
+                    "gate_id": row.get("gate_id"),
                     "sample_id": sample.sample_id,
                     "condition": sample.condition or "",
                     "replicate": sample.replicate or "",
@@ -68,6 +69,32 @@ def batch_gate_statistics_table(samples: list[SampleRecord], gates, use_compensa
                 }
             )
     return rows
+
+
+def population_frequency_table(samples: list[SampleRecord], gates, use_compensation: bool = False) -> list[dict[str, object]]:
+    """Return a population-by-sample percent-parent matrix for cohort review."""
+    if not samples or not gates:
+        return []
+    rows_by_gate: dict[str, dict[str, object]] = {}
+    for sample in samples:
+        events = event_view(sample, use_compensation)
+        view_name = "metadata_compensated" if use_compensation and sample.compensated_events is not None else "raw"
+        compatible = [gate for gate in gates if gate.metadata.get("event_view", "raw") == view_name]
+        masks = apply_gate_tree(events, compatible)
+        for row in gate_statistics(events, compatible, masks, sample.fluorescence_channels):
+            gate_id = str(row.get("gate_id") or row.get("gate_name"))
+            frequency_row = rows_by_gate.setdefault(
+                gate_id,
+                {
+                    "population": row.get("gate_name"),
+                    "gate_id": gate_id,
+                    "parent_gate": row.get("parent_gate"),
+                    "gate_warning": row.get("gate_warning", ""),
+                },
+            )
+            frequency_row[sample.sample_id] = row.get("percent_parent")
+            frequency_row[f"{sample.sample_id}_count"] = row.get("event_count")
+    return list(rows_by_gate.values())
 
 
 def compare_control_treated(

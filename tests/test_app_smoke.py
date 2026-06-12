@@ -83,6 +83,10 @@ def test_gate_manager_controls_are_rendered():
     assert "rename-gate" in layout_json
     assert "toggle-gate" in layout_json
     assert "delete-gate" in layout_json
+    assert "add-boolean-gate" in layout_json
+    assert "boolean-gate-a" in layout_json
+    assert "boolean-gate-b" in layout_json
+    assert any("boolean-gate-a.options" in key for key in dash_app.callback_map)
 
 
 def test_analysis_template_controls_are_rendered_and_wired():
@@ -110,11 +114,15 @@ def test_compare_summary_container_is_rendered():
     assert "compare-summary-cards" in layout_json
     assert "compare-insights" in layout_json
     assert "comparison-delta-chart" in layout_json
+    assert "batch-apply-gates" in layout_json
+    assert "population-frequency-table" in layout_json
+    assert "export-population-frequency-csv" in layout_json
     assert any("grouping-readiness-summary.children" in key for key in dash_app.callback_map)
     assert "manifest-template-download.data" in dash_app.callback_map
     assert any("comparison-delta-chart.figure" in key for key in dash_app.callback_map)
     assert any("compare-insights.children" in key for key in dash_app.callback_map)
     assert any("control-group.options" in key for key in dash_app.callback_map)
+    assert any("population-frequency-table.columns" in key for key in dash_app.callback_map)
 
 
 def test_qc_review_lanes_are_rendered_and_wired():

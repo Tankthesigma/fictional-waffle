@@ -28,6 +28,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         Input("add-quadrant-gates", "n_clicks"),
         Input("add-ellipse-gate", "n_clicks"),
         Input("add-birange-gate", "n_clicks"),
+        Input("add-boolean-gate", "n_clicks"),
         Input("suggest-candidate-gates", "n_clicks"),
         Input("ai-auto-gate-clusters", "n_clicks"),
         Input("accept-candidate-gates", "n_clicks"),
@@ -71,6 +72,10 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         State("birange-x-max", "value"),
         State("birange-y-min", "value"),
         State("birange-y-max", "value"),
+        State("boolean-gate-name", "value"),
+        State("boolean-operation", "value"),
+        State("boolean-gate-a", "value"),
+        State("boolean-gate-b", "value"),
         State("manage-gate-id", "value"),
         State("manage-gate-name", "value"),
         State("compensation-enabled", "value"),
@@ -84,6 +89,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         add_quadrant_clicks,
         add_ellipse_clicks,
         add_birange_clicks,
+        add_boolean_clicks,
         suggest_clicks,
         ai_auto_gate_clicks,
         accept_clicks,
@@ -127,6 +133,10 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         birange_x_max,
         birange_y_min,
         birange_y_max,
+        boolean_gate_name,
+        boolean_operation,
+        boolean_gate_a,
+        boolean_gate_b,
         manage_gate_id,
         manage_gate_name,
         compensation_enabled,
@@ -305,6 +315,32 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
             gate.review_status = "review_needed"
             session.gates.append(gate)
             status = f"Added review-needed bi-range gate: {gate.name}."
+        elif action == "add-boolean-gate":
+            from app.core.gating import boolean_gate
+
+            operation = str(boolean_operation or "AND").upper()
+            operands = [gate_id for gate_id in [boolean_gate_a, boolean_gate_b] if gate_id]
+            if operation == "NOT":
+                operands = operands[:1]
+            if (operation in {"AND", "OR"} and len(operands) < 2) or (operation == "NOT" and not operands):
+                return no_update, no_update, no_update, "Choose the required operand gate(s) before adding a boolean gate.", no_update, no_update, no_update
+            try:
+                gate = boolean_gate(
+                    uuid4().hex[:8],
+                    boolean_gate_name or "Boolean population",
+                    operation,
+                    operands,
+                    parent_id=_valid_parent_id(session.gates, manage_gate_id),
+                )
+            except ValueError as exc:
+                return no_update, no_update, no_update, f"Boolean gate was not added: {exc}", no_update, no_update, no_update
+            sample = session.selected_sample(sample_id)
+            use_compensation = _is_compensation_on(compensation_enabled) and sample is not None and sample.compensated_events is not None
+            gate.metadata["event_view"] = "metadata_compensated" if use_compensation else "raw"
+            gate.review_status = "review_needed"
+            session.gates.append(gate)
+            operand_text = f" {operation} ".join(operands) if operation != "NOT" else f"NOT {operands[0]}"
+            status = f"Added review-needed boolean gate: {gate.name} ({operand_text})."
         elif action == "suggest-candidate-gates":
             from app.core.compensation import event_view
             from app.core.gating import suggest_candidate_gates
@@ -464,6 +500,15 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
         options = _gate_options(session.gates)
         selected_gate = manage_gate_id if manage_gate_id in {gate.gate_id for gate in session.gates} else (options[0]["value"] if options else None)
         return gate_to_table(session.gates), stats, table_columns(stats_columns), status, options, selected_gate, _gate_stack_cards(session.gates, stats)
+
+    @app.callback(
+        Output("boolean-gate-a", "options"),
+        Output("boolean-gate-b", "options"),
+        Input("gate-table", "data"),
+    )
+    def update_boolean_gate_options(_gate_rows):
+        options = _gate_options(session.gates)
+        return options, options
 
     @app.callback(
         Output("gate-table", "data", allow_duplicate=True),

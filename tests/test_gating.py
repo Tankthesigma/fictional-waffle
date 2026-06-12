@@ -5,6 +5,7 @@ import pytest
 from app.core.gating import (
     apply_gate,
     apply_gate_tree,
+    boolean_gate,
     bi_range_gate,
     delete_gate,
     drawn_shape_gate,
@@ -92,6 +93,31 @@ def test_bi_range_gate_membership():
     mask = apply_gate(events, gate)
 
     assert mask.tolist() == [False, True, False]
+
+
+def test_boolean_gate_combines_existing_gate_masks():
+    events = pd.DataFrame({"A": [1, 2, 3, 4], "B": [1, 4, 4, 1]})
+    a_high = rectangle_gate("a_high", "A high", "A", "B", 3, 4, 0, 5)
+    b_high = rectangle_gate("b_high", "B high", "A", "B", 0, 5, 3, 5)
+    both = boolean_gate("both", "A and B", "AND", ["a_high", "b_high"])
+    either = boolean_gate("either", "A or B", "OR", ["a_high", "b_high"])
+    not_a = boolean_gate("not_a", "Not A", "NOT", ["a_high"])
+
+    masks = apply_gate_tree(events, [both, not_a, b_high, either, a_high])
+
+    assert masks["both"].tolist() == [False, False, True, False]
+    assert masks["either"].tolist() == [False, True, True, True]
+    assert masks["not_a"].tolist() == [True, True, False, False]
+
+
+def test_boolean_gate_missing_operand_is_empty_with_warning():
+    events = pd.DataFrame({"A": [1, 2], "B": [1, 2]})
+    gate = boolean_gate("missing", "Missing operand", "AND", ["ghost", "also_ghost"])
+
+    masks = apply_gate_tree(events, [gate])
+
+    assert masks["missing"].tolist() == [False, False]
+    assert "missing boolean operand" in gate.metadata["mask_warning"]
 
 
 def test_drawn_rectangle_shape_becomes_raw_review_gate():

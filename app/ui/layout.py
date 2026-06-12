@@ -498,6 +498,31 @@ def gates_tab():
                         ],
                     ),
                     card(
+                        "Boolean Gate",
+                        [
+                            html.Div("Combine existing gates with AND, OR, or NOT. Boolean gates are review-needed and recomputed across samples.", className="muted"),
+                            html.Div(
+                                [
+                                    dcc.Input(id="boolean-gate-name", type="text", placeholder="Gate name", value="Boolean population"),
+                                    dcc.Dropdown(
+                                        id="boolean-operation",
+                                        value="AND",
+                                        clearable=False,
+                                        options=[
+                                            {"label": "AND", "value": "AND"},
+                                            {"label": "OR", "value": "OR"},
+                                            {"label": "NOT", "value": "NOT"},
+                                        ],
+                                    ),
+                                    dcc.Dropdown(id="boolean-gate-a", options=[], placeholder="First gate", clearable=False),
+                                    dcc.Dropdown(id="boolean-gate-b", options=[], placeholder="Second gate for AND/OR", clearable=True),
+                                    html.Button("Add Boolean Gate", id="add-boolean-gate", n_clicks=0),
+                                ],
+                                className="gate-form",
+                            ),
+                        ],
+                    ),
+                    card(
                         "Gate Manager",
                         [
                             html.Div("Rename, enable/disable, or delete one selected gate. Select a gate here before drawing on the plot to make the new drawn gate a child of it.", className="muted"),
@@ -556,7 +581,9 @@ def compare_tab():
                             html.Label("Treated group"),
                             dcc.Dropdown(id="treated-group", options=[], placeholder="Select treated group", clearable=True),
                             html.Button("Compare Groups", id="compare-button", n_clicks=0, className="primary"),
+                            html.Button("Apply Gates Across Batch", id="batch-apply-gates", n_clicks=0),
                             html.Button("Export Comparison CSV", id="export-comparison-csv", n_clicks=0),
+                            html.Button("Export Population Frequencies CSV", id="export-population-frequency-csv", n_clicks=0),
                         ],
                         className="compare-form",
                     ),
@@ -571,6 +598,7 @@ def compare_tab():
                         "batch-gate-stats-table",
                         ["sample_id", "condition", "replicate", "gate_name", "parent_gate", "event_count", "percent_total", "percent_parent", "gate_warning"],
                     ),
+                    data_table("population-frequency-table", ["population", "parent_gate"], page_size=12),
                     data_table(
                         "comparison-table",
                         [

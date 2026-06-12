@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 
-GateType = Literal["rectangle", "polygon", "histogram_range", "ellipse", "quadrant", "bi_range"]
-SUPPORTED_GATE_TYPES = {"rectangle", "polygon", "histogram_range", "ellipse", "quadrant", "bi_range"}
+GateType = Literal["rectangle", "polygon", "histogram_range", "ellipse", "quadrant", "bi_range", "boolean"]
+SUPPORTED_GATE_TYPES = {"rectangle", "polygon", "histogram_range", "ellipse", "quadrant", "bi_range", "boolean"}
 
 
 @dataclass(slots=True)

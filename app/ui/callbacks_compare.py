@@ -60,6 +60,8 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
         Output("median-table", "columns"),
         Output("batch-gate-stats-table", "data"),
         Output("batch-gate-stats-table", "columns"),
+        Output("population-frequency-table", "data"),
+        Output("population-frequency-table", "columns"),
         Output("comparison-table", "data"),
         Output("compare-status", "children"),
         Output("compare-summary-cards", "children"),
@@ -67,13 +69,25 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
         Output("comparison-delta-chart", "figure"),
         Input("sample-ids-store", "data"),
         Input("compare-button", "n_clicks"),
+        Input("batch-apply-gates", "n_clicks"),
         Input("export-comparison-csv", "n_clicks"),
+        Input("export-population-frequency-csv", "n_clicks"),
         Input("compensation-enabled", "value"),
         Input("control-group", "value"),
         Input("treated-group", "value"),
         Input("gate-table", "data"),
     )
-    def update_compare(_sample_ids, _n_clicks, _export_clicks, compensation_enabled, control_group, treated_group, _gate_rows):
+    def update_compare(
+        _sample_ids,
+        _compare_clicks,
+        _batch_apply_clicks,
+        _export_clicks,
+        _export_frequency_clicks,
+        compensation_enabled,
+        control_group,
+        treated_group,
+        _gate_rows,
+    ):
         from dash import callback_context
         from app.core.compare import (
             batch_gate_statistics_table,
@@ -82,6 +96,7 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
             comparison_insights,
             comparison_summary,
             fluorescence_median_table,
+            population_frequency_table,
         )
         from app.core.export_tables import export_rows_csv
         from app.core.plotting import comparison_delta_chart
@@ -91,6 +106,7 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
         use_compensation = isinstance(compensation_enabled, list) and "on" in compensation_enabled
         medians = fluorescence_median_table(samples, use_compensation=use_compensation)
         batch_gate_rows = batch_gate_statistics_table(samples, session.gates, use_compensation=use_compensation)
+        population_frequency_rows = population_frequency_table(samples, session.gates, use_compensation=use_compensation)
         comparison_rows = []
         status = ""
         if control_group and treated_group:
@@ -105,17 +121,31 @@ def register_compare_callbacks(app, session: WorkbenchSession) -> None:
                 status = f"Exported comparison CSV to {path}."
             else:
                 status = "Choose control and treated groups before exporting comparison results."
+        elif action == "export-population-frequency-csv":
+            if population_frequency_rows:
+                path = export_rows_csv(population_frequency_rows, EXPORT_ROOT / "population-frequency-table.csv")
+                status = f"Exported population frequency CSV to {path}."
+            else:
+                status = "No population frequencies available. Add gates, then apply them across the batch."
+        elif action == "batch-apply-gates":
+            status = (
+                f"Applied {len(session.gates)} gate definition(s) across {len(samples)} sample(s); "
+                f"{len(batch_gate_rows)} gate-stat row(s) and {len(population_frequency_rows)} population row(s) are shown."
+            )
         median_columns = _columns_from_rows(medians, ["sample_id", "condition"])
         batch_gate_columns = _columns_from_rows(
             batch_gate_rows,
             ["sample_id", "condition", "replicate", "gate_name", "parent_gate", "event_count", "percent_total", "percent_parent", "gate_warning"],
         )
+        frequency_columns = _columns_from_rows(population_frequency_rows, ["population", "parent_gate"])
         return (
             batch_table(samples),
             medians,
             table_columns(median_columns),
             batch_gate_rows,
             table_columns(batch_gate_columns),
+            population_frequency_rows,
+            table_columns(frequency_columns),
             comparison_rows,
             status,
             _summary_cards(comparison_summary(comparison_rows)),
