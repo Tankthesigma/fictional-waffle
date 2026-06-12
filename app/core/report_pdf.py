@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 from pathlib import Path
 
 from app import __version__
@@ -11,6 +12,7 @@ from app.models.qc_flag import QCFlag
 from app.models.sample import SampleRecord
 
 DISCLAIMER = REPORT_DISCLAIMER
+logger = logging.getLogger(__name__)
 
 
 def export_pdf_report(
@@ -31,6 +33,7 @@ def export_pdf_report(
         from reportlab.lib.styles import getSampleStyleSheet
         from reportlab.platypus import Image, Paragraph, SimpleDocTemplate, Spacer, Table
     except Exception:
+        logger.exception("ReportLab import failed; writing plain-text report fallback to %s", target)
         target.write_text(_plain_report(samples, qc_flags, gates, gate_stats, title, comparison_rows or []), encoding="utf-8")
         return target
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import logging
 from pathlib import Path
 import shutil
 from uuid import uuid4
@@ -9,6 +10,8 @@ from dash import Input, Output, State, callback_context, html, no_update
 
 from app.core.paths import UPLOAD_ROOT
 from app.core.session_store import WorkbenchSession
+
+logger = logging.getLogger(__name__)
 
 
 def register_upload_callbacks(app, session: WorkbenchSession) -> None:
@@ -104,6 +107,7 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
                 apply_manifest(loaded or session.sample_list(), manifest)
                 messages.append(f"Applied manifest: {manifest_filename}.")
             except Exception as exc:
+                logger.exception("Manifest upload could not be applied: %s", manifest_filename)
                 messages.append(f"Manifest was not applied: {exc}")
 
         if panel_contents and panel_filename:
@@ -113,6 +117,7 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
                 messages.extend(apply_panel_setup(loaded or session.sample_list(), panel))
                 messages.append(f"Applied panel setup: {panel_filename}.")
             except Exception as exc:
+                logger.exception("Panel setup upload could not be applied: %s", panel_filename)
                 messages.append(f"Panel setup was not applied: {exc}")
 
         for sample in loaded:
@@ -126,6 +131,7 @@ def _save_upload(content: str, filename: str, directory: Path) -> Path:
         _header, encoded = content.split(",", 1)
         data = base64.b64decode(encoded, validate=True)
     except Exception as exc:
+        logger.exception("Upload payload for %s was not valid base64 data", filename)
         raise ValueError("upload payload was not valid base64 data") from exc
     safe = Path(filename).name
     target = directory / safe

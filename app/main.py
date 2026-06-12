@@ -11,6 +11,7 @@ if __package__ is None or __package__ == "":
 
 from dash import Dash  # noqa: E402
 
+from app.core.logging_config import configure_logging  # noqa: E402
 from app.core.paths import ensure_runtime_dirs  # noqa: E402
 from app.core.session_store import WorkbenchSession  # noqa: E402
 from app.ui.callbacks import register_callbacks  # noqa: E402
@@ -19,10 +20,13 @@ from app.ui.layout import build_layout  # noqa: E402
 
 def create_app() -> Dash:
     """Create the local Dash app."""
+    configure_logging()
     try:
         import PIL.Image  # noqa: F401
-    except Exception:
-        pass
+    except Exception as exc:
+        import logging
+
+        logging.getLogger(__name__).debug("Optional Pillow import failed during startup: %s", exc)
     ensure_runtime_dirs()
     dash_app = Dash(__name__, title="Ask Flow Workbench", suppress_callback_exceptions=True)
     max_upload_mb = int(os.environ.get("ASK_FLOW_MAX_UPLOAD_MB", "512"))

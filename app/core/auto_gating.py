@@ -43,10 +43,10 @@ def suggest_ai_auto_gates(
     gates remain candidate/review-needed until a human accepts or edits them.
     """
     if sample is None:
-        return AutoGateResult([], [], ["Select a sample before running AI-assisted autogating."])
+        return AutoGateResult([], [], ["Select a sample before running cluster-guided gate review."])
     x_channel, y_channel = _resolve_gate_axes(sample, x_channel, y_channel)
     if not x_channel or not y_channel:
-        return AutoGateResult([], [], ["Choose two plot channels before running AI-assisted autogating."])
+        return AutoGateResult([], [], ["Choose two plot channels before running cluster-guided gate review."])
     if x_channel not in sample.events or y_channel not in sample.events:
         return AutoGateResult([], [], ["Selected plot channels are not available in the sample event table."])
 
@@ -80,7 +80,7 @@ def suggest_ai_auto_gates(
         gate.metadata.update(
             {
                 "event_view": "raw",
-                "candidate_reason": "AI-assisted cluster footprint; review/edit before using final statistics",
+                "candidate_reason": "Cluster-derived footprint; review/edit before using final statistics",
                 "auto_gate": "cluster-derived rectangle on current plot",
                 "embedding": review.reducer,
                 "cluster_id": cluster_id,

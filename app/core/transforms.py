@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 def raw_transform(values: np.ndarray | pd.Series) -> np.ndarray:
@@ -63,6 +66,7 @@ def apply_transform(
             arr = np.asarray(values, dtype=float)
             return logicle(arr, channel_indices=None)
         except Exception as exc:  # pragma: no cover - depends on optional compiled package API
+            logger.exception("Logicle transform failed")
             raise ValueError("logicle transform is unavailable in this environment") from exc
     raise ValueError(f"unsupported transform: {transform}")
 
@@ -89,5 +93,6 @@ def invert_transform(
 
             return logicle_inverse(arr, channel_indices=None)
         except Exception as exc:  # pragma: no cover - depends on optional compiled package API
+            logger.exception("Logicle inverse transform failed")
             raise ValueError("logicle inverse transform is unavailable in this environment") from exc
     raise ValueError(f"unsupported transform: {transform}")

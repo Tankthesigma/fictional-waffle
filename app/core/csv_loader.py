@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pandas as pd
@@ -10,6 +11,7 @@ from app.models.sample import SampleRecord
 
 
 MANIFEST_COLUMNS = ["sample_id", "file_name", "condition", "replicate", "control_type", "notes"]
+logger = logging.getLogger(__name__)
 
 
 def load_csv_file(path: str | Path, sample_id: str | None = None) -> LoadResult:
@@ -20,6 +22,7 @@ def load_csv_file(path: str | Path, sample_id: str | None = None) -> LoadResult:
     try:
         data = pd.read_csv(target)
     except Exception as exc:
+        logger.exception("Could not parse CSV file %s", target)
         return LoadResult(None, [f"Could not parse {target.name}: {exc}"], [])
     if data.empty:
         return LoadResult(None, [f"{target.name} contains no event rows."], [])

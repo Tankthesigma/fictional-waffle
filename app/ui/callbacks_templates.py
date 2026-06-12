@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import logging
 from dash import Input, Output, State, no_update
 
 from app.core.paths import TEMPLATE_PATH
 from app.core.session_store import WorkbenchSession
 from app.ui.components import table_columns
 from app.ui.callbacks_gating import _columns_from_rows, _gate_options, _gate_stack_cards
+
+logger = logging.getLogger(__name__)
 
 
 def register_template_callbacks(app, session: WorkbenchSession) -> None:
@@ -104,6 +107,7 @@ def register_template_callbacks(app, session: WorkbenchSession) -> None:
                 session.gates = gates_from_template(template)
                 applied = apply_template_channel_annotations(session.sample_list(), template)
             except Exception as exc:
+                logger.exception("Analysis template could not be loaded from %s", TEMPLATE_PATH)
                 return _unchanged(f"Analysis template could not be loaded: {exc}", revision)
 
             from app.core.gating import gate_to_table

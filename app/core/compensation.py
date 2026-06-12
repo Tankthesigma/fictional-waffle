@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import logging
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -35,6 +38,7 @@ def parse_spillover(keywords: dict[str, Any]) -> SpilloverInfo | None:
 
         matrix, channels = get_spill(str(value))
     except Exception as exc:
+        logger.exception("Spillover metadata could not be parsed from %s", key)
         return SpilloverInfo(
             keyword=key,
             channels=[],
@@ -71,6 +75,7 @@ def apply_spillover_compensation(events: pd.DataFrame, spillover: SpilloverInfo 
         indices = [int(events.columns.get_loc(channel)) for channel in resolved_channels]
         compensated = compensate(events.to_numpy(dtype=float), spillover.matrix, fluoro_indices=indices)
     except Exception as exc:
+        logger.exception("Spillover compensation could not be applied")
         return None, [f"Could not apply spillover compensation: {exc}"]
     return pd.DataFrame(compensated, columns=events.columns, index=events.index), warnings
 

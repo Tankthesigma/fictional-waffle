@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 from pathlib import Path
 from typing import Any
@@ -12,6 +13,8 @@ from app.core.channel_inference import best_scatter_pair
 from app.core.transforms import invert_transform
 from app.models.channel import ChannelSummary
 from app.models.gate import GateDefinition
+
+logger = logging.getLogger(__name__)
 
 
 SUPPORTED_GATE_TYPES = {"rectangle", "histogram_range", "polygon", "ellipse", "quadrant", "bi_range"}
@@ -428,6 +431,7 @@ def apply_gate_tree(events: pd.DataFrame, gates: list[GateDefinition]) -> dict[s
         try:
             masks[gate.gate_id] = apply_gate(events, gate, parent_mask=parent_mask)
         except Exception as exc:
+            logger.exception("Gate %s could not be applied", gate.gate_id)
             gate.metadata["mask_warning"] = f"gate could not be applied: {exc}"
             masks[gate.gate_id] = empty.copy()
         state[gate.gate_id] = "done"

@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+import logging
 from pathlib import Path
 
 from dash import Input, Output, State, html
 
 from app.core.paths import EXPORT_ROOT
 from app.core.session_store import WorkbenchSession
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -202,6 +205,7 @@ def _export_report_figures(
         try:
             figure.write_image(path, width=1200, height=760, scale=2)
         except Exception as exc:
+            logger.exception("Static plot export failed for %s", path)
             export_warnings.append(f"{filename}: {type(exc).__name__}: {exc}")
             continue
         paths.append(path)

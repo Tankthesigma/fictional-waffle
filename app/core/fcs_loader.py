@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,6 +15,7 @@ from app.core.compensation import apply_spillover_compensation, parse_spillover
 from app.models.sample import SampleRecord
 
 MAX_FCS_PARAMETERS = 100_000
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -40,6 +42,7 @@ def load_fcs_file(path: str | Path, sample_id: str | None = None) -> LoadResult:
     try:
         from flowio import FlowData  # type: ignore
     except Exception:
+        logger.exception("FlowIO import failed while loading %s", target)
         return LoadResult(
             None,
             ["FlowIO is not installed. Install requirements.txt to parse FCS files."],
@@ -66,6 +69,7 @@ def load_fcs_file(path: str | Path, sample_id: str | None = None) -> LoadResult:
         record.compensated_events, record.compensation_warnings = apply_spillover_compensation(record.events, record.spillover)
         return LoadResult(record, [], load_warnings + event_warnings)
     except Exception as exc:
+        logger.exception("Could not parse FCS file %s", target)
         return LoadResult(None, [f"Could not parse {target.name}: {exc}"], [])
 
 
@@ -104,9 +108,11 @@ def _read_flow_data(flow_data_class: Any, target: Path) -> tuple[Any, list[str]]
                 warning_messages.append(f"{target.name}: FlowIO reported a data offset mismatch; loaded with {flag_name}=True for review.")
                 return flow_data, warning_messages
             except TypeError as retry_exc:
+                logger.debug("FlowIO retry option %s was not accepted for %s: %s", kwargs, target, retry_exc)
                 last_retry_error = retry_exc
                 continue
             except Exception as retry_exc:
+                logger.debug("FlowIO retry option %s failed for %s: %s", kwargs, target, retry_exc)
                 last_retry_error = retry_exc
                 continue
         if last_retry_error:

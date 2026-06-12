@@ -66,7 +66,7 @@ def test_candidate_gate_controls_are_rendered_with_review_language():
     assert "add-review-scatter-gate" in layout_json
     assert "Add Review FSC/SSC Gate" in layout_json
     assert "ai-auto-gate-clusters" in layout_json
-    assert "AI Auto-Gate Clusters" in layout_json
+    assert "Cluster-Guided Gate Review" in layout_json
     assert "accept-candidate-gates" in layout_json
     assert "reject-candidate-gates" in layout_json
     assert "Candidate gates are review-needed and disabled until accepted" in layout_json
@@ -138,14 +138,14 @@ def test_ask_flow_briefing_is_rendered_and_wired():
     layout_json = json.dumps(dash_app.layout.to_plotly_json(), default=str)
 
     assert "ask-flow-briefing" in layout_json
-    assert "Analysis assistant for the current workspace" in layout_json
+    assert "Workspace review panel for plots, QC, gates, high-dimensional clusters" in layout_json
     assert "ask-flow-plan" in layout_json
-    assert "Suggested Analysis Plan" in layout_json
+    assert "Review Plan" in layout_json
     assert "High-Dimensional Review" in layout_json
     assert "high-dimensional-graph" in layout_json
     assert "high-dimensional-cluster-table" in layout_json
     assert "ask-flow-agent-status" in layout_json
-    assert "Safe actions:" in layout_json
+    assert "Workbench actions:" in layout_json
     assert "ask-flow-loading" in layout_json
     assert "ask-flow-answer-loading" in layout_json
     assert any("ask-flow-briefing.children" in key for key in dash_app.callback_map)

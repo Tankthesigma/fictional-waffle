@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 from dash import Input, Output, State, html, no_update
 
 from app.core.session_store import WorkbenchSession
 from app.ui.components import table_columns
+
+logger = logging.getLogger(__name__)
 
 
 def register_plot_callbacks(app, session: WorkbenchSession) -> None:
@@ -202,6 +205,7 @@ def register_plot_callbacks(app, session: WorkbenchSession) -> None:
         try:
             warnings = apply_manual_spillover(sample, rows or [])
         except Exception as exc:
+            logger.exception("Manual compensation matrix could not be applied for %s", sample.sample_id)
             return f"Compensation matrix was not applied: {exc}", no_update
         if sample.compensated_events is None:
             return "Compensation matrix was reviewed but not applied: " + " ".join(warnings), no_update

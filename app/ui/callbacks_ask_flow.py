@@ -167,7 +167,7 @@ def _answer_panel(answer: str, status: str, action_messages: list[str]):
 
 def _requests_auto_gate(question: str) -> bool:
     normalized = question.lower()
-    return any(phrase in normalized for phrase in ("auto gate", "autogate", "cluster gate", "ai gate", "suggest gates from clusters"))
+    return any(phrase in normalized for phrase in ("auto gate", "autogate", "cluster gate", "ai gate", "suggest gates from clusters", "cluster-guided gate"))
 
 
 def _empty_gate_outputs():
@@ -184,7 +184,7 @@ def _run_auto_gate_from_chat(session: WorkbenchSession, sample, x_channel, y_cha
     from app.ui.components import table_columns
 
     if sample is None:
-        return "Auto-gate review skipped: select a sample first.", _empty_gate_outputs()
+        return "Cluster gate review skipped: select a sample first.", _empty_gate_outputs()
     result = suggest_ai_auto_gates(
         sample,
         x_channel=x_channel,

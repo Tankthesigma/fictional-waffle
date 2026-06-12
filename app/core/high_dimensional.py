@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 
 import numpy as np
 import pandas as pd
 
 from app.core.downsample import downsample_events
 from app.models.sample import SampleRecord
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -135,6 +138,7 @@ def _embed_events(scaled: np.ndarray, *, reducer: str, random_state: int) -> tup
             ).fit_transform(scaled)
             return np.asarray(embedding, dtype=float), "umap", []
         except Exception as exc:
+            logger.exception("UMAP embedding failed; falling back to PCA")
             pca_values = _pca_embedding(scaled, random_state)
             return pca_values, "pca", [f"UMAP was unavailable or could not run ({exc}); PCA fallback shown."]
     return _pca_embedding(scaled, random_state), "pca", []

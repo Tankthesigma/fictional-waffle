@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import logging
 from pathlib import Path
 
 from app import __version__
@@ -9,6 +10,8 @@ from app.core.report_outline import report_outline, report_outline_bullets
 from app.models.gate import GateDefinition
 from app.models.qc_flag import QCFlag
 from app.models.sample import SampleRecord
+
+logger = logging.getLogger(__name__)
 
 
 def export_pptx_report(
@@ -27,6 +30,7 @@ def export_pptx_report(
     try:
         from pptx import Presentation
     except Exception:
+        logger.exception("python-pptx import failed; writing PPTX export fallback to %s", target)
         target.write_text("python-pptx is not installed. Install requirements.txt to export PPTX.\n", encoding="utf-8")
         return target
 

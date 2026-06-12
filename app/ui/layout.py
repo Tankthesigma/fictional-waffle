@@ -338,7 +338,7 @@ def gates_tab():
                                     html.Button("Quick Gate Current View", id="add-review-current-view-gate", n_clicks=0),
                                     html.Button("Add Review FSC/SSC Gate", id="add-review-scatter-gate", n_clicks=0),
                                     html.Button("Suggest Candidate Gates", id="suggest-candidate-gates", n_clicks=0),
-                                    html.Button("AI Auto-Gate Clusters", id="ai-auto-gate-clusters", n_clicks=0),
+                                    html.Button("Cluster-Guided Gate Review", id="ai-auto-gate-clusters", n_clicks=0),
                                     html.Button("Accept Candidates", id="accept-candidate-gates", n_clicks=0),
                                     html.Button("Reject Candidates", id="reject-candidate-gates", n_clicks=0),
                                 ],
@@ -541,10 +541,10 @@ def ask_flow_tab():
             card(
                 "Ask Flow",
                 [
-                    html.P("Analysis assistant for the current workspace. It can explain results, suggest next steps, and apply safe plot actions.", className="muted"),
+                    html.P("Workspace review panel for plots, QC, gates, high-dimensional clusters, and report-ready summaries.", className="muted"),
                     html.Div(id="ask-flow-agent-status", className="status-box small"),
                     html.Div(id="ask-flow-briefing", className="ask-briefing"),
-                    html.H3("Suggested Analysis Plan"),
+                    html.H3("Review Plan"),
                     html.Div(id="ask-flow-plan", className="analysis-plan-grid"),
                     html.H3("High-Dimensional Review"),
                     dcc.Graph(id="high-dimensional-graph", config={"displayModeBar": True}, className="analysis-graph"),
@@ -552,7 +552,7 @@ def ask_flow_tab():
                     dcc.Textarea(
                         id="ask-flow-question",
                         value="Plan the analysis for this sample.",
-                        placeholder="Ask anything about the current analysis, or try: plot FL1-A vs SSC-A as density with arcsinh; histogram FITC; show 100000 events.",
+                        placeholder="Ask about the current analysis, or try: plot FL1-A vs SSC-A as density with arcsinh; histogram FITC; show 100000 events.",
                         className="ask-input",
                     ),
                     html.Button("Ask", id="ask-flow-button", n_clicks=0, className="primary"),
@@ -565,14 +565,14 @@ def ask_flow_tab():
                     ),
                     html.Div(
                         [
-                            html.Span("Safe actions:"),
+                            html.Span("Workbench actions:"),
                             html.Span("set sample"),
                             html.Span("set axes"),
                             html.Span("set histogram"),
                             html.Span("plot mode"),
                             html.Span("transform"),
                             html.Span("max events"),
-                            html.Span("auto-gate review"),
+                            html.Span("cluster gate review"),
                         ],
                         className="agent-action-strip",
                     ),

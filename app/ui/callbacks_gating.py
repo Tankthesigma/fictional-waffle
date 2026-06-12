@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from uuid import uuid4
 
 from dash import Input, Output, State, html, no_update
@@ -7,6 +8,8 @@ from dash import Input, Output, State, html, no_update
 from app.core.paths import EXPORT_ROOT, GATES_PATH, PROJECT_PATH
 from app.core.session_store import WorkbenchSession
 from app.ui.components import table_columns
+
+logger = logging.getLogger(__name__)
 
 
 def register_gating_callbacks(app, session: WorkbenchSession) -> None:
@@ -331,7 +334,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
 
             sample = session.selected_sample(sample_id)
             if sample is None:
-                return no_update, no_update, no_update, "Upload and select a sample before running AI-assisted autogating.", no_update, no_update, no_update
+                return no_update, no_update, no_update, "Upload and select a sample before running cluster-guided gate review.", no_update, no_update, no_update
             result = suggest_ai_auto_gates(
                 sample,
                 x_channel=x_channel,
@@ -385,6 +388,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
                     session.gates = load_gates(GATES_PATH)
                     status = f"Loaded gates from {GATES_PATH}."
                 except Exception as exc:
+                    logger.exception("Gate file could not be loaded from %s", GATES_PATH)
                     status = f"Gate file could not be loaded: {exc}"
             else:
                 status = f"No saved gate file found at {GATES_PATH}."
@@ -427,6 +431,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
                         f"reapplied {restored_channels} channel annotation(s). Re-upload raw FCS/CSV files if samples are not already loaded."
                     )
                 except Exception as exc:
+                    logger.exception("Project file could not be loaded from %s", PROJECT_PATH)
                     status = f"Project file could not be loaded: {exc}"
             else:
                 status = f"No saved project file found at {PROJECT_PATH}."
@@ -509,6 +514,7 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
                 parent_id=_valid_parent_id(session.gates, manage_gate_id),
             )
         except Exception as exc:
+            logger.exception("Drawn gate could not be created")
             return no_update, no_update, no_update, f"Drawn gate could not be created: {exc}", no_update, no_update, no_update, signature
         if gate is None:
             return no_update, no_update, no_update, "Draw a rectangle or closed polygon on the scatter plot to create a gate.", no_update, no_update, no_update, signature
@@ -573,12 +579,12 @@ def _drawn_gate_status(gate) -> str:
 
 def _auto_gate_status(gates, warnings: list[str]) -> str:
     if not gates:
-        return "AI-assisted autogating did not add gates. " + " ".join(warnings)
+        return "Cluster-guided gate review did not add gates. " + " ".join(warnings)
     enhanced = sum(gate.metadata.get("label_source") == "enhanced_assistant" for gate in gates)
     note = f" Enhanced labels applied to {enhanced} cluster(s)." if enhanced else ""
     warning_text = " ".join(warnings)
     return (
-        f"Added {len(gates)} disabled review-needed auto-gate candidate(s) from cluster footprints."
+        f"Added {len(gates)} disabled review-needed cluster gate candidate(s) from cluster footprints."
         f"{note} Review/edit and accept before using final statistics. {warning_text}"
     ).strip()
 

@@ -1380,7 +1380,7 @@ button:hover {
 }
 
 #ask-flow-answer-loading[data-dash-is-loading="true"]::after {
-  content: "Ask Flow is working...";
+  content: "Reviewing current workspace...";
   position: absolute;
   left: 18px;
   bottom: 14px;

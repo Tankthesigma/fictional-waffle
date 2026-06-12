@@ -55,17 +55,22 @@ python app/main.py
 
 Open http://127.0.0.1:8050.
 
-Optional enhanced assistant mode:
+Optional enhanced review mode:
 
 ```bash
 export ASK_FLOW_CLOUD_ASSISTANT_ENABLED=1
-export ASK_FLOW_CLOUD_MODEL=gemini-3.5-flash
 export GOOGLE_CLOUD_PROJECT=your-project-id
 export GOOGLE_CLOUD_LOCATION=global
 python app/main.py
 ```
 
 This uses Google Application Default Credentials on the local machine. No API keys or credentials are stored in the repo. If enhanced mode is not configured or the call fails, Ask Flow falls back to deterministic local answers.
+
+For a fully reproducible demo environment, install from the lockfile instead:
+
+```bash
+pip install -r requirements.lock
+```
 
 ## Public Test Data
 
@@ -111,9 +116,9 @@ Do not commit large public datasets into this repo. Keep local test files outsid
 - Rule-based QC dashboard with review-needed language.
 - Batch tables, event count chart, median fluorescence table, batch gate-statistics grid, and exploratory control-vs-treated comparison.
 - High-dimensional review using UMAP with PCA fallback plus clustering for review-needed population exploration without automatic identity claims.
-- AI-assisted autogating MVP: cluster fluorescence space with UMAP/PCA review, generate disabled review-needed gate candidates on the active plot, and optionally apply enhanced marker-aware cluster labels without sending raw event matrices.
+- Cluster-guided gate review MVP: cluster fluorescence space with UMAP/PCA review, generate disabled review-needed gate candidates on the active plot, and optionally apply enhanced marker-aware cluster labels without sending raw event matrices.
 - Local CSV, PDF, and PowerPoint report export with representative plot images when static export is available.
-- Ask Flow assistant panel with deterministic local answers, state-aware analysis plans, safe UI actions, optional enhanced responses, and chat-triggered autogate review.
+- Ask Flow review panel with deterministic local answers, state-aware analysis plans, safe UI actions, optional enhanced responses, and chat-triggered cluster-gate review.
 
 ## Limitations
 

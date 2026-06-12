@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Iterable
 
 import pandas as pd
@@ -9,6 +10,8 @@ from app.core.compensation import event_view
 from app.core.transforms import apply_transform, log10_clamp_warning
 from app.models.gate import GateDefinition
 from app.models.sample import SampleRecord
+
+logger = logging.getLogger(__name__)
 
 
 def empty_figure(message: str = "Upload an FCS or event-level CSV file to begin."):
@@ -48,6 +51,7 @@ def scatter_figure(
         x_values = apply_transform(display[x_channel], display_transform, cofactor=cofactor)
         y_values = apply_transform(display[y_channel], display_transform, cofactor=cofactor)
     except Exception as exc:
+        logger.exception("Scatter transform failed for %s on %s/%s", sample.sample_id, x_channel, y_channel)
         return empty_figure(f"{display_transform} transform could not be displayed: {exc}")
     x_values, y_values = _finite_xy(x_values, y_values)
     if len(x_values) == 0:
@@ -158,6 +162,7 @@ def histogram_figure(
         try:
             transformed = apply_transform(display[channel], display_transform, cofactor=cofactor)
         except Exception as exc:
+            logger.exception("Histogram transform failed for %s on %s", sample.sample_id, channel)
             return empty_figure(f"{display_transform} transform could not be displayed: {exc}")
         fig.add_trace(
             go.Histogram(

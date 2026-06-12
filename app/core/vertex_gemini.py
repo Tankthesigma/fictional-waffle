@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from dataclasses import dataclass
 from typing import Any
@@ -14,6 +15,7 @@ from app.models.sample import SampleRecord
 
 
 DEFAULT_VERTEX_MODEL = "gemini-3.5-flash"
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -61,6 +63,7 @@ def answer_with_gemini(
         from google import genai
         from google.genai.types import HttpOptions
     except Exception as exc:
+        logger.exception("Enhanced assistant dependency import failed")
         return GeminiAnswer(fallback, used_vertex=False, status=f"Enhanced assistant unavailable: google-genai is not installed ({exc}).")
 
     project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT_ID")
@@ -89,6 +92,7 @@ def answer_with_gemini(
             return GeminiAnswer(fallback, used_vertex=False, status="Enhanced assistant returned an empty answer; local answer shown.")
         return GeminiAnswer(text, used_vertex=True, status="Enhanced assistant answered.")
     except Exception as exc:
+        logger.exception("Enhanced assistant request failed")
         return GeminiAnswer(fallback, used_vertex=False, status=f"Enhanced assistant unavailable: {exc}. Local answer shown.")
 
 
@@ -104,6 +108,7 @@ def label_clusters_with_gemini(sample: SampleRecord, cluster_rows: list[dict[str
         from google import genai
         from google.genai.types import HttpOptions
     except Exception:
+        logger.exception("Enhanced cluster-label dependency import failed")
         return {}
     project = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT_ID")
     location = os.getenv("GOOGLE_CLOUD_LOCATION", "global")
@@ -142,6 +147,7 @@ def label_clusters_with_gemini(sample: SampleRecord, cluster_rows: list[dict[str
         )
         return _parse_cluster_labels(getattr(response, "text", "") or "")
     except Exception:
+        logger.exception("Enhanced cluster-label request failed")
         return {}
 
 
@@ -218,6 +224,7 @@ def _parse_cluster_labels(text: str) -> dict[int, str]:
     try:
         payload = json.loads(cleaned)
     except Exception:
+        logger.debug("Cluster-label response was not valid JSON")
         return {}
     if not isinstance(payload, list):
         return {}
