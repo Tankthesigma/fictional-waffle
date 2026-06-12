@@ -136,15 +136,24 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
 
             if not all(value is not None for value in [x_channel, y_channel, x_min, x_max, y_min, y_max]):
                 return no_update, no_update, no_update, "Choose x/y channels and complete all rectangle bounds.", no_update, no_update, no_update
+            try:
+                x_min_value, x_max_value, y_min_value, y_max_value = _parse_float_fields(
+                    ("x min", x_min),
+                    ("x max", x_max),
+                    ("y min", y_min),
+                    ("y max", y_max),
+                )
+            except ValueError as exc:
+                return no_update, no_update, no_update, f"Rectangle gate needs numeric bounds: {exc}", no_update, no_update, no_update
             gate = rectangle_gate(
                 uuid4().hex[:8],
                 gate_name or "User rectangle gate",
                 x_channel,
                 y_channel,
-                float(min(x_min, x_max)),
-                float(max(x_min, x_max)),
-                float(min(y_min, y_max)),
-                float(max(y_min, y_max)),
+                min(x_min_value, x_max_value),
+                max(x_min_value, x_max_value),
+                min(y_min_value, y_max_value),
+                max(y_min_value, y_max_value),
             )
             sample = session.selected_sample(sample_id)
             use_compensation = _is_compensation_on(compensation_enabled) and sample is not None and sample.compensated_events is not None
@@ -184,12 +193,16 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
 
             if not all(value is not None for value in [hist_channel, hist_min, hist_max]):
                 return no_update, no_update, no_update, "Choose a histogram channel and complete range bounds.", no_update, no_update, no_update
+            try:
+                hist_min_value, hist_max_value = _parse_float_fields(("min", hist_min), ("max", hist_max))
+            except ValueError as exc:
+                return no_update, no_update, no_update, f"Histogram gate needs numeric bounds: {exc}", no_update, no_update, no_update
             gate = histogram_range_gate(
                 uuid4().hex[:8],
                 hist_gate_name or "User histogram gate",
                 hist_channel,
-                float(min(hist_min, hist_max)),
-                float(max(hist_min, hist_max)),
+                min(hist_min_value, hist_max_value),
+                max(hist_min_value, hist_max_value),
             )
             sample = session.selected_sample(sample_id)
             use_compensation = _is_compensation_on(compensation_enabled) and sample is not None and sample.compensated_events is not None
@@ -201,6 +214,13 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
 
             if not all(value is not None for value in [x_channel, y_channel, quadrant_x_threshold, quadrant_y_threshold]):
                 return no_update, no_update, no_update, "Choose x/y channels and complete quadrant thresholds.", no_update, no_update, no_update
+            try:
+                quadrant_x_value, quadrant_y_value = _parse_float_fields(
+                    ("x threshold", quadrant_x_threshold),
+                    ("y threshold", quadrant_y_threshold),
+                )
+            except ValueError as exc:
+                return no_update, no_update, no_update, f"Quadrant gates need numeric thresholds: {exc}", no_update, no_update, no_update
             sample = session.selected_sample(sample_id)
             use_compensation = _is_compensation_on(compensation_enabled) and sample is not None and sample.compensated_events is not None
             event_view_name = "metadata_compensated" if use_compensation else "raw"
@@ -209,8 +229,8 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
                 quadrant_gate_name or "Quadrant gate",
                 x_channel,
                 y_channel,
-                float(quadrant_x_threshold),
-                float(quadrant_y_threshold),
+                quadrant_x_value,
+                quadrant_y_value,
                 parent_id=_valid_parent_id(session.gates, manage_gate_id),
             )
             for gate in gates:
@@ -223,15 +243,24 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
 
             if not all(value is not None for value in [x_channel, y_channel, ellipse_center_x, ellipse_center_y, ellipse_radius_x, ellipse_radius_y]):
                 return no_update, no_update, no_update, "Choose x/y channels and complete ellipse center/radius values.", no_update, no_update, no_update
+            try:
+                ellipse_center_x_value, ellipse_center_y_value, ellipse_radius_x_value, ellipse_radius_y_value = _parse_float_fields(
+                    ("center x", ellipse_center_x),
+                    ("center y", ellipse_center_y),
+                    ("radius x", ellipse_radius_x),
+                    ("radius y", ellipse_radius_y),
+                )
+            except ValueError as exc:
+                return no_update, no_update, no_update, f"Ellipse gate needs numeric center/radius values: {exc}", no_update, no_update, no_update
             gate = ellipse_gate(
                 uuid4().hex[:8],
                 ellipse_gate_name or "Ellipse gate",
                 x_channel,
                 y_channel,
-                float(ellipse_center_x),
-                float(ellipse_center_y),
-                float(ellipse_radius_x),
-                float(ellipse_radius_y),
+                ellipse_center_x_value,
+                ellipse_center_y_value,
+                ellipse_radius_x_value,
+                ellipse_radius_y_value,
                 parent_id=_valid_parent_id(session.gates, manage_gate_id),
             )
             sample = session.selected_sample(sample_id)
@@ -245,15 +274,24 @@ def register_gating_callbacks(app, session: WorkbenchSession) -> None:
 
             if not all(value is not None for value in [x_channel, y_channel, birange_x_min, birange_x_max, birange_y_min, birange_y_max]):
                 return no_update, no_update, no_update, "Choose x/y channels and complete bi-range bounds.", no_update, no_update, no_update
+            try:
+                birange_x_min_value, birange_x_max_value, birange_y_min_value, birange_y_max_value = _parse_float_fields(
+                    ("x min", birange_x_min),
+                    ("x max", birange_x_max),
+                    ("y min", birange_y_min),
+                    ("y max", birange_y_max),
+                )
+            except ValueError as exc:
+                return no_update, no_update, no_update, f"Bi-range gate needs numeric bounds: {exc}", no_update, no_update, no_update
             gate = bi_range_gate(
                 uuid4().hex[:8],
                 birange_gate_name or "Bi-range gate",
                 x_channel,
                 y_channel,
-                float(min(birange_x_min, birange_x_max)),
-                float(max(birange_x_min, birange_x_max)),
-                float(min(birange_y_min, birange_y_max)),
-                float(max(birange_y_min, birange_y_max)),
+                min(birange_x_min_value, birange_x_max_value),
+                max(birange_x_min_value, birange_x_max_value),
+                min(birange_y_min_value, birange_y_max_value),
+                max(birange_y_min_value, birange_y_max_value),
                 parent_id=_valid_parent_id(session.gates, manage_gate_id),
             )
             sample = session.selected_sample(sample_id)
@@ -486,6 +524,18 @@ def _columns_from_rows(rows: list[dict[str, object]], preferred: list[str]) -> l
 
 def _is_compensation_on(value) -> bool:
     return isinstance(value, list) and "on" in value
+
+
+def _parse_float_fields(*fields: tuple[str, object]) -> tuple[float, ...]:
+    values: list[float] = []
+    for label, value in fields:
+        if value is None or value == "":
+            raise ValueError(f"{label} is required")
+        try:
+            values.append(float(value))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"{label} must be numeric") from exc
+    return tuple(values)
 
 
 def _gate_options(gates):

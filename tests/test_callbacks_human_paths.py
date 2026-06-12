@@ -13,6 +13,117 @@ def _callback_key(app, contains: str) -> str:
     raise AssertionError(f"callback containing {contains!r} was not registered")
 
 
+def _gate_callback_payload(output: str, action_id: str, state_updates: dict[str, object] | None = None) -> dict[str, object]:
+    input_ids = [
+        "add-rectangle-gate",
+        "add-review-current-view-gate",
+        "add-review-scatter-gate",
+        "add-histogram-gate",
+        "add-quadrant-gates",
+        "add-ellipse-gate",
+        "add-birange-gate",
+        "suggest-candidate-gates",
+        "accept-candidate-gates",
+        "reject-candidate-gates",
+        "rename-gate",
+        "toggle-gate",
+        "delete-gate",
+        "save-gates",
+        "load-gates",
+        "save-project",
+        "load-project",
+        "export-gate-stats",
+    ]
+    state_values: dict[str, object] = {
+        "selected-sample-store": None,
+        "x-channel": "FSC-A",
+        "y-channel": "SSC-A",
+        "hist-channel": "FL1-A",
+        "plot-mode": "scatter",
+        "transform": "raw",
+        "cofactor": 150,
+        "max-events": 50000,
+        "control-group": "",
+        "treated-group": "",
+        "gate-name": "main",
+        "gate-x-min": 0,
+        "gate-x-max": 1,
+        "gate-y-min": 0,
+        "gate-y-max": 1,
+        "hist-gate-name": "positive",
+        "hist-gate-min": 0,
+        "hist-gate-max": 1,
+        "quadrant-gate-name": "quad",
+        "quadrant-x-threshold": 1,
+        "quadrant-y-threshold": 1,
+        "ellipse-gate-name": "ellipse",
+        "ellipse-center-x": 1,
+        "ellipse-center-y": 1,
+        "ellipse-radius-x": 1,
+        "ellipse-radius-y": 1,
+        "birange-gate-name": "birange",
+        "birange-x-min": 0,
+        "birange-x-max": 1,
+        "birange-y-min": 0,
+        "birange-y-max": 1,
+        "manage-gate-id": None,
+        "manage-gate-name": "",
+        "compensation-enabled": [],
+    }
+    state_values.update(state_updates or {})
+    state_order = [
+        "selected-sample-store",
+        "x-channel",
+        "y-channel",
+        "hist-channel",
+        "plot-mode",
+        "transform",
+        "cofactor",
+        "max-events",
+        "control-group",
+        "treated-group",
+        "gate-name",
+        "gate-x-min",
+        "gate-x-max",
+        "gate-y-min",
+        "gate-y-max",
+        "hist-gate-name",
+        "hist-gate-min",
+        "hist-gate-max",
+        "quadrant-gate-name",
+        "quadrant-x-threshold",
+        "quadrant-y-threshold",
+        "ellipse-gate-name",
+        "ellipse-center-x",
+        "ellipse-center-y",
+        "ellipse-radius-x",
+        "ellipse-radius-y",
+        "birange-gate-name",
+        "birange-x-min",
+        "birange-x-max",
+        "birange-y-min",
+        "birange-y-max",
+        "manage-gate-id",
+        "manage-gate-name",
+        "compensation-enabled",
+    ]
+    return {
+        "output": output,
+        "outputs": [
+            {"id": "gate-table", "property": "data"},
+            {"id": "gate-stats-table", "property": "data"},
+            {"id": "gate-stats-table", "property": "columns"},
+            {"id": "gate-status", "property": "children"},
+            {"id": "manage-gate-id", "property": "options"},
+            {"id": "manage-gate-id", "property": "value"},
+            {"id": "gate-stack-cards", "property": "children"},
+        ],
+        "inputs": [{"id": input_id, "property": "n_clicks", "value": 1 if input_id == action_id else 0} for input_id in input_ids],
+        "state": [{"id": state_id, "property": "value", "value": state_values[state_id]} for state_id in state_order],
+        "changedPropIds": [f"{action_id}.n_clicks"],
+    }
+
+
 def test_incomplete_gate_form_returns_status_without_callback_error():
     dash_app = create_app()
     client = dash_app.server.test_client()
@@ -175,6 +286,22 @@ def test_incomplete_histogram_gate_form_returns_status_without_callback_error():
 
     assert response.status_code == 200
     assert "complete range bounds" in response.get_data(as_text=True)
+
+
+def test_non_numeric_ellipse_gate_form_returns_status_without_callback_error():
+    dash_app = create_app()
+    client = dash_app.server.test_client()
+    output = _callback_key(dash_app, "gate-status.children")
+
+    response = client.post(
+        "/_dash-update-component",
+        json=_gate_callback_payload(output, "add-ellipse-gate", {"ellipse-radius-x": "wide"}),
+    )
+
+    assert response.status_code == 200
+    text = response.get_data(as_text=True)
+    assert "Ellipse gate needs numeric center" in text
+    assert "radius x must be numeric" in text
 
 
 def test_bad_upload_payload_returns_friendly_status_without_callback_error():
