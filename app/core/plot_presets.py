@@ -80,7 +80,7 @@ def recommended_plot_presets(sample: SampleRecord | None) -> list[PlotPreset]:
                 label="Time Review",
                 x_channel=time.raw_name,
                 y_channel=fsc or ssc,
-                hist_channel=first_fluor,
+                hist_channel=first_fluor.raw_name if first_fluor else None,
                 plot_mode="scatter",
                 transform="raw",
                 description="Time-vs-signal view for acquisition stability review.",

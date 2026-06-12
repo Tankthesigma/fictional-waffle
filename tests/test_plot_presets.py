@@ -31,6 +31,7 @@ def test_recommended_plot_presets_cover_scatter_singlet_marker_and_time_views():
     assert presets[2].label == "CD3 FITC Histogram"
     assert presets[2].hist_channel == "FL1-A"
     assert presets[3].x_channel == "Time"
+    assert presets[3].hist_channel == "FL1-A"
 
 
 def test_resolve_plot_preset_defaults_to_first_recommendation():
