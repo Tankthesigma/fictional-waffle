@@ -14,6 +14,7 @@ def build_layout():
             dcc.Store(id="analysis-revision-store", data=0),
             dcc.Store(id="last-drawn-gate-store"),
             dcc.Store(id="channel-transform-overrides-store", data={}),
+            dcc.Store(id="ask-flow-command-history-store", data=[]),
             dcc.Store(id="toast-store"),
             dcc.Interval(id="toast-timer", interval=3500, disabled=True),
             html.Div(id="toast-container", className="toast-container"),
@@ -387,6 +388,7 @@ def global_assistant_bar():
                 delay_show=150,
                 children=html.Div(id="global-assistant-answer", className="global-assistant-answer"),
             ),
+            html.Div(id="global-assistant-timeline", className="global-assistant-timeline"),
         ],
         className="global-assistant-bar",
     )

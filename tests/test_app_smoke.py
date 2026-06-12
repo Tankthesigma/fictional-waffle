@@ -168,6 +168,8 @@ def test_ask_flow_briefing_is_rendered_and_wired():
     assert "global-assistant-command" in layout_json
     assert "global-assistant-button" in layout_json
     assert "global-assistant-answer" in layout_json
+    assert "ask-flow-command-history-store" in layout_json
+    assert "global-assistant-timeline" in layout_json
     assert "global-quick-qc" in layout_json
     assert "global-quick-singlets" in layout_json
     assert "global-quick-cluster-gates" in layout_json
@@ -186,6 +188,8 @@ def test_ask_flow_briefing_is_rendered_and_wired():
     assert any("ask-flow-agent-status.children" in key for key in dash_app.callback_map)
     assert any("high-dimensional-graph.figure" in key for key in dash_app.callback_map)
     assert any("global-assistant-answer.children" in key for key in dash_app.callback_map)
+    assert any("global-assistant-timeline.children" in key for key in dash_app.callback_map)
+    assert any("ask-flow-command-history-store.data" in key for key in dash_app.callback_map)
     assert any("main-tabs.value" in key for key in dash_app.callback_map)
 
 

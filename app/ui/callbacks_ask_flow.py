@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 from dash import Input, Output, State, callback_context, html, no_update
 
 from app.core.session_store import WorkbenchSession
@@ -47,6 +49,8 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
     @app.callback(
         Output("ask-flow-answer", "children"),
         Output("global-assistant-answer", "children"),
+        Output("ask-flow-command-history-store", "data"),
+        Output("global-assistant-timeline", "children"),
         Output("main-tabs", "value", allow_duplicate=True),
         Output("sample-dropdown", "value", allow_duplicate=True),
         Output("x-channel", "value", allow_duplicate=True),
@@ -74,6 +78,7 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
         State("x-channel", "value"),
         State("y-channel", "value"),
         State("compensation-enabled", "value"),
+        State("ask-flow-command-history-store", "data"),
         prevent_initial_call=True,
     )
     def ask_flow(
@@ -89,6 +94,7 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
         x_channel,
         y_channel,
         compensation_enabled,
+        history,
     ):
         from app.core.ask_flow import answer_question
         from app.core.ask_flow_actions import plan_actions
@@ -137,9 +143,12 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
             action_messages=plan.messages,
         )
         answer_panel = _answer_panel(gemini.text, gemini.status, plan.messages)
+        next_history = _append_history(history, question or "", plan.messages, gemini.status, triggered)
         return (
             answer_panel,
             answer_panel,
+            next_history,
+            _history_cards(next_history),
             plan.updates.get("tab", no_update),
             plan.updates.get("sample_id", no_update),
             plan.updates.get("x_channel", no_update),
@@ -164,6 +173,56 @@ def _question_from_trigger(triggered: str, tab_question: str | None, global_ques
     if triggered == "global-assistant-button":
         return global_question or ""
     return tab_question or ""
+
+
+def _append_history(history, question: str, action_messages: list[str], status: str, triggered: str) -> list[dict[str, object]]:
+    rows = history if isinstance(history, list) else []
+    label = _trigger_label(triggered)
+    entry = {
+        "time": datetime.now().strftime("%H:%M:%S"),
+        "label": label,
+        "question": question.strip() or label,
+        "actions": list(action_messages),
+        "status": status,
+    }
+    return [entry, *[row for row in rows if isinstance(row, dict)]][:5]
+
+
+def _trigger_label(triggered: str) -> str:
+    return {
+        "ask-flow-button": "Ask Flow",
+        "global-assistant-button": "Command",
+        "global-quick-qc": "Quick QC",
+        "global-quick-singlets": "Quick Singlets",
+        "global-quick-cluster-gates": "Quick Cluster Gates",
+        "global-quick-report": "Quick Report",
+    }.get(triggered, "Command")
+
+
+def _history_cards(history) -> list:
+    rows = history if isinstance(history, list) else []
+    if not rows:
+        return []
+    cards = [html.Div([html.Span("Recent"), html.Strong("Copilot timeline")], className="assistant-timeline-header")]
+    for row in rows[:5]:
+        actions = row.get("actions") if isinstance(row.get("actions"), list) else []
+        cards.append(
+            html.Div(
+                [
+                    html.Div(
+                        [
+                            html.Span(str(row.get("time") or ""), className="assistant-timeline-time"),
+                            html.Strong(str(row.get("label") or "Command")),
+                        ],
+                        className="assistant-timeline-topline",
+                    ),
+                    html.P(str(row.get("question") or "Command")),
+                    html.Ul([html.Li(str(action)) for action in actions[:4]]) if actions else html.Small("No workbench action was needed."),
+                ],
+                className="assistant-timeline-card",
+            )
+        )
+    return cards
 
 
 def _briefing_cards(rows: list[dict[str, str]]):

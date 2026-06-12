@@ -130,6 +130,16 @@ table,
   padding-top: 8px;
 }
 
+.assistant-timeline-card {
+  background: #f8fafc;
+  border-color: var(--line);
+}
+
+.assistant-timeline-card::before {
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+}
+
 #global-assistant-loading[data-dash-is-loading="true"],
 #ask-flow-answer-loading[data-dash-is-loading="true"] {
   border-color: rgba(79, 70, 229, 0.28);
