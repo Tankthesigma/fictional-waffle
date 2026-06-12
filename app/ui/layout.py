@@ -13,6 +13,7 @@ def build_layout():
             dcc.Store(id="analysis-revision-store", data=0),
             dcc.Store(id="last-drawn-gate-store"),
             header(),
+            workspace_toolbar(),
             html.Main(
                 [
                     home_upload_panel(),
@@ -60,11 +61,54 @@ def header():
     )
 
 
+def workspace_toolbar():
+    return html.Nav(
+        [
+            html.Div(
+                [
+                    html.Span("Workspace"),
+                    html.Strong("Local session"),
+                ],
+                className="toolbar-cell",
+            ),
+            html.Div(
+                [
+                    html.Span("Input"),
+                    html.Strong("Exported FCS / CSV"),
+                ],
+                className="toolbar-cell",
+            ),
+            html.Div(
+                [
+                    html.Span("Events"),
+                    html.Strong("Server-side matrices"),
+                ],
+                className="toolbar-cell",
+            ),
+            html.Div(
+                [
+                    html.Span("Review"),
+                    html.Strong("Gates, QC, statistics"),
+                ],
+                className="toolbar-cell",
+            ),
+            html.Div(
+                [
+                    html.Span("Output"),
+                    html.Strong("CSV / PDF / PPTX"),
+                ],
+                className="toolbar-cell",
+            ),
+        ],
+        className="workspace-toolbar",
+    )
+
+
 def home_upload_panel():
     return html.Section(
         [
             card(
-                "Upload",
+                "Import Queue",
                 [
                     html.P("Use exported FCS files when available. CSV fallback is supported for event-level tables with clear limitations.", className="muted"),
                     upload_box("upload-data", ".fcs or .csv files", multiple=True),
@@ -79,7 +123,7 @@ def home_upload_panel():
                 "upload-card",
             ),
             card(
-                "Samples",
+                "Sample Manager",
                 data_table(
                     "sample-table",
                     [
@@ -110,7 +154,7 @@ def workbench_panel():
         [
             html.Aside(
                 [
-                    html.H2("Samples & Gates"),
+                    html.H2("Workspace Tree"),
                     dcc.Dropdown(id="sample-dropdown", options=[], placeholder="Select sample", clearable=False),
                     html.Div(
                         [
@@ -153,7 +197,7 @@ def workbench_panel():
             ),
             html.Aside(
                 [
-                    html.H2("Acquisition View"),
+                    html.H2("Plot Inspector"),
                     html.Div(
                         [
                             html.Span("Data view", className="panel-kicker"),
@@ -539,7 +583,7 @@ def ask_flow_tab():
     return html.Div(
         [
             card(
-                "Ask Flow",
+                "Review Console",
                 [
                     html.P("Analysis review console for plots, QC, gates, high-dimensional clusters, and report-ready summaries.", className="muted"),
                     html.Div(id="ask-flow-agent-status", className="status-box small"),

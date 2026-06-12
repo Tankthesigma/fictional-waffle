@@ -1533,6 +1533,40 @@ body {
   font-size: 18px;
 }
 
+.workspace-toolbar {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  gap: 1px;
+  padding: 0 10px 1px;
+  background: #17202b;
+  border-bottom: 1px solid #9aa7b7;
+}
+
+.toolbar-cell {
+  min-height: 38px;
+  padding: 6px 10px;
+  background: #eef2f7;
+  border: 1px solid #c5ced8;
+  border-bottom: 0;
+}
+
+.toolbar-cell span {
+  display: block;
+  color: #64748b;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.toolbar-cell strong {
+  display: block;
+  margin-top: 3px;
+  color: #111827;
+  font-size: 12px;
+  line-height: 1.15;
+}
+
 .app-shell {
   gap: 10px;
   padding: 10px;
@@ -1907,7 +1941,8 @@ button.primary:hover {
   .analysis-guide-steps,
   .panel-readiness-metrics,
   .grouping-readiness-metrics,
-  .channel-override-form {
+  .channel-override-form,
+  .workspace-toolbar {
     grid-template-columns: 1fr;
   }
 
