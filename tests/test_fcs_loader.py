@@ -1,6 +1,6 @@
 import numpy as np
 
-from app.core.fcs_loader import _events_to_dataframe, _read_flow_data, load_fcs_file
+from app.core.fcs_loader import MAX_FCS_PARAMETERS, _events_to_dataframe, _extract_channel_names, _read_flow_data, load_fcs_file
 
 
 def test_fcs_loader_invalid_file_handling(tmp_path):
@@ -65,3 +65,26 @@ def test_event_dataframe_uses_data_shape_for_flat_arrays_with_bad_metadata():
     assert frame.shape == (2, 2)
     assert frame.columns.tolist() == ["FSC-A", "SSC-A"]
     assert any("extra metadata names were ignored" in warning for warning in warnings)
+
+
+def test_extract_channel_names_uses_par_keyword_fallback():
+    class FakeFlowData:
+        channels = None
+
+    names = _extract_channel_names(
+        FakeFlowData(),
+        {"$PAR": "3", "$P1N": "FSC-A", "$P2N": "SSC-A", "$P3N": "FITC-A"},
+    )
+
+    assert names == ["FSC-A", "SSC-A", "FITC-A"]
+
+
+def test_extract_channel_names_caps_unreasonable_par_keyword():
+    class FakeFlowData:
+        channels = None
+
+    names = _extract_channel_names(FakeFlowData(), {"$PAR": str(MAX_FCS_PARAMETERS + 10_000), "$P1N": "FSC-A"})
+
+    assert len(names) == MAX_FCS_PARAMETERS
+    assert names[0] == "FSC-A"
+    assert names[-1] == f"Channel {MAX_FCS_PARAMETERS}"

@@ -13,6 +13,8 @@ from app.core.channel_inference import summarize_channels
 from app.core.compensation import apply_spillover_compensation, parse_spillover
 from app.models.sample import SampleRecord
 
+MAX_FCS_PARAMETERS = 100_000
+
 
 @dataclass(slots=True)
 class LoadResult:
@@ -179,6 +181,7 @@ def _extract_channel_names(flow_data: Any, keywords: dict[str, Any]) -> list[str
     if names:
         return names
     par = _keyword_int(keywords, "$PAR") or _keyword_int(keywords, "par") or 0
+    par = max(0, min(par, MAX_FCS_PARAMETERS))
     for idx in range(1, par + 1):
         name = _keyword_lookup(keywords, f"$P{idx}N", f"p{idx}n", f"P{idx}N") or f"Channel {idx}"
         names.append(str(name))
