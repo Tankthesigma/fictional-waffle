@@ -107,17 +107,6 @@ def fluorescence_summary(values: pd.Series) -> dict[str, float | None]:
     }
 
 
-def fluorescence_medians(events: pd.DataFrame, fluorescence_channels: list[str]) -> dict[str, float | None]:
-    """Compute fluorescence medians for a sample."""
-    result: dict[str, float | None] = {}
-    for channel in fluorescence_channels:
-        if channel in events.columns:
-            result[channel] = float(pd.to_numeric(events[channel], errors="coerce").median())
-        else:
-            result[channel] = None
-    return result
-
-
 def _pct(part: int, whole: int) -> float:
     if whole <= 0:
         return 0.0

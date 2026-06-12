@@ -37,16 +37,13 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
     def handle_upload(clear_clicks, demo_clicks, contents, filenames, manifest_contents, manifest_filename, panel_contents, panel_filename):
         from app.core.demo_data import build_demo_samples
         from app.core.csv_loader import apply_manifest, load_csv_file, parse_manifest
-        from app.core.fcs_loader import load_fcs_file
+        from app.core.fcs_loader import file_hash, load_fcs_file
         from app.core.panel_setup import apply_panel_setup, parse_panel_setup
         from app.core.qc import qc_summary, run_batch_qc
 
         action = callback_context.triggered[0]["prop_id"].split(".")[0] if callback_context.triggered else ""
         if action == "clear-project":
-            session.samples.clear()
-            session.gates.clear()
-            session.qc_flags.clear()
-            session.comparison_rows.clear()
+            _clear_session(session)
             _clear_upload_cache()
             return html.Div("Project cleared."), [], [], None, [], "0", "0", "0"
         if action == "load-demo-data":
@@ -73,6 +70,8 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
         project_dir.mkdir(parents=True, exist_ok=True)
 
         loaded = []
+        loaded_hashes = []
+        seen_hashes: dict[str, str] = {}
         messages = []
         for content, filename in zip(contents or [], filenames, strict=False):
             if not filename:
@@ -87,9 +86,16 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
             except ValueError as exc:
                 messages.append(f"Skipped {filename}: {exc}")
                 continue
+            digest = file_hash(path)
+            duplicate_id = session.duplicate_sample_id(digest) or seen_hashes.get(digest)
+            if duplicate_id is not None:
+                messages.append(f"Skipped duplicate {filename}: matches sample {duplicate_id}.")
+                continue
             result = load_fcs_file(path) if suffix == ".fcs" else load_csv_file(path)
             if result.sample:
                 loaded.append(result.sample)
+                loaded_hashes.append((result.sample, digest))
+                seen_hashes[digest] = result.sample.sample_id
                 messages.extend(result.warnings)
                 if result.sample.compensated_events is not None:
                     messages.append(
@@ -122,6 +128,8 @@ def register_upload_callbacks(app, session: WorkbenchSession) -> None:
 
         for sample in loaded:
             session.samples[sample.sample_id] = sample
+        for sample, digest in loaded_hashes:
+            session.remember_file_hash(digest, sample)
         session.qc_flags = run_batch_qc(session.sample_list())
         return _upload_response(session, messages or [f"Loaded {len(loaded)} sample(s)."], qc_summary)
 
@@ -151,6 +159,7 @@ def _clear_upload_cache() -> None:
 
 def _clear_session(session: WorkbenchSession) -> None:
     session.samples.clear()
+    session.file_hashes.clear()
     session.gates.clear()
     session.qc_flags.clear()
     session.comparison_rows.clear()

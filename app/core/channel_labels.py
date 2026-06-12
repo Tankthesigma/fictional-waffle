@@ -24,8 +24,3 @@ def channel_label_map(samples: list[SampleRecord]) -> dict[str, str]:
             if channel.raw_name not in labels or label != channel.raw_name:
                 labels[channel.raw_name] = label
     return labels
-
-
-def labeled_channel_list(sample: SampleRecord | None, raw_names: list[str]) -> str:
-    """Format a short comma-separated list of marker-aware channel labels."""
-    return ", ".join(channel_label(sample, raw_name) for raw_name in raw_names)

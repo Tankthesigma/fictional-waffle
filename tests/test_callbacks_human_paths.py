@@ -414,6 +414,41 @@ def test_csv_upload_callback_populates_sample_table():
     assert sample_rows[0]["event_count"] == 10
 
 
+def test_upload_callback_skips_duplicate_file_hashes():
+    dash_app = create_app()
+    client = dash_app.server.test_client()
+    output = _callback_key(dash_app, "upload-status.children")
+    payload = b"FSC-A,SSC-A,FL1-A\n1,2,10\n2,4,20\n3,8,30\n4,16,40\n5,32,50\n6,64,60\n7,128,70\n8,256,80\n9,512,90\n10,1024,100\n"
+    encoded = base64.b64encode(payload).decode()
+
+    response = client.post(
+        "/_dash-update-component",
+        json={
+            "output": output,
+            "outputs": _upload_outputs(),
+            "inputs": [
+                {"id": "clear-project", "property": "n_clicks", "value": 0},
+                {"id": "load-demo-data", "property": "n_clicks", "value": 0},
+                {"id": "upload-data", "property": "contents", "value": [f"data:text/csv;base64,{encoded}", f"data:text/csv;base64,{encoded}"]},
+                {"id": "upload-manifest", "property": "contents", "value": None},
+                {"id": "upload-panel", "property": "contents", "value": None},
+            ],
+            "state": [
+                {"id": "upload-data", "property": "filename", "value": ["demo.csv", "demo-copy.csv"]},
+                {"id": "upload-manifest", "property": "filename", "value": None},
+                {"id": "upload-panel", "property": "filename", "value": None},
+            ],
+            "changedPropIds": ["upload-data.contents"],
+        },
+    )
+
+    assert response.status_code == 200
+    payload = json.loads(response.get_data(as_text=True))
+    assert len(payload["response"]["sample-table"]["data"]) == 1
+    assert payload["response"]["metric-samples"]["children"] == "1"
+    assert "Skipped duplicate demo-copy.csv" in response.get_data(as_text=True)
+
+
 def test_load_demo_dataset_callback_populates_batch_without_files():
     dash_app = create_app()
     client = dash_app.server.test_client()

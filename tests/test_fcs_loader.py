@@ -1,6 +1,8 @@
+import hashlib
+
 import numpy as np
 
-from app.core.fcs_loader import MAX_FCS_PARAMETERS, _events_to_dataframe, _extract_channel_names, _read_flow_data, load_fcs_file
+from app.core.fcs_loader import MAX_FCS_PARAMETERS, _events_to_dataframe, _extract_channel_names, _read_flow_data, file_hash, load_fcs_file
 
 
 def test_fcs_loader_invalid_file_handling(tmp_path):
@@ -11,6 +13,13 @@ def test_fcs_loader_invalid_file_handling(tmp_path):
 
     assert result.sample is None
     assert result.errors
+
+
+def test_file_hash_returns_sha256_digest(tmp_path):
+    path = tmp_path / "sample.fcs"
+    path.write_bytes(b"fake-fcs-bytes")
+
+    assert file_hash(path) == hashlib.sha256(b"fake-fcs-bytes").hexdigest()
 
 
 def test_fcs_loader_retries_offset_error(tmp_path):

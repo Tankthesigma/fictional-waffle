@@ -274,16 +274,6 @@ def time_stability_figure(sample: SampleRecord | None):
     return px.histogram(frame, x="Time", nbins=40, template="plotly_white", title=f"{sample.sample_id}: event rate over Time")
 
 
-def high_dimensional_cluster_figure(sample: SampleRecord | None, *, max_events: int = 25_000):
-    """Build a UMAP/PCA cluster review figure for the current sample."""
-    if sample is None:
-        return empty_figure("Select a sample to run high-dimensional cluster review.")
-    from app.core.high_dimensional import umap_cluster_review
-
-    review = umap_cluster_review(sample, max_events=max_events)
-    return high_dimensional_cluster_figure_from_review(review, sample_id=sample.sample_id)
-
-
 def high_dimensional_cluster_figure_from_review(review, *, sample_id: str = "sample"):
     """Render a precomputed high-dimensional review result."""
     import plotly.express as px
