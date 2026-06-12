@@ -353,7 +353,7 @@ def global_assistant_bar():
                     dcc.Input(
                         id="global-assistant-command",
                         placeholder="Try: show QC, plot CD3 vs SSC-A as density, create singlet gate, auto gate clusters",
-                        debounce=True,
+                        debounce=False,
                     ),
                     html.Button("Run", id="global-assistant-button", n_clicks=0, className="primary"),
                 ],

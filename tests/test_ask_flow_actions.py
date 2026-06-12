@@ -45,6 +45,23 @@ def test_ask_flow_plans_safe_tab_navigation():
     assert "Opened the QC workspace." in plan.messages
 
 
+def test_ask_flow_understands_casual_graph_command():
+    sample = _sample()
+
+    plan = plan_actions("do graph", [sample], sample)
+
+    assert plan.updates["tab"] == "explore"
+    assert "Opened the Explore workspace." in plan.messages
+
+
+def test_ask_flow_understands_messy_cluster_command():
+    from app.ui.callbacks_ask_flow import _requests_auto_gate
+
+    assert _requests_auto_gate("make clusterns")
+    assert _requests_auto_gate("do clusters")
+    assert not _requests_auto_gate("so everything")
+
+
 def _sample(sample_id: str = "s1") -> SampleRecord:
     frame = pd.DataFrame({"FSC-A": [1, 2], "SSC-A": [1, 4], "FL1-A": [10, 20]})
     sample = SampleRecord(sample_id, f"{sample_id}.csv", path="unused.csv", file_type="csv", events=frame)

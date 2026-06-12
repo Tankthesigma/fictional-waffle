@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import re
 
 from dash import Input, Output, State, callback_context, html, no_update
 
@@ -270,7 +271,9 @@ def _answer_panel(answer: str, status: str, action_messages: list[str]):
 
 def _requests_auto_gate(question: str) -> bool:
     normalized = question.lower()
-    return any(phrase in normalized for phrase in ("auto gate", "autogate", "cluster gate", "ai gate", "suggest gates from clusters", "cluster-guided gate"))
+    if any(phrase in normalized for phrase in ("auto gate", "autogate", "cluster gate", "ai gate", "suggest gates from clusters", "cluster-guided gate")):
+        return True
+    return bool(re.search(r"\b(?:make|create|build|run|do|suggest|review)\b.*\bclust\w*", normalized))
 
 
 def _requests_singlet_gate(question: str) -> bool:

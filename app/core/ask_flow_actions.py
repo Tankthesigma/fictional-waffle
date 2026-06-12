@@ -103,7 +103,8 @@ def _tab_from_text(normalized: str) -> str | None:
         "reports": ("report", "reports", "pdf", "powerpoint", "pptx", "export"),
         "ask-flow": ("ask flow", "assistant", "copilot", "chat"),
     }
-    if not any(verb in normalized for verb in ("open", "show", "go to", "switch to", "take me", "bring me")):
+    navigation_verbs = ("open", "show", "go to", "switch to", "take me", "bring me", "do", "make", "create", "build")
+    if not any(verb in normalized for verb in navigation_verbs):
         return None
     for tab, aliases in tab_aliases.items():
         if any(re.search(rf"\b{re.escape(alias)}\b", normalized) for alias in aliases):
