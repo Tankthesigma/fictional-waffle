@@ -69,6 +69,7 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
         Output("gate-stack-cards", "children", allow_duplicate=True),
         Input("ask-flow-button", "n_clicks"),
         Input("global-assistant-button", "n_clicks"),
+        Input("global-quick-analyze", "n_clicks"),
         Input("global-quick-qc", "n_clicks"),
         Input("global-quick-singlets", "n_clicks"),
         Input("global-quick-cluster-gates", "n_clicks"),
@@ -85,6 +86,7 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
     def ask_flow(
         _ask_clicks,
         _global_clicks,
+        _quick_analyze,
         _quick_qc,
         _quick_singlets,
         _quick_cluster_gates,
@@ -110,7 +112,29 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
         auto_gate_status = None
         auto_gate_outputs = _empty_gate_outputs()
         singlet_status = None
-        if _requests_auto_gate(question or ""):
+        if _requests_auto_analysis(question or ""):
+            plan.updates.setdefault("tab", "gates")
+            plan.updates.setdefault("plot_mode", "density")
+            plan.updates.setdefault("transform", "arcsinh")
+            analysis_status, auto_gate_outputs = _run_auto_analysis_from_chat(
+                session,
+                sample,
+                plan.updates.get("x_channel", x_channel),
+                plan.updates.get("y_channel", y_channel),
+                plan.updates.get("hist_channel"),
+                compensation_enabled,
+            )
+            plan.messages.extend(analysis_status)
+        elif _requests_accept_candidates(question or ""):
+            accept_status, auto_gate_outputs = _run_candidate_review_action(session, sample, compensation_enabled, accept=True)
+            plan.messages.append(accept_status)
+        elif _requests_reject_candidates(question or ""):
+            reject_status, auto_gate_outputs = _run_candidate_review_action(session, sample, compensation_enabled, accept=False)
+            plan.messages.append(reject_status)
+        elif _requests_enable_disable_gates(question or ""):
+            gate_status, auto_gate_outputs = _run_gate_enable_action(session, sample, compensation_enabled, enable=not _requests_disable_gates(question or ""))
+            plan.messages.append(gate_status)
+        elif _requests_auto_gate(question or ""):
             auto_gate_status, auto_gate_outputs = _run_auto_gate_from_chat(
                 session,
                 sample,
@@ -182,6 +206,7 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
 
 def _question_from_trigger(triggered: str, tab_question: str | None, global_question: str | None) -> str:
     quick_questions = {
+        "global-quick-analyze": "run analysis on this sample",
         "global-quick-qc": "show QC and summarize the review flags",
         "global-quick-singlets": "create singlet gate",
         "global-quick-cluster-gates": "auto gate clusters",
@@ -211,6 +236,7 @@ def _trigger_label(triggered: str) -> str:
     return {
         "ask-flow-button": "Ask Flow",
         "global-assistant-button": "Command",
+        "global-quick-analyze": "Quick Analyze",
         "global-quick-qc": "Quick QC",
         "global-quick-singlets": "Quick Singlets",
         "global-quick-cluster-gates": "Quick Cluster Gates",
@@ -294,9 +320,49 @@ def _requests_auto_gate(question: str) -> bool:
     return bool(re.search(r"\b(?:make|create|build|run|do|suggest|review)\b.*\bclust\w*", normalized))
 
 
+def _requests_auto_analysis(question: str) -> bool:
+    normalized = question.lower()
+    phrases = (
+        "run analysis",
+        "analyze this",
+        "analyse this",
+        "analyze sample",
+        "analyse sample",
+        "process sample",
+        "work this up",
+        "work it up",
+        "do everything",
+        "run everything",
+        "full analysis",
+        "full workup",
+        "make it work",
+    )
+    return any(phrase in normalized for phrase in phrases)
+
+
 def _requests_singlet_gate(question: str) -> bool:
     normalized = question.lower()
     return "singlet" in normalized and any(phrase in normalized for phrase in ("gate", "preset", "create", "make", "add", "suggest"))
+
+
+def _requests_accept_candidates(question: str) -> bool:
+    normalized = question.lower()
+    return any(word in normalized for word in ("accept", "approve", "use")) and any(word in normalized for word in ("candidate", "review gate", "suggested gate"))
+
+
+def _requests_reject_candidates(question: str) -> bool:
+    normalized = question.lower()
+    return any(word in normalized for word in ("reject", "remove", "clear", "delete")) and any(word in normalized for word in ("candidate", "review gate", "suggested gate"))
+
+
+def _requests_disable_gates(question: str) -> bool:
+    normalized = question.lower()
+    return any(phrase in normalized for phrase in ("disable gates", "turn off gates", "hide gates", "pause gates"))
+
+
+def _requests_enable_disable_gates(question: str) -> bool:
+    normalized = question.lower()
+    return _requests_disable_gates(question) or any(phrase in normalized for phrase in ("enable gates", "turn on gates", "show gates", "activate gates"))
 
 
 def _requests_candidate_gates(question: str) -> bool:
@@ -458,6 +524,73 @@ def _first_fluorescence_channel(sample) -> str | None:
         if channel.role == "fluorescence":
             return channel.raw_name
     return sample.channels[0].raw_name if sample.channels else None
+
+
+def _run_auto_analysis_from_chat(session: WorkbenchSession, sample, x_channel, y_channel, hist_channel, compensation_enabled):
+    """Run a conservative multi-step review workflow from one copilot command."""
+    if sample is None:
+        return ["Analysis workflow skipped: select a sample first."], _empty_gate_outputs()
+
+    messages: list[str] = []
+    selected_gate_id = None
+    for runner, args in (
+        (_run_scatter_gate_from_chat, (session, sample, compensation_enabled)),
+        (_run_singlet_gate_from_chat, (session, sample, compensation_enabled)),
+        (_run_auto_gate_from_chat, (session, sample, x_channel, y_channel, compensation_enabled)),
+        (_run_histogram_gate_from_chat, (session, sample, hist_channel, compensation_enabled)),
+    ):
+        status, outputs = runner(*args)
+        messages.append(status)
+        if outputs[5] is not no_update:
+            selected_gate_id = outputs[5]
+
+    summary = "Ran review workflow: density/arcsinh view, scatter review gate, singlet preset when available, cluster candidates, and a marker range gate."
+    messages.insert(0, summary)
+    status = " ".join(messages)
+    if selected_gate_id is None and session.gates:
+        selected_gate_id = session.gates[-1].gate_id
+    return messages, _gate_outputs(session, sample, selected_gate_id, compensation_enabled, status)
+
+
+def _run_candidate_review_action(session: WorkbenchSession, sample, compensation_enabled, *, accept: bool):
+    candidates = [gate for gate in session.gates if gate.candidate]
+    if not candidates:
+        status = "No candidate gates are pending review."
+        return status, _gate_outputs(session, sample, None, compensation_enabled, status)
+    if accept:
+        for gate in candidates:
+            gate.candidate = False
+            gate.enabled = True
+            gate.review_status = "accepted"
+            gate.metadata["accepted_from_candidate"] = "true"
+        status = f"Accepted {len(candidates)} candidate gate(s). They are enabled, but still review the bounds before final reporting."
+        selected = candidates[0].gate_id
+    else:
+        candidate_ids = {gate.gate_id for gate in candidates}
+        session.gates = [gate for gate in session.gates if gate.gate_id not in candidate_ids]
+        status = f"Rejected {len(candidates)} candidate gate(s)."
+        selected = None
+    return status, _gate_outputs(session, sample, selected, compensation_enabled, status)
+
+
+def _run_gate_enable_action(session: WorkbenchSession, sample, compensation_enabled, *, enable: bool):
+    if not session.gates:
+        status = "No gates are available to enable or disable."
+        return status, _gate_outputs(session, sample, None, compensation_enabled, status)
+    changed = 0
+    for gate in session.gates:
+        if enable and gate.candidate:
+            continue
+        if gate.enabled != enable:
+            gate.enabled = enable
+            changed += 1
+    if enable:
+        skipped = sum(1 for gate in session.gates if gate.candidate)
+        status = f"Enabled {changed} accepted/user gate(s). {skipped} candidate gate(s) still need accept/edit/reject." if skipped else f"Enabled {changed} gate(s)."
+    else:
+        status = f"Disabled {changed} gate(s)."
+    selected = session.gates[0].gate_id if session.gates else None
+    return status, _gate_outputs(session, sample, selected, compensation_enabled, status)
 
 
 def _run_singlet_gate_from_chat(session: WorkbenchSession, sample, compensation_enabled):

@@ -361,6 +361,7 @@ def global_assistant_bar():
             ),
             html.Div(
                 [
+                    html.Button("Analyze", id="global-quick-analyze", n_clicks=0),
                     html.Button("QC", id="global-quick-qc", n_clicks=0),
                     html.Button("Singlets", id="global-quick-singlets", n_clicks=0),
                     html.Button("Cluster gates", id="global-quick-cluster-gates", n_clicks=0),
@@ -377,6 +378,7 @@ def global_assistant_bar():
                     html.Span("transform"),
                     html.Span("singlets"),
                     html.Span("cluster gates"),
+                    html.Span("approve/reject"),
                     html.Span("summarize"),
                 ],
                 className="agent-action-strip global-skills",

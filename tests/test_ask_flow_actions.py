@@ -55,10 +55,25 @@ def test_ask_flow_understands_casual_graph_command():
 
 
 def test_ask_flow_understands_messy_cluster_command():
-    from app.ui.callbacks_ask_flow import _requests_auto_gate, _requests_candidate_gates, _requests_current_view_gate, _requests_histogram_gate, _requests_scatter_review_gate
+    from app.ui.callbacks_ask_flow import (
+        _requests_accept_candidates,
+        _requests_auto_analysis,
+        _requests_auto_gate,
+        _requests_candidate_gates,
+        _requests_current_view_gate,
+        _requests_disable_gates,
+        _requests_histogram_gate,
+        _requests_reject_candidates,
+        _requests_scatter_review_gate,
+    )
 
     assert _requests_auto_gate("make clusterns")
     assert _requests_auto_gate("do clusters")
+    assert _requests_auto_analysis("run analysis on this sample")
+    assert _requests_auto_analysis("do everything")
+    assert _requests_accept_candidates("approve candidate gates")
+    assert _requests_reject_candidates("reject suggested gates")
+    assert _requests_disable_gates("turn off gates")
     assert _requests_current_view_gate("make a gate on this plot")
     assert _requests_scatter_review_gate("make main population fsc ssc gate")
     assert _requests_histogram_gate("make positive histogram gate")
@@ -97,6 +112,48 @@ def test_ask_flow_can_create_review_needed_histogram_gate():
     assert session.gates[0].channels == ["FL1-A"]
     assert session.gates[0].review_status == "review_needed"
     assert outputs[5] == session.gates[0].gate_id
+
+
+def test_ask_flow_can_accept_and_reject_candidates():
+    from app.core.gating import rectangle_gate
+    from app.core.session_store import WorkbenchSession
+    from app.ui.callbacks_ask_flow import _run_candidate_review_action
+
+    sample = _sample()
+    gate = rectangle_gate("candidate", "Candidate", "FSC-A", "SSC-A", 1, 10, 101, 110)
+    gate.candidate = True
+    gate.enabled = False
+    session = WorkbenchSession(samples={sample.sample_id: sample}, gates=[gate])
+
+    status, outputs = _run_candidate_review_action(session, sample, [], accept=True)
+
+    assert "Accepted 1 candidate" in status
+    assert session.gates[0].candidate is False
+    assert session.gates[0].enabled is True
+    assert outputs[5] == "candidate"
+
+    session.gates[0].candidate = True
+    status, outputs = _run_candidate_review_action(session, sample, [], accept=False)
+
+    assert "Rejected 1 candidate" in status
+    assert session.gates == []
+    assert outputs[0] == []
+
+
+def test_ask_flow_run_analysis_creates_real_review_artifacts():
+    from app.core.session_store import WorkbenchSession
+    from app.ui.callbacks_ask_flow import _run_auto_analysis_from_chat
+
+    sample = _sample()
+    session = WorkbenchSession(samples={sample.sample_id: sample})
+
+    messages, outputs = _run_auto_analysis_from_chat(session, sample, "FSC-A", "SSC-A", "FL1-A", [])
+
+    assert "Ran review workflow" in messages[0]
+    assert len(session.gates) >= 2
+    assert any(gate.metadata.get("ask_flow_action") == "scatter_review_gate" for gate in session.gates)
+    assert any(gate.gate_type == "histogram_range" for gate in session.gates)
+    assert outputs[0]
 
 
 def _sample(sample_id: str = "s1") -> SampleRecord:
