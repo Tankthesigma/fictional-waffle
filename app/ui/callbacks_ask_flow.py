@@ -122,6 +122,24 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
         elif _requests_singlet_gate(question or ""):
             singlet_status, auto_gate_outputs = _run_singlet_gate_from_chat(session, sample, compensation_enabled)
             plan.messages.append(singlet_status)
+        elif _requests_candidate_gates(question or ""):
+            candidate_status, auto_gate_outputs = _run_candidate_gates_from_chat(session, sample, compensation_enabled)
+            plan.messages.append(candidate_status)
+        elif _requests_scatter_review_gate(question or ""):
+            scatter_status, auto_gate_outputs = _run_scatter_gate_from_chat(session, sample, compensation_enabled)
+            plan.messages.append(scatter_status)
+        elif _requests_histogram_gate(question or ""):
+            histogram_status, auto_gate_outputs = _run_histogram_gate_from_chat(session, sample, plan.updates.get("hist_channel"), compensation_enabled)
+            plan.messages.append(histogram_status)
+        elif _requests_current_view_gate(question or ""):
+            view_status, auto_gate_outputs = _run_current_view_gate_from_chat(
+                session,
+                sample,
+                plan.updates.get("x_channel", x_channel),
+                plan.updates.get("y_channel", y_channel),
+                compensation_enabled,
+            )
+            plan.messages.append(view_status)
         flags = session.qc_flags.get(sample.sample_id, []) if sample else []
         fallback = answer_question(
             question or "",
@@ -281,8 +299,165 @@ def _requests_singlet_gate(question: str) -> bool:
     return "singlet" in normalized and any(phrase in normalized for phrase in ("gate", "preset", "create", "make", "add", "suggest"))
 
 
+def _requests_candidate_gates(question: str) -> bool:
+    normalized = question.lower()
+    return any(phrase in normalized for phrase in ("suggest candidate gates", "candidate gates", "suggest review gates", "suggest gates", "review-needed gates"))
+
+
+def _requests_scatter_review_gate(question: str) -> bool:
+    normalized = question.lower()
+    scatter_words = ("fsc", "ssc", "scatter", "main population", "cleanup gate", "debris gate")
+    gate_words = ("gate", "gating", "population")
+    return any(word in normalized for word in scatter_words) and any(word in normalized for word in gate_words)
+
+
+def _requests_histogram_gate(question: str) -> bool:
+    normalized = question.lower()
+    return any(word in normalized for word in ("histogram gate", "hist gate", "range gate", "positive gate", "marker gate"))
+
+
+def _requests_current_view_gate(question: str) -> bool:
+    normalized = question.lower()
+    gate_words = ("gate", "gating", "population", "region")
+    action_words = ("make", "create", "build", "add", "gate this", "gate current", "current view", "this plot", "this graph")
+    return any(word in normalized for word in gate_words) and any(word in normalized for word in action_words)
+
+
 def _empty_gate_outputs():
     return (no_update, no_update, no_update, no_update, no_update, no_update, no_update)
+
+
+def _gate_outputs(session: WorkbenchSession, sample, selected_gate_id: str | None, compensation_enabled, status: str):
+    from app.core.gating import gate_to_table
+    from app.ui.callbacks_gating import _columns_from_rows, _gate_options, _gate_stack_cards, _stats_for_sample
+    from app.ui.components import table_columns
+
+    stats = _stats_for_sample(session, sample.sample_id, compensation_enabled) if sample is not None else []
+    columns = _columns_from_rows(stats, ["gate_name", "parent_gate", "channel_labels", "channels", "event_count", "percent_total", "percent_parent"])
+    options = _gate_options(session.gates)
+    selected = selected_gate_id or (options[0]["value"] if options else None)
+    return (
+        gate_to_table(session.gates),
+        stats,
+        table_columns(columns),
+        status,
+        options,
+        selected,
+        _gate_stack_cards(session.gates, stats),
+    )
+
+
+def _compensated_view_name(sample, use_compensation: bool) -> str:
+    return "metadata_compensated" if use_compensation and sample is not None and sample.compensated_events is not None else "raw"
+
+
+def _use_compensation(sample, compensation_enabled) -> bool:
+    return bool(compensation_enabled and "on" in compensation_enabled and sample is not None and sample.compensated_events is not None)
+
+
+def _run_current_view_gate_from_chat(session: WorkbenchSession, sample, x_channel, y_channel, compensation_enabled):
+    from uuid import uuid4
+
+    from app.core.compensation import event_view
+    from app.core.gating import review_current_view_gate
+
+    if sample is None:
+        return "Current-view gate skipped: select a sample first.", _empty_gate_outputs()
+    use_compensation = _use_compensation(sample, compensation_enabled)
+    gate = review_current_view_gate(event_view(sample, use_compensation), x_channel, y_channel, uuid4().hex[:8], name="Ask Flow current-view gate")
+    if gate is None:
+        return "Current-view gate skipped: choose two numeric plot channels first.", _empty_gate_outputs()
+    gate.metadata["event_view"] = _compensated_view_name(sample, use_compensation)
+    gate.metadata["ask_flow_action"] = "current_view_gate"
+    session.gates.append(gate)
+    status = f"Added editable review-needed current-view gate: {gate.name}. Review/edit before using final statistics."
+    return status, _gate_outputs(session, sample, gate.gate_id, compensation_enabled, status)
+
+
+def _run_scatter_gate_from_chat(session: WorkbenchSession, sample, compensation_enabled):
+    from uuid import uuid4
+
+    from app.core.compensation import event_view
+    from app.core.gating import review_scatter_gate
+
+    if sample is None:
+        return "FSC/SSC gate skipped: select a sample first.", _empty_gate_outputs()
+    use_compensation = _use_compensation(sample, compensation_enabled)
+    gate = review_scatter_gate(event_view(sample, use_compensation), sample.channels, uuid4().hex[:8], name="Ask Flow FSC/SSC gate")
+    if gate is None:
+        return "FSC/SSC gate skipped: FSC/SSC channels were not confidently identified.", _empty_gate_outputs()
+    gate.metadata["event_view"] = _compensated_view_name(sample, use_compensation)
+    gate.metadata["ask_flow_action"] = "scatter_review_gate"
+    session.gates.append(gate)
+    status = f"Added editable review-needed FSC/SSC gate: {gate.name}. Review/edit before using final statistics."
+    return status, _gate_outputs(session, sample, gate.gate_id, compensation_enabled, status)
+
+
+def _run_candidate_gates_from_chat(session: WorkbenchSession, sample, compensation_enabled):
+    from app.core.compensation import event_view
+    from app.core.gating import suggest_candidate_gates
+
+    if sample is None:
+        return "Candidate gate suggestion skipped: select a sample first.", _empty_gate_outputs()
+    use_compensation = _use_compensation(sample, compensation_enabled)
+    current_view = _compensated_view_name(sample, use_compensation)
+    existing_ids = {gate.gate_id for gate in session.gates}
+    suggestions = [
+        gate
+        for gate in suggest_candidate_gates(event_view(sample, use_compensation), sample.channels, id_prefix=sample.sample_id)
+        if gate.gate_id not in existing_ids
+    ]
+    for gate in suggestions:
+        gate.metadata["event_view"] = current_view
+        gate.metadata["ask_flow_action"] = "candidate_gate_suggestion"
+    session.gates.extend(suggestions)
+    status = (
+        f"Added {len(suggestions)} disabled candidate gate(s) for review. Accept, edit, or reject before final statistics."
+        if suggestions
+        else "No new stable candidate gates were suggested for this sample."
+    )
+    selected = suggestions[0].gate_id if suggestions else None
+    return status, _gate_outputs(session, sample, selected, compensation_enabled, status)
+
+
+def _run_histogram_gate_from_chat(session: WorkbenchSession, sample, requested_channel, compensation_enabled):
+    from uuid import uuid4
+
+    import numpy as np
+    import pandas as pd
+
+    from app.core.compensation import event_view
+    from app.core.gating import histogram_range_gate
+
+    if sample is None:
+        return "Histogram gate skipped: select a sample first.", _empty_gate_outputs()
+    use_compensation = _use_compensation(sample, compensation_enabled)
+    events = event_view(sample, use_compensation)
+    channel = requested_channel or _first_fluorescence_channel(sample)
+    if not channel or channel not in events:
+        return "Histogram gate skipped: choose a histogram or fluorescence channel first.", _empty_gate_outputs()
+    values = pd.to_numeric(events[channel], errors="coerce").to_numpy(dtype=float)
+    finite = values[np.isfinite(values)]
+    if finite.size < 10:
+        return "Histogram gate skipped: not enough finite events on the selected channel.", _empty_gate_outputs()
+    low, high = np.nanpercentile(finite, [5, 95])
+    if not np.isfinite(low) or not np.isfinite(high) or low == high:
+        return "Histogram gate skipped: selected channel does not have a usable numeric range.", _empty_gate_outputs()
+    gate = histogram_range_gate(uuid4().hex[:8], f"Ask Flow {channel} range", channel, float(low), float(high))
+    gate.review_status = "review_needed"
+    gate.metadata["event_view"] = _compensated_view_name(sample, use_compensation)
+    gate.metadata["ask_flow_action"] = "histogram_range_gate"
+    gate.metadata["review_gate_reason"] = f"central 5-95% range on {channel}; review/edit before final statistics"
+    session.gates.append(gate)
+    status = f"Added editable review-needed histogram gate on {channel}. Review/edit before using final statistics."
+    return status, _gate_outputs(session, sample, gate.gate_id, compensation_enabled, status)
+
+
+def _first_fluorescence_channel(sample) -> str | None:
+    for channel in sample.channels:
+        if channel.role == "fluorescence":
+            return channel.raw_name
+    return sample.channels[0].raw_name if sample.channels else None
 
 
 def _run_singlet_gate_from_chat(session: WorkbenchSession, sample, compensation_enabled):
