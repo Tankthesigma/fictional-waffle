@@ -262,7 +262,7 @@ def _history_cards(history) -> list:
                         className="assistant-timeline-topline",
                     ),
                     html.P(str(row.get("question") or "Command")),
-                    html.Ul([html.Li(str(action)) for action in actions[:4]]) if actions else html.Small("No workbench action was needed."),
+                    html.Ul([html.Li(str(action)) for action in actions[:4]]) if actions else html.Small("Answered locally."),
                 ],
                 className="assistant-timeline-card",
             )

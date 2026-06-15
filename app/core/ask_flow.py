@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import ast
+import operator
+import re
+
 from app.core.compare import comparison_insights, comparison_summary
 from app.core.qc import qc_summary
 from app.core.compensation import compensation_status
@@ -29,6 +33,9 @@ def answer_question(
     gates = gates or []
     qc_flags = qc_flags or []
     comparison_rows = comparison_rows or []
+    general = _general_answer(q)
+    if general:
+        return general
     if not sample:
         return "Upload or select a sample first. " + FORBIDDEN_NOTICE
     if any(token in q for token in ("plan", "what next", "next step", "workup", "analyze this", "analysis")):
@@ -89,6 +96,64 @@ def answer_question(
         f"Sample {sample.sample_id} is loaded with {sample.event_count:,} events and {sample.channel_count} channels. "
         f"Ask about QC flags, selected plots, gates, or control-versus-treated comparisons. {FORBIDDEN_NOTICE}"
     )
+
+
+def _general_answer(q: str) -> str | None:
+    """Answer small local questions that do not need uploaded cytometry data."""
+    if not q:
+        return None
+    if re.fullmatch(r"(hi|hello|hey|yo|sup|what'?s up|whats up)[!. ]*", q):
+        return (
+            "Hey. I am here. Load an FCS/CSV file or the demo dataset and I can run QC, set plots, "
+            "create review-needed gates, approve/reject candidates, and summarize results."
+        )
+    math_answer = _arithmetic_answer(q)
+    if math_answer:
+        return math_answer
+    if any(phrase in q for phrase in ("what can you do", "help", "skills", "commands")):
+        return (
+            "I can navigate the workbench, set scatter/histogram plots, switch transforms, run QC review, "
+            "create review-needed gates, run cluster-guided gates, approve/reject candidate gates, and draft local summaries. "
+            "Upload or select a sample for cytometry-specific analysis."
+        )
+    return None
+
+
+def _arithmetic_answer(q: str) -> str | None:
+    expression = q
+    expression = re.sub(r"\b(what'?s|what is|calculate|calc|solve|equals?|please|answer)\b", " ", expression)
+    expression = expression.replace("x", "*").replace("×", "*").replace("÷", "/")
+    expression = re.sub(r"\s+", "", expression)
+    if not expression or not re.fullmatch(r"[0-9+\-*/().]+", expression):
+        return None
+    try:
+        value = _eval_arithmetic(ast.parse(expression, mode="eval").body)
+    except Exception:
+        return None
+    if isinstance(value, float) and value.is_integer():
+        value = int(value)
+    return f"{expression} = {value}"
+
+
+def _eval_arithmetic(node: ast.AST) -> float:
+    operators = {
+        ast.Add: operator.add,
+        ast.Sub: operator.sub,
+        ast.Mult: operator.mul,
+        ast.Div: operator.truediv,
+    }
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+        return float(node.value)
+    if isinstance(node, ast.UnaryOp) and isinstance(node.op, (ast.UAdd, ast.USub)):
+        value = _eval_arithmetic(node.operand)
+        return value if isinstance(node.op, ast.UAdd) else -value
+    if isinstance(node, ast.BinOp) and type(node.op) in operators:
+        left = _eval_arithmetic(node.left)
+        right = _eval_arithmetic(node.right)
+        if isinstance(node.op, ast.Div) and right == 0:
+            raise ValueError("division by zero")
+        return operators[type(node.op)](left, right)
+    raise ValueError("unsupported expression")
 
 
 def analysis_briefing(

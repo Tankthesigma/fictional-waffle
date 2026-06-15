@@ -8,6 +8,19 @@ from app.models.qc_flag import QCFlag
 from app.models.sample import SampleRecord
 
 
+def test_ask_flow_answers_basic_math_without_sample():
+    answer = answer_question("whats 6+7", None)
+
+    assert answer == "6+7 = 13"
+
+
+def test_ask_flow_answers_greeting_without_sample():
+    answer = answer_question("hi", None)
+
+    assert "Hey. I am here." in answer
+    assert "Load an FCS/CSV file" in answer
+
+
 def test_ask_flow_answers_compensation_locally():
     sample = SampleRecord(
         "s1",
