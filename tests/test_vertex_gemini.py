@@ -1,6 +1,6 @@
 import pandas as pd
 
-from app.core.vertex_gemini import _parse_cluster_labels, answer_with_gemini, vertex_enabled, vertex_status
+from app.core.vertex_gemini import _parse_cluster_labels, _prompt, answer_with_gemini, vertex_enabled, vertex_status
 from app.models.sample import SampleRecord
 
 
@@ -40,6 +40,25 @@ def test_cloud_assistant_status_hides_provider_details(monkeypatch):
     assert "Assistant: enhanced mode enabled" in status
     assert "Gemini" not in status
     assert "Vertex" not in status
+
+
+def test_cloud_prompt_allows_general_questions_without_sample():
+    prompt = _prompt(
+        "who is the president of america?",
+        None,
+        x_channel=None,
+        y_channel=None,
+        gates=[],
+        qc_flags=[],
+        comparison_rows=[],
+        action_messages=[],
+    )
+
+    assert "general_question_mode" in prompt
+    assert "current_date" in prompt
+    assert "You may answer ordinary general-knowledge" in prompt
+    assert "Use current_date for time-sensitive general questions" in prompt
+    assert "upload or select a sample first" in prompt
 
 
 def test_parse_cluster_labels_keeps_review_language_and_rejects_bad_claims():

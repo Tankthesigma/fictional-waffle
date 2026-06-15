@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass
+from datetime import date
 from typing import Any
 
 from app.core.ask_flow import FORBIDDEN_NOTICE
@@ -166,6 +167,8 @@ def _prompt(
         "app": "Ask Flow Workbench",
         "scope": "post-acquisition FCS/CSV analysis only; no instrument control",
         "question": question,
+        "current_date": date.today().isoformat(),
+        "general_question_mode": sample is None,
         "actions_already_applied": action_messages,
         "sample": _sample_context(sample, x_channel, y_channel),
         "qc_summary": qc_summary(qc_flags),
@@ -174,10 +177,18 @@ def _prompt(
         "comparison_rows": comparison_rows[:30],
         "forbidden_notice": FORBIDDEN_NOTICE,
     }
+    general_instruction = (
+        "No cytometry sample is loaded. You may answer ordinary general-knowledge, math, greeting, or app-help questions directly. "
+        "If the user asks for cytometry-specific interpretation, ask them to upload or select a sample first. "
+        if sample is None
+        else "Use only the provided sample, QC, gate, and comparison context for cytometry-specific answers. "
+    )
     return (
         "You are Ask Flow inside a local flow cytometry analysis workbench. "
-        "Answer the user's question using only the provided context. Be concise, practical, and plain-English. "
-        "Never infer cell identity unless marker meaning was provided. Never diagnose disease. Never claim gates are correct. "
+        "Be concise, practical, and plain-English. "
+        + general_instruction
+        + "Use current_date for time-sensitive general questions. If you are unsure about a current fact, say it should be verified. "
+        + "Never infer cell identity unless marker meaning was provided. Never diagnose disease. Never claim gates are correct. "
         "Never suggest cytometer operation, acquisition settings, lasers, fluidics, cleaning, maintenance, firmware, drivers, or hardware control. "
         "Call candidate gates review-needed. Label comparison statistics exploratory. "
         "If the user asks for a task, describe only the safe app action already applied in actions_already_applied; do not invent additional execution. "
