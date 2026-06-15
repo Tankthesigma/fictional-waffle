@@ -149,6 +149,17 @@ def register_ask_flow_callbacks(app, session: WorkbenchSession) -> None:
         elif _requests_candidate_gates(question or ""):
             candidate_status, auto_gate_outputs = _run_candidate_gates_from_chat(session, sample, compensation_enabled)
             plan.messages.append(candidate_status)
+        elif _requests_gate_set(question or ""):
+            plan.updates.setdefault("tab", "gates")
+            gate_set_status, auto_gate_outputs = _run_gate_set_from_chat(
+                session,
+                sample,
+                plan.updates.get("x_channel", x_channel),
+                plan.updates.get("y_channel", y_channel),
+                plan.updates.get("hist_channel"),
+                compensation_enabled,
+            )
+            plan.messages.extend(gate_set_status)
         elif _requests_scatter_review_gate(question or ""):
             scatter_status, auto_gate_outputs = _run_scatter_gate_from_chat(session, sample, compensation_enabled)
             plan.messages.append(scatter_status)
@@ -370,6 +381,26 @@ def _requests_candidate_gates(question: str) -> bool:
     return any(phrase in normalized for phrase in ("suggest candidate gates", "candidate gates", "suggest review gates", "suggest gates", "review-needed gates"))
 
 
+def _requests_gate_set(question: str) -> bool:
+    normalized = question.lower()
+    if any(word in normalized for word in ("cluster", "singlet", "histogram", "range", "candidate", "approve", "accept", "reject")):
+        return False
+    direct_phrases = (
+        "add gates",
+        "add some gates",
+        "make gates",
+        "make some gates",
+        "create gates",
+        "create some gates",
+        "build gates",
+        "setup gates",
+        "set up gates",
+        "gate it",
+        "gate this sample",
+    )
+    return any(phrase in normalized for phrase in direct_phrases)
+
+
 def _requests_scatter_review_gate(question: str) -> bool:
     normalized = question.lower()
     scatter_words = ("fsc", "ssc", "scatter", "main population", "cleanup gate", "debris gate")
@@ -546,6 +577,36 @@ def _run_auto_analysis_from_chat(session: WorkbenchSession, sample, x_channel, y
 
     summary = "Ran review workflow: density/arcsinh view, scatter review gate, singlet preset when available, cluster candidates, and a marker range gate."
     messages.insert(0, summary)
+    status = " ".join(messages)
+    if selected_gate_id is None and session.gates:
+        selected_gate_id = session.gates[-1].gate_id
+    return messages, _gate_outputs(session, sample, selected_gate_id, compensation_enabled, status)
+
+
+def _run_gate_set_from_chat(session: WorkbenchSession, sample, x_channel, y_channel, hist_channel, compensation_enabled):
+    """Create the small practical gate set users expect from 'add gates'."""
+    if sample is None:
+        return ["Gate workflow skipped: load or select a sample first, then say 'add gates' again."], _empty_gate_outputs()
+
+    messages: list[str] = []
+    selected_gate_id = None
+    for runner, args in (
+        (_run_scatter_gate_from_chat, (session, sample, compensation_enabled)),
+        (_run_candidate_gates_from_chat, (session, sample, compensation_enabled)),
+        (_run_histogram_gate_from_chat, (session, sample, hist_channel, compensation_enabled)),
+    ):
+        status, outputs = runner(*args)
+        messages.append(status)
+        if outputs[5] is not no_update:
+            selected_gate_id = outputs[5]
+
+    if not any("Added" in message for message in messages):
+        fallback_status, fallback_outputs = _run_current_view_gate_from_chat(session, sample, x_channel, y_channel, compensation_enabled)
+        messages.append(fallback_status)
+        if fallback_outputs[5] is not no_update:
+            selected_gate_id = fallback_outputs[5]
+
+    messages.insert(0, "Added a review gate set for this sample where compatible channels were available.")
     status = " ".join(messages)
     if selected_gate_id is None and session.gates:
         selected_gate_id = session.gates[-1].gate_id

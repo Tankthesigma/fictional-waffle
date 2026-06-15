@@ -62,6 +62,7 @@ def test_ask_flow_understands_messy_cluster_command():
         _requests_candidate_gates,
         _requests_current_view_gate,
         _requests_disable_gates,
+        _requests_gate_set,
         _requests_histogram_gate,
         _requests_reject_candidates,
         _requests_scatter_review_gate,
@@ -74,10 +75,15 @@ def test_ask_flow_understands_messy_cluster_command():
     assert _requests_accept_candidates("approve candidate gates")
     assert _requests_reject_candidates("reject suggested gates")
     assert _requests_disable_gates("turn off gates")
+    assert _requests_gate_set("add gates")
+    assert _requests_gate_set("make some gates")
+    assert _requests_gate_set("gate this sample")
     assert _requests_current_view_gate("make a gate on this plot")
     assert _requests_scatter_review_gate("make main population fsc ssc gate")
     assert _requests_histogram_gate("make positive histogram gate")
     assert _requests_candidate_gates("suggest candidate gates")
+    assert not _requests_gate_set("add histogram gate")
+    assert not _requests_gate_set("approve candidate gates")
     assert not _requests_auto_gate("so everything")
 
 
@@ -154,6 +160,32 @@ def test_ask_flow_run_analysis_creates_real_review_artifacts():
     assert any(gate.metadata.get("ask_flow_action") == "scatter_review_gate" for gate in session.gates)
     assert any(gate.gate_type == "histogram_range" for gate in session.gates)
     assert outputs[0]
+
+
+def test_ask_flow_add_gates_command_creates_review_gate_set():
+    from app.core.session_store import WorkbenchSession
+    from app.ui.callbacks_ask_flow import _run_gate_set_from_chat
+
+    sample = _sample()
+    session = WorkbenchSession(samples={sample.sample_id: sample})
+
+    messages, outputs = _run_gate_set_from_chat(session, sample, "FSC-A", "SSC-A", "FL1-A", [])
+
+    assert "Added a review gate set" in messages[0]
+    assert len(session.gates) >= 2
+    assert any(gate.metadata.get("ask_flow_action") == "scatter_review_gate" for gate in session.gates)
+    assert any(gate.gate_type == "histogram_range" for gate in session.gates)
+    assert outputs[0]
+
+
+def test_ask_flow_add_gates_without_sample_explains_next_step():
+    from app.core.session_store import WorkbenchSession
+    from app.ui.callbacks_ask_flow import _run_gate_set_from_chat
+
+    messages, outputs = _run_gate_set_from_chat(WorkbenchSession(), None, None, None, None, [])
+
+    assert messages == ["Gate workflow skipped: load or select a sample first, then say 'add gates' again."]
+    assert outputs[0] is not None
 
 
 def _sample(sample_id: str = "s1") -> SampleRecord:
